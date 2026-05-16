@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using web.Models;
+using web.Utils;
 
 namespace web.Controllers;
 
@@ -176,7 +177,7 @@ public class ProfileController(
             user.AvatarFileName    = fileName;
             user.AvatarContentType = ext == ".png" ? "image/png" : "image/jpeg";
             user.AvatarFileSize    = bytes.Length;
-            user.AvatarUploadedAt  = DateTime.Now;
+            user.AvatarUploadedAt  = AppTime.UtcNow;
 
             return null; // ingen fejl
         }

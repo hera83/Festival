@@ -1,5 +1,7 @@
 namespace web.Models;
 
+using web.Utils;
+
 /// <summary>
 /// Repræsenterer én check-in session for en frivillig.
 /// En frivillig kan have flere check-ins samme dag.
@@ -13,7 +15,7 @@ public class VolunteerCheckIn
     /// <summary>Dato for check-in (dato-del af CheckedInAt, gemt separat for hurtig søgning).</summary>
     public DateOnly CheckInDate { get; set; }
 
-    public DateTime CheckedInAt { get; set; } = DateTime.Now;
+    public DateTime CheckedInAt { get; set; } = AppTime.UtcNow;
 
     /// <summary>Null = stadig indchecket. Sat ved checkout.</summary>
     public DateTime? CheckedOutAt { get; set; }

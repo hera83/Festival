@@ -1,5 +1,7 @@
 namespace web.Models;
 
+using web.Utils;
+
 public class ShiftType
 {
     public int Id { get; set; }
@@ -8,8 +10,8 @@ public class ShiftType
     public int RequiredCount { get; set; } = 0;
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = AppTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = AppTime.UtcNow;
 
     public ICollection<Shift> Shifts { get; set; } = [];
 }

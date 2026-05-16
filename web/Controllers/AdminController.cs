@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
+using web.Utils;
 
 namespace web.Controllers;
 
@@ -42,7 +43,7 @@ public class AdminController : Controller
         if (string.IsNullOrWhiteSpace(token))
             return BadRequest();
 
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
 
         // QR-koden indeholder frivilligens Key (ikke QrToken)
         var volunteer = await _db.Volunteers
@@ -73,7 +74,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> StatistikSearch(string q = "", int page = 1, int pageSize = 10)
     {
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
 
         // Hent alle frivillige for sæsonen
         var volunteersQuery = _db.Volunteers
@@ -142,7 +143,7 @@ public class AdminController : Controller
     // ── Statistik detaljer (JSON) ─────────────────────────────────
     public async Task<IActionResult> VolunteerCheckInDetail(int volunteerId)
     {
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
 
         var volunteer = await _db.Volunteers
             .FirstOrDefaultAsync(v => v.Id == volunteerId && v.SeasonId == seasonId);
@@ -162,7 +163,7 @@ public class AdminController : Controller
             .ToListAsync();
         var logsByCheckIn = locationLogs.ToLookup(l => l.CheckInId);
 
-        var now = DateTime.Now;
+        var now = AppTime.UtcNow;
 
         var sessions = checkIns.Select(c =>
         {
@@ -312,7 +313,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> ExportVolunteers()
     {
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
 
         var shifts = await _db.Shifts
             .Include(s => s.Volunteer)
@@ -391,7 +392,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> ExportStatistik()
     {
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
 
         var volunteers = await _db.Volunteers
             .Where(v => v.SeasonId == seasonId)
@@ -457,7 +458,7 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteDataset()
     {
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
 
         var locationLogs = await _db.VolunteerLocationLogs.Where(l => l.SeasonId == seasonId).ToListAsync();
         _db.VolunteerLocationLogs.RemoveRange(locationLogs);
@@ -506,8 +507,8 @@ public class AdminController : Controller
         if (validRows.Count == 0)
             return BadRequest(new { success = false, message = "Der er ingen gyldige rækker at importere." });
 
-        var now = DateTime.Now;
-        var currentSeasonId = DateTime.Now.Year;
+        var now = AppTime.UtcNow;
+        var currentSeasonId = AppTime.CurrentSeason;
         var seasonIds = new List<int> { currentSeasonId };
         var keys = validRows.Select(r => r.Key).Distinct().ToList();
 

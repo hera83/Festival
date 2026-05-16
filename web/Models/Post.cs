@@ -1,5 +1,7 @@
 namespace web.Models;
 
+using web.Utils;
+
 /// <summary>
 /// En post er en navngivet gruppe/zone på festivalen (fx "Bar 8", "Blå Scene").
 /// Frivillige kan flyttes fra Pitten til en post og mellem poster.
@@ -24,5 +26,5 @@ public class Post
     /// </summary>
     public int? AlarmAfterMinutes { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = AppTime.UtcNow;
 }

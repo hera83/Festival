@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
+using web.Utils;
 
 namespace web.Controllers;
 
@@ -13,7 +14,7 @@ public class DashboardSettingController(ApplicationDbContext db) : Controller
     [HttpGet]
     public async Task<IActionResult> Get(string key)
     {
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
         var setting = await db.DashboardSettings
             .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == key);
         return Json(new { value = setting?.Value });
@@ -27,7 +28,7 @@ public class DashboardSettingController(ApplicationDbContext db) : Controller
         if (string.IsNullOrWhiteSpace(req.Key))
             return Json(new { success = false, message = "Ugyldig nøgle." });
 
-        var seasonId = DateTime.Now.Year;
+        var seasonId = AppTime.CurrentSeason;
         var setting = await db.DashboardSettings
             .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == req.Key);
 
@@ -38,7 +39,7 @@ public class DashboardSettingController(ApplicationDbContext db) : Controller
         }
 
         setting.Value = string.IsNullOrWhiteSpace(req.Value) ? null : req.Value;
-        setting.UpdatedAt = DateTime.Now;
+        setting.UpdatedAt = AppTime.UtcNow;
         await db.SaveChangesAsync();
 
         return Json(new { success = true });

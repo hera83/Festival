@@ -1,5 +1,7 @@
 namespace web.Models;
 
+using web.Utils;
+
 /// <summary>
 /// Logger alle bevægelser for en frivillig i løbet af en check-in session:
 /// CheckIn (→ Pit), Move (→ Bar8, → Pit, osv.), CheckOut.
@@ -17,7 +19,7 @@ public class VolunteerLocationLog
     /// <summary>Lokation efter hændelsen, fx "Pit", "Bar8". Null ved CheckOut.</summary>
     public string? Location { get; set; }
 
-    public DateTime OccurredAt { get; set; } = DateTime.Now;
+    public DateTime OccurredAt { get; set; } = AppTime.UtcNow;
 
     public VolunteerCheckIn CheckIn { get; set; } = null!;
     public Volunteer Volunteer { get; set; } = null!;

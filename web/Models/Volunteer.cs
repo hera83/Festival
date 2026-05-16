@@ -1,5 +1,7 @@
 namespace web.Models;
 
+using web.Utils;
+
 public class Volunteer
 {
     public int Id { get; set; }
@@ -12,8 +14,8 @@ public class Volunteer
     public bool QrCodeSent { get; set; }
     public DateTime? QrCodeSentAt { get; set; }
     public string? QrCodeSentBy { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = AppTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = AppTime.UtcNow;
 
     public ICollection<Shift> Shifts { get; set; } = [];
 }

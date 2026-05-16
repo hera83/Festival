@@ -85,7 +85,7 @@
                                 }
                             </td>
                             <td class="align-middle" style="color: var(--clr-text-muted); font-size: 0.85rem;">
-                                @(user.LastLogin.HasValue ? user.LastLogin.Value.ToString("dd-MM-yyyy HH:mm") : "—")
+                                @(user.LastLogin.HasValue ? web.Utils.AppTime.ToCopenhagen(user.LastLogin.Value).ToString("dd-MM-yyyy HH:mm") : "—")
                             </td>
                             <td class="pe-3 align-middle text-end">
                                 <div class="d-flex gap-2 justify-content-end">

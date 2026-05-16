@@ -3,13 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
+using web.Utils;
 
 namespace web.Controllers;
 
 [Authorize]
 public class FrivilligController(ApplicationDbContext db) : Controller
 {
-    private static int CurrentSeason => DateTime.Now.Year;
+    private static int CurrentSeason => AppTime.CurrentSeason;
 
     public async Task<IActionResult> Index()
     {
@@ -49,21 +50,24 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         if (!DateOnly.TryParse(date, out var dateOnly))
             return BadRequest("Ugyldig dato");
 
-        var windowStart = dateOnly.ToDateTime(new TimeOnly(startHour, 0));
-        var windowEnd   = windowStart.AddHours(24);
-        var now         = DateTime.Now;
+        var windowStartLocal = dateOnly.ToDateTime(new TimeOnly(startHour, 0));
+        var windowEndLocal   = windowStartLocal.AddHours(24);
+        var windowStartUtc   = AppTime.CopenhagenLocalToUtc(windowStartLocal);
+        var windowEndUtc     = AppTime.CopenhagenLocalToUtc(windowEndLocal);
+        var nowLocal         = AppTime.CopenhagenNow;
+        var nowUtc           = AppTime.UtcNow;
 
         // ── Vagttyper + tilmeldte ────────────────────────────────
         var shiftTypes = await db.ShiftTypes
-            .Where(st => st.SeasonId == CurrentSeason && st.StartTime < windowEnd && st.EndTime > windowStart)
+            .Where(st => st.SeasonId == CurrentSeason && st.StartTime < windowEndLocal && st.EndTime > windowStartLocal)
             .Include(st => st.Shifts)
             .ToListAsync();
 
         // ── Check-ins der overlapper vinduet ────────────────────
         var checkIns = await db.VolunteerCheckIns
             .Where(ci => ci.SeasonId == CurrentSeason
-                      && ci.CheckedInAt < windowEnd
-                      && (ci.CheckedOutAt == null || ci.CheckedOutAt > windowStart))
+                      && ci.CheckedInAt < windowEndUtc
+                      && (ci.CheckedOutAt == null || ci.CheckedOutAt > windowStartUtc))
             .ToListAsync();
 
         var staffed  = new int[24];
@@ -73,14 +77,16 @@ public class FrivilligController(ApplicationDbContext db) : Controller
 
         for (int i = 0; i < 24; i++)
         {
-            var slotStart = windowStart.AddHours(i);
-            var slotEnd   = slotStart.AddHours(1);
+            var slotStartLocal = windowStartLocal.AddHours(i);
+            var slotEndLocal   = slotStartLocal.AddHours(1);
+            var slotStartUtc   = AppTime.CopenhagenLocalToUtc(slotStartLocal);
+            var slotEndUtc     = AppTime.CopenhagenLocalToUtc(slotEndLocal);
 
-            isPast[i] = slotEnd <= now;
+            isPast[i] = slotEndLocal <= nowLocal;
 
             foreach (var st in shiftTypes)
             {
-                if (st.StartTime < slotEnd && st.EndTime > slotStart)
+                if (st.StartTime < slotEndLocal && st.EndTime > slotStartLocal)
                 {
                     required[i] += st.RequiredCount;
                     staffed[i]  += st.Shifts.Count;
@@ -90,14 +96,14 @@ public class FrivilligController(ApplicationDbContext db) : Controller
             // Tæl frivillige der var tjekket ind i dette slot
             foreach (var ci in checkIns)
             {
-                var ciOut = ci.CheckedOutAt ?? now; // åben session tæller til nu
-                if (ci.CheckedInAt < slotEnd && ciOut > slotStart)
+                var ciOut = ci.CheckedOutAt ?? nowUtc; // åben session tæller til nu
+                if (ci.CheckedInAt < slotEndUtc && ciOut > slotStartUtc)
                     checkedIn[i]++;
             }
         }
 
         var labels = Enumerable.Range(0, 24)
-            .Select(i => windowStart.AddHours(i).ToString("HH:00"))
+            .Select(i => windowStartLocal.AddHours(i).ToString("HH:00"))
             .ToList();
 
         return Json(new { labels, staffed, required, checkedIn, isPast });
@@ -327,7 +333,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         volunteer.Name        = vm.Name.Trim();
         volunteer.Email       = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
         volunteer.PhoneNumber = string.IsNullOrWhiteSpace(vm.PhoneNumber) ? null : vm.PhoneNumber.Trim();
-        volunteer.UpdatedAt   = DateTime.Now;
+        volunteer.UpdatedAt   = AppTime.UtcNow;
 
         // Synkroniser vagter
         var existingIds = volunteer.Shifts.Select(s => s.ShiftTypeId).ToHashSet();
@@ -464,7 +470,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         if (requiredCount < 0) return Json(new { success = false, message = "Behov kan ikke være negativt." });
 
         shiftType.RequiredCount = requiredCount;
-        shiftType.UpdatedAt     = DateTime.Now;
+        shiftType.UpdatedAt     = AppTime.UtcNow;
         await db.SaveChangesAsync();
 
         return Json(new { success = true, message = $"Behov for '{shiftType.ShiftName}' sat til {requiredCount}." });

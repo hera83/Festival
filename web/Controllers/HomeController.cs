@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
+using web.Utils;
 
 namespace web.Controllers
 {
@@ -25,7 +26,7 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> CheckInSearch(string? q, string? date)
         {
-            var today = date != null && DateOnly.TryParse(date, out var d) ? d : DateOnly.FromDateTime(DateTime.Now);
+            var today = date != null && DateOnly.TryParse(date, out var d) ? d : AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             // Frivillige der allerede er checket ind i dag (åben session)
@@ -83,7 +84,7 @@ namespace web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             var volunteer = await _db.Volunteers.FindAsync(request.VolunteerId);
@@ -95,7 +96,7 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 VolunteerId = request.VolunteerId,
                 CheckInDate = today,
-                CheckedInAt = DateTime.Now,
+                CheckedInAt = AppTime.UtcNow,
                 CurrentLocation = "Pit"
             };
             _db.VolunteerCheckIns.Add(checkIn);
@@ -108,7 +109,7 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 EventType = "CheckIn",
                 Location = "Pit",
-                OccurredAt = DateTime.Now
+                OccurredAt = AppTime.UtcNow
             };
             _db.VolunteerLocationLogs.Add(log);
             await _db.SaveChangesAsync();
@@ -125,7 +126,7 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCheckedInCount()
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
             var checkedIn = await _db.VolunteerCheckIns
                 .CountAsync(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null);
@@ -138,8 +139,8 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetNoShowCount()
         {
-            var now = DateTime.Now;
-            var today = DateOnly.FromDateTime(now);
+            var now = AppTime.CopenhagenNow;
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             // Frivillige der allerede er checket ind i dag
@@ -168,8 +169,8 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetNoShowList(string? q)
         {
-            var now = DateTime.Now;
-            var today = DateOnly.FromDateTime(now);
+            var now = AppTime.CopenhagenNow;
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             var checkedInVolunteerIds = await _db.VolunteerCheckIns
@@ -214,7 +215,7 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetPitVolunteers(string? q)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             var hasQuery = !string.IsNullOrWhiteSpace(q);
@@ -277,7 +278,7 @@ namespace web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MoveVolunteer([FromBody] MoveVolunteerRequest request)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             var checkIn = await _db.VolunteerCheckIns
@@ -304,7 +305,7 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 EventType = "Move",
                 Location = to,
-                OccurredAt = DateTime.Now
+                OccurredAt = AppTime.UtcNow
             });
 
             await _db.SaveChangesAsync();
@@ -326,7 +327,7 @@ namespace web.Controllers
             if (string.IsNullOrWhiteSpace(request.Key))
                 return Json(new { result = "error", message = "Ugyldig QR kode." });
 
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             var volunteer = await _db.Volunteers
@@ -339,7 +340,7 @@ namespace web.Controllers
             var existing = await _db.VolunteerCheckIns
                 .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == volunteer.Id && c.CheckInDate == today && c.CheckedOutAt == null);
 
-            var now = DateTime.Now;
+            var now = AppTime.UtcNow;
 
             if (existing == null)
             {
@@ -399,7 +400,7 @@ namespace web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckOut([FromBody] CheckInRequest request)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
             var volunteer = await _db.Volunteers.FindAsync(request.VolunteerId);
@@ -412,7 +413,7 @@ namespace web.Controllers
             if (existing == null)
                 return Json(new { success = false, message = $"{volunteer.Name} er ikke checket ind." });
 
-            var now = DateTime.Now;
+            var now = AppTime.UtcNow;
 
             // Hvis personen ikke er i pitten
             if (existing.CurrentLocation != "Pit")
