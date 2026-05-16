@@ -1586,11 +1586,63 @@
     syncPitAlarm().then(() => loadPitVolunteers(''));
     loadAllPosts();
 
-    // Alarm-tjek hvert minut
-    setInterval(() => {
-        loadAllPosts();
-        syncPitAlarm().then(() => loadPitVolunteers(pitSearchInput.value));
-    }, 60 * 1000);
+    // ── Background auto-refresh ───────────────────────────────────────────────
+    // Poller et let "state hash" endpoint hvert 3. sekund.
+    // Kun hvis hash'en er ændret OG brugeren ikke er i gang med noget,
+    // hentes de faktiske data og UI opdateres stille og roligt.
+    let _lastStateHash = null;
+    let _autoRefreshPaused = false; // sættes true under drag/drop
+
+    // Lyt på drag-events for at pause refresh under drag
+    document.addEventListener('dragstart', () => { _autoRefreshPaused = true; });
+    document.addEventListener('dragend',   () => { setTimeout(() => { _autoRefreshPaused = false; }, 500); });
+
+    async function backgroundRefresh() {
+        // Spring over hvis brugeren er i gang med drag eller søger aktivt
+        if (_autoRefreshPaused) return;
+        if (document.hidden) return; // tab er ikke synlig
+
+        try {
+            const res  = await fetch('/Home/StateHash');
+            const data = await res.json();
+            const hash = data.hash;
+
+            if (hash === _lastStateHash) return; // ingen ændring
+
+            _lastStateHash = hash;
+
+            // Opdater alt – men bevar pit-søgefeltet hvis det er i brug
+            const pitQ = pitSearchInput.value;
+            syncPitAlarm().then(() => loadPitVolunteers(pitQ));
+            loadAllPosts();
+            updateCheckedInCount();
+            updateNoShowCount();
+
+            // Diskret prik der viser at siden er synkroniseret
+            showSyncDot();
+        } catch {
+            // Netværksfejl – ignorer stille
+        }
+    }
+
+    function showSyncDot() {
+        let dot = document.getElementById('autoSyncDot');
+        if (!dot) {
+            dot = document.createElement('div');
+            dot.id = 'autoSyncDot';
+            dot.title = 'Siden er synkroniseret';
+            dot.style.cssText = 'position:fixed;bottom:10px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--clr-ok);opacity:0;transition:opacity 0.4s;pointer-events:none;z-index:8000;';
+            document.body.appendChild(dot);
+        }
+        dot.style.opacity = '1';
+        clearTimeout(dot._t);
+        dot._t = setTimeout(() => { dot.style.opacity = '0'; }, 1800);
+    }
+
+    // Sæt hash ved første load så vi ikke refresher unødvendigt med det samme
+    fetch('/Home/StateHash').then(r => r.json()).then(d => { _lastStateHash = d.hash; }).catch(() => {});
+
+    setInterval(backgroundRefresh, 3 * 1000);
 })();
 </script>
 

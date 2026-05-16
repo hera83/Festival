@@ -395,6 +395,38 @@ namespace web.Controllers
             public string Key { get; set; } = string.Empty;
         }
 
+        // GET: /Home/StateHash — returnerer et let fingerprint af den nuværende driftsstate.
+        // Bruges af klientens background-poller til at detektere ændringer uden at hente alle data.
+        [HttpGet]
+        public async Task<IActionResult> StateHash()
+        {
+            var today = AppTime.CopenhagenToday;
+            var seasonId = today.Year;
+
+            var checkInCount = await _db.VolunteerCheckIns
+                .CountAsync(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null);
+
+            var lastLogTick = await _db.VolunteerLocationLogs
+                .Where(l => l.SeasonId == seasonId)
+                .OrderByDescending(l => l.OccurredAt)
+                .Select(l => (DateTime?)l.OccurredAt)
+                .FirstOrDefaultAsync();
+
+            var postCount = await _db.Posts.CountAsync(p => p.SeasonId == seasonId);
+
+            // Inkluder en checksum af posternes positioner så flytning af poster også detekteres
+            var postPositionHash = await _db.Posts
+                .Where(p => p.SeasonId == seasonId)
+                .Select(p => p.Id * 31 + p.ColumnIndex * 7 + p.SortOrder)
+                .SumAsync(x => (long)x);
+
+            // Enkel deterministisk hash – billig at beregne
+            var raw = $"{checkInCount}|{lastLogTick?.Ticks ?? 0}|{postCount}|{postPositionHash}";
+            var hash = raw.GetHashCode().ToString("X8");
+
+            return Json(new { hash });
+        }
+
         // POST: /Home/CheckOut
         [HttpPost]
         [ValidateAntiForgeryToken]
