@@ -1,0 +1,78 @@
+@model web.Models.CreateVolunteerViewModel
+
+<div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+    <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Opret frivillig</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+</div>
+
+<form id="createVolForm" autocomplete="off">
+    @Html.AntiForgeryToken()
+
+    <div class="modal-body" style="background: var(--clr-surface); color: var(--clr-text);">
+
+        <div class="row g-3 mb-3">
+            <div class="col-sm-4">
+                <label class="form-label small fw-semibold">Nøgle <span class="text-danger">*</span></label>
+                <input type="text" name="Key" id="volKey" class="form-control form-control-sm"
+                       value="@Model.Key" maxlength="20"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+                <div class="form-text" style="color: var(--clr-text-muted);">Unik identifikator</div>
+            </div>
+            <div class="col-sm-8">
+                <label class="form-label small fw-semibold">Navn <span class="text-danger">*</span></label>
+                <input type="text" name="Name" class="form-control form-control-sm"
+                       placeholder="Fornavn Efternavn"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">E-mail</label>
+                <input type="email" name="Email" class="form-control form-control-sm"
+                       placeholder="navn@eksempel.dk"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">Telefon</label>
+                <input type="tel" name="PhoneNumber" class="form-control form-control-sm"
+                       placeholder="12 34 56 78"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+            </div>
+        </div>
+
+        @if (Model.AvailableShiftTypes.Any())
+        {
+            <div>
+                <label class="form-label small fw-semibold">Vagttyper</label>
+                <div class="border rounded p-2" style="border-color: var(--clr-border) !important; max-height: 220px; overflow-y: auto; background: var(--clr-bg);">
+                    @foreach (var st in Model.AvailableShiftTypes)
+                    {
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox"
+                                   name="ShiftTypeIds" value="@st.Id" id="st_@st.Id" />
+                            <label class="form-check-label small" for="st_@st.Id" style="color: var(--clr-text);">
+                                <span class="fw-semibold">@st.ShiftName</span>
+                                <span style="color: var(--clr-text-muted);">
+                                    — @st.StartTime.ToString("dd-MM HH:mm") – @st.EndTime.ToString("HH:mm")
+                                </span>
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <p class="small mb-0" style="color: var(--clr-text-muted);">
+                <i class="bi bi-info-circle me-1"></i>Ingen vagttyper registreret for indeværende sæson.
+            </p>
+        }
+    </div>
+
+    <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-surface);">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuller</button>
+        <button type="submit" id="createVolSubmit" class="btn btn-sm btn-primary">
+            <i class="bi bi-person-plus me-1"></i>Opret
+        </button>
+    </div>
+</form>

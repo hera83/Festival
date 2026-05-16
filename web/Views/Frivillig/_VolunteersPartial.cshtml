@@ -1,0 +1,466 @@
+@model web.Models.VolunteersPagedViewModel
+
+@* Søgefelt — aldrig erstattet af AJAX *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="volSearchInput" class="form-control form-control-sm"
+               placeholder="Søg nøgle, navn, e-mail eller telefon…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               autocomplete="off" />
+        <button type="button" id="volSearchClear" class="btn btn-sm d-none"
+                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted); border-left: none;"
+                tabindex="-1" aria-label="Ryd søgning">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <button type="button" id="btnOpenCreateVol" class="btn btn-sm"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
+        <i class="bi bi-person-plus me-1"></i>Opret frivillig
+    </button>
+</div>
+
+@* Modal — indhold hentes dynamisk *@
+<div class="modal fade" id="createVolModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+            <div id="createVolModalBody">
+                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Rediger-modal *@
+<div class="modal fade" id="editVolModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+            <div id="editVolModalBody">
+                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Slet-modal *@
+<div class="modal fade" id="deleteVolModal" tabindex="-1" aria-labelledby="deleteVolModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="deleteVolModalLabel">
+                    <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet frivillig
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                <p class="mb-1">Er du sikker på du vil slette</p>
+                <p class="fw-semibold mb-1" id="deleteVolName"></p>
+                <p class="small mb-0" style="color: var(--clr-text-muted);">Alle tilknyttede vagter slettes også.</p>
+            </div>
+            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Annuller
+                </button>
+                <button type="button" id="deleteVolConfirm" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                    <i class="bi bi-trash me-1"></i>Slet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* QR-kode modal *@
+<div class="modal fade" id="qrVolModal" tabindex="-1" aria-labelledby="qrVolModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="qrVolModalLabel">
+                    <i class="bi bi-qr-code me-2" style="color: var(--clr-brand);"></i>QR-kode – <span id="qrVolName"></span>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+                <p class="mb-1 small" style="color: var(--clr-text-muted);">Nøgle: <span id="qrVolKey" class="fw-semibold" style="color: var(--clr-text);"></span></p>
+                <div class="mt-3 p-2 rounded d-inline-block" style="background: #fff;">
+                    <img id="qrVolImage" src="" alt="QR-kode" style="width: 180px; height: 180px;" />
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm" id="qrPrintBtn" style="background: var(--clr-brand); color: #fff; border: none;">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Resultat-zone — kun denne div overskrives ved søgning/sideskift *@
+<div id="vol-result-zone">
+    <div class="card">
+        <div class="card-header">
+            <span><i class="bi bi-people me-2"></i>Frivillige (<span>@Model.TotalCount</span>)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <th class="ps-3">Nøgle</th>
+                            <th>Navn</th>
+                            <th>E-mail</th>
+                            <th>Telefon</th>
+                            <th>QR sendt</th>
+                            <th class="pe-3" style="width:110px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Volunteers.Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                    <i class="bi bi-person-x fs-4 d-block mb-1"></i>
+                                    Ingen frivillige fundet
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var v in Model.Volunteers)
+                        {
+                            <tr style="border-bottom: 1px solid var(--clr-border);">
+                                <td class="ps-3 align-middle"><span class="badge badge-info">@v.Key</span></td>
+                                <td class="align-middle fw-semibold">@v.Name</td>
+                                <td class="align-middle">@(v.Email ?? "—")</td>
+                                <td class="align-middle">@(v.PhoneNumber ?? "—")</td>
+                                <td class="align-middle">
+                                    @if (v.QrCodeSent)
+                                    {
+                                        <span class="badge badge-ok"><i class="bi bi-check-circle me-1"></i>Sendt</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-warn"><i class="bi bi-clock me-1"></i>Afventer</span>
+                                    }
+                                </td>
+                                <td class="pe-3 align-middle text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-sm vol-qr-btn"
+                                                style="background: var(--clr-ok); color: #fff; border: none;"
+                                                title="Vis QR-kode"
+                                                data-id="@v.Id" data-name="@v.Name" data-key="@v.Key">
+                                            <i class="bi bi-qr-code"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm vol-edit-btn"
+                                                style="background: var(--clr-info); color: #fff; border: none;"
+                                                title="Rediger frivillig"
+                                                data-id="@v.Id">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm vol-delete-btn"
+                                                style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                title="Slet frivillig"
+                                                data-id="@v.Id" data-name="@v.Name"
+                                                data-bs-toggle="modal" data-bs-target="#deleteVolModal">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+        <span style="color: var(--clr-text-muted); font-size: 0.85rem;">
+            @if (Model.TotalCount == 0) { <span>Ingen resultater</span> }
+            else { <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span> }
+        </span>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+                <span>Pr. side</span>
+                <select id="volPageSizeSelect" class="form-select form-select-sm"
+                        style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                    @foreach (var size in new[] { 10, 25, 50 })
+                    {
+                        if (Model.PageSize == size) { <!option value="@size" selected>@size</!option> }
+                        else { <!option value="@size">@size</!option> }
+                    }
+                </select>
+            </div>
+            <nav aria-label="Sidenavigation">
+                <ul class="pagination pagination-sm mb-0">
+                    @{
+                        var cp = Model.Page; var tp = Model.TotalPages;
+                        var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+                        for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+                    }
+                    <li class="page-item @(cp == 1 ? "disabled" : "")">
+                        <button class="page-link vol-page-btn" data-page="@(cp - 1)" @(cp == 1 ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                    </li>
+                    @{ int? lastShown = null; }
+                    @foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link vol-page-btn" data-page="@p"
+                                    style="@(p == cp ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;" : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);")">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                    <li class="page-item @(cp >= tp ? "disabled" : "")">
+                        <button class="page-link vol-page-btn" data-page="@(cp + 1)" @(cp >= tp ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var searchUrl     = '@Url.Action("VolunteersSearch",  "Frivillig")';
+    var createFormUrl = '@Url.Action("GetCreateForm",     "Frivillig")';
+    var createPostUrl = '@Url.Action("CreateVolunteer",   "Frivillig")';
+    var editFormUrl   = '@Url.Action("GetEditForm",       "Frivillig")';
+    var editPostUrl   = '@Url.Action("UpdateVolunteer",   "Frivillig")';
+    var deletePostUrl = '@Url.Action("DeleteVolunteer",   "Frivillig")';
+
+    var debounce;
+    var currentSize  = @Model.PageSize;
+    var currentPage  = @Model.Page;
+
+    // ── Hjælper: hent og opdater result-zone ─────────────────────
+    async function loadPage(page, size) {
+        currentPage = page;
+        currentSize = size;
+        var q   = document.getElementById('volSearchInput').value.trim();
+        var url = searchUrl + '?q=' + encodeURIComponent(q) + '&page=' + page + '&pageSize=' + size;
+        try {
+            var res = await fetch(url);
+            if (!res.ok) { showToast('Kunne ikke hente frivillige.', 'error'); return; }
+            var doc  = new DOMParser().parseFromString(await res.text(), 'text/html');
+            var zone = doc.getElementById('vol-result-zone');
+            if (!zone) return;
+            document.getElementById('vol-result-zone').innerHTML = zone.innerHTML;
+            bindZoneEvents();
+        } catch (e) {
+            showToast('Netværksfejl – prøv igen.', 'error');
+        }
+    }
+
+    // ── Søgning ───────────────────────────────────────────────────
+    var volInput = document.getElementById('volSearchInput');
+    var volClear = document.getElementById('volSearchClear');
+
+    volInput.addEventListener('input', function () {
+        volClear.classList.toggle('d-none', this.value === '');
+    });
+    volClear.addEventListener('click', function () {
+        volInput.value = '';
+        volClear.classList.add('d-none');
+        loadPage(1, currentSize);
+        volInput.focus();
+    });
+    volInput.addEventListener('keyup', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { loadPage(1, currentSize); }, 250);
+    });
+
+    // ── Zone-events (paginering) ──────────────────────────────────
+    function bindZoneEvents() {
+        var sel = document.getElementById('volPageSizeSelect');
+        if (sel) sel.addEventListener('change', function () { loadPage(1, parseInt(this.value)); });
+        document.querySelectorAll('.vol-page-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var p = parseInt(this.dataset.page);
+                if (!isNaN(p) && p >= 1) loadPage(p, currentSize);
+            });
+        });
+        bindRowActions();
+    }
+
+    // ── Slet-modal ────────────────────────────────────────────────
+    var deleteModalEl   = document.getElementById('deleteVolModal');
+    var bsDeleteModal   = new bootstrap.Modal(deleteModalEl);
+    var pendingDeleteId = null;
+
+    deleteModalEl.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        pendingDeleteId = parseInt(btn.dataset.id);
+        document.getElementById('deleteVolName').textContent = btn.dataset.name;
+    });
+
+    document.getElementById('deleteVolConfirm').addEventListener('click', async function () {
+        if (!pendingDeleteId) return;
+        var btn = this;
+        btn.disabled = true;
+        try {
+            var fd = new FormData();
+            fd.append('id', pendingDeleteId);
+            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+            var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
+            var json = await res.json();
+            bsDeleteModal.hide();
+            if (json.success) {
+                showToast(json.message, 'success');
+                document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                await loadPage(currentPage, currentSize);
+            } else {
+                showToast(json.message, 'error');
+            }
+        } catch (e) {
+            bsDeleteModal.hide();
+            showToast('Netværksfejl – kunne ikke slette.', 'error');
+        } finally {
+            btn.disabled = false;
+            pendingDeleteId = null;
+        }
+    });
+
+    // ── QR-kode modal ─────────────────────────────────────────────
+    var qrModalEl  = document.getElementById('qrVolModal');
+    var bsQrModal  = new bootstrap.Modal(qrModalEl);
+
+    function openQrModal(id, name, key) {
+        document.getElementById('qrVolName').textContent = name;
+        document.getElementById('qrVolKey').textContent  = key;
+        var encoded = encodeURIComponent(key);
+        document.getElementById('qrVolImage').src = 'https://quickchart.io/qr?text=' + encoded + '&size=180&margin=1';
+        bsQrModal.show();
+    }
+
+    document.getElementById('qrPrintBtn').addEventListener('click', function () {
+        var name = document.getElementById('qrVolName').textContent;
+        var key  = document.getElementById('qrVolKey').textContent;
+        var src  = document.getElementById('qrVolImage').src;
+        var win  = window.open('', '_blank', 'width=400,height=500');
+        win.document.write(
+            '<!DOCTYPE html><html><head><title>QR – ' + name + '</title>' +
+            '<style>' +
+            'body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif; }' +
+            'img { width: 200px; height: 200px; }' +
+            'p { margin: 6px 0; font-size: 14px; }' +
+            '.key { font-size: 12px; color: #555; }' +
+            '</style></head><body>' +
+            '<img src="' + src + '" onload="window.print(); window.close();" />' +
+            '<p><strong>' + name + '</strong></p>' +
+            '<p class="key">Nøgle: ' + key + '</p>' +
+            '</body></html>'
+        );
+        win.document.close();
+    });
+
+    // ── Rediger/slet ikoner ───────────────────────────────────────
+    function bindRowActions() {
+        document.querySelectorAll('.vol-qr-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () { openQrModal(parseInt(this.dataset.id), this.dataset.name, this.dataset.key); });
+        });
+        document.querySelectorAll('.vol-edit-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () { openEditModal(parseInt(this.dataset.id)); });
+        });
+    }
+
+    // ── Opret-modal ───────────────────────────────────────────────
+    var createModalEl   = document.getElementById('createVolModal');
+    var createModalBody = document.getElementById('createVolModalBody');
+    var bsCreateModal   = new bootstrap.Modal(createModalEl);
+
+    document.getElementById('btnOpenCreateVol').addEventListener('click', async function () {
+        createModalBody.innerHTML = spinner();
+        bsCreateModal.show();
+        try {
+            var res = await fetch(createFormUrl);
+            if (res.ok) { createModalBody.innerHTML = await res.text(); bindCreateForm(); }
+            else { bsCreateModal.hide(); showToast('Kunne ikke hente opret-formularen.', 'error'); }
+        } catch (e) {
+            bsCreateModal.hide();
+            showToast('Netværksfejl – prøv igen.', 'error');
+        }
+    });
+
+    function bindCreateForm() {
+        var form = document.getElementById('createVolForm');
+        if (!form) return;
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            await submitForm(form, createPostUrl, document.getElementById('createVolSubmit'), bsCreateModal, 'Frivillig oprettet.');
+        });
+    }
+
+    // ── Rediger-modal ─────────────────────────────────────────────
+    var editModalEl   = document.getElementById('editVolModal');
+    var editModalBody = document.getElementById('editVolModalBody');
+    var bsEditModal   = new bootstrap.Modal(editModalEl);
+
+    async function openEditModal(id) {
+        editModalBody.innerHTML = spinner();
+        bsEditModal.show();
+        try {
+            var res = await fetch(editFormUrl + '?id=' + id);
+            if (res.ok) { editModalBody.innerHTML = await res.text(); bindEditForm(); }
+            else { bsEditModal.hide(); showToast('Kunne ikke hente redigér-formularen.', 'error'); }
+        } catch (e) {
+            bsEditModal.hide();
+            showToast('Netværksfejl – prøv igen.', 'error');
+        }
+    }
+
+    function bindEditForm() {
+        var form = document.getElementById('editVolForm');
+        if (!form) return;
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            await submitForm(form, editPostUrl, document.getElementById('editVolSubmit'), bsEditModal, 'Ændringer gemt.');
+        });
+    }
+
+    // ── Fælles form-submit ────────────────────────────────────────
+    async function submitForm(form, url, submitEl, modal, successMsg) {
+        submitEl.disabled = true;
+        try {
+            var res  = await fetch(url, { method: 'POST', body: new FormData(form) });
+            var json = await res.json();
+            if (json.success) {
+                modal.hide();
+                showToast(json.message || successMsg, 'success');
+                document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                await loadPage(1, currentSize);
+            } else {
+                showToast(json.message || 'Der opstod en fejl.', 'error');
+                submitEl.disabled = false;
+            }
+        } catch (e) {
+            showToast('Netværksfejl – kunne ikke gemme.', 'error');
+            submitEl.disabled = false;
+        }
+    }
+
+    function spinner() {
+        return '<div class="modal-body text-center py-5" style="color:var(--clr-text-muted);"><div class="spinner-border spinner-border-sm" role="status"></div></div>';
+    }
+
+    bindZoneEvents();
+})();
+</script>
+

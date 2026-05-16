@@ -1,0 +1,393 @@
+@model web.Models.VolunteerImportPreviewViewModel
+
+@{
+    var rowsToShow = Model.Rows;
+}
+
+<div class="modal fade" id="volunteerImportPreviewModal" tabindex="-1" aria-labelledby="volunteerImportPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 1600px; width: min(1600px, calc(100vw - 2rem));">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <div>
+                    <h6 class="modal-title mb-1" id="volunteerImportPreviewModalLabel">
+                        <i class="bi bi-table me-2" style="color: var(--clr-brand);"></i>Import preview
+                    </h6>
+                    <div class="small" style="color: var(--clr-text-muted);">
+                        @Model.FileName · @Model.TotalCount rækker · @Model.ValidCount ok · @Model.ErrorCount med fejl
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" style="background: var(--clr-surface);">
+                <div class="d-flex flex-column align-items-start gap-2 mb-3">
+                    <div class="btn-group btn-group-sm w-auto" role="group" aria-label="Filtrér rækker">
+                        <button type="button" class="btn btn-outline-secondary active" data-preview-filter="all">
+                            <i class="bi bi-grid-3x3-gap me-1"></i>Vis alle
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-preview-filter="errors">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Vis fejl
+                        </button>
+                    </div>
+
+                    <div class="input-group input-group-sm" style="max-width: 360px; width: 100%;">
+                        <span class="input-group-text" style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="volunteerPreviewSearchInput" class="form-control form-control-sm" placeholder="Søg i preview…" autocomplete="off" style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--clr-border);">
+                                <th class="ps-3">Række</th>
+                                <th>Key</th>
+                                <th>Navn</th>
+                                <th>Email</th>
+                                <th>Telefon</th>
+                                <th>Start</th>
+                                <th>Slut</th>
+                                <th>VagtNavn</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volunteerPreviewBody">
+                            @if (!rowsToShow.Any())
+                            {
+                                <tr id="volunteerPreviewEmptyRow">
+                                    <td colspan="9" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                        <i class="bi bi-inbox fs-4 d-block mb-1"></i>
+                                        Ingen rækker fundet
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var row in rowsToShow)
+                                {
+                                    var rowClass = row.HasErrors ? "preview-row has-errors" : "preview-row no-errors";
+                                    var searchText = string.Join(" ", new[]
+                                    {
+                                        row.RowNumber.ToString(),
+                                        row.Key,
+                                        row.Name,
+                                        row.Email ?? string.Empty,
+                                        row.PhoneNumber ?? string.Empty,
+                                        row.Start?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty,
+                                        row.End?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty,
+                                        row.ShiftName ?? string.Empty,
+                                        string.Join(" ", row.Errors)
+                                    }).ToLowerInvariant();
+                                    <tr class="@rowClass" data-has-errors="@(row.HasErrors ? "true" : "false")" data-search="@searchText" style="border-bottom: 1px solid var(--clr-border);">
+                                        <td class="ps-3">@row.RowNumber</td>
+                                        <td>@row.Key</td>
+                                        <td>@row.Name</td>
+                                        <td>@row.Email</td>
+                                        <td>@row.PhoneNumber</td>
+                                        <td>@(row.Start?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
+                                        <td>@(row.End?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
+                                        <td>@row.ShiftName</td>
+                                        <td>
+                                            @if (row.HasErrors)
+                                            {
+                                                var errorList = string.Join("\n", row.Errors);
+                                                <span class="badge badge-alarm"
+                                                      data-bs-toggle="tooltip"
+                                                      data-bs-placement="left"
+                                                      data-bs-custom-class="import-error-tooltip"
+                                                      title="@errorList"
+                                                      style="cursor: help;">
+                                                    <i class="bi bi-x-circle me-1"></i>Fejl (@row.Errors.Count)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-ok"><i class="bi bi-check-lg me-1"></i>OK</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                                <tr id="volunteerPreviewEmptyRow" class="d-none">
+                                    <td colspan="9" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                        <i class="bi bi-inbox fs-4 d-block mb-1"></i>
+                                        Ingen resultater fundet
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="volunteerPreviewPaginationBar" class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+                    <span id="volunteerPreviewPaginationInfo" style="color: var(--clr-text-muted); font-size: 0.85rem;">
+                        @if (Model.TotalCount == 0)
+                        {
+                            <span>Ingen resultater</span>
+                        }
+                        else
+                        {
+                            <span>1–@Math.Min(10, Model.TotalCount) af @Model.TotalCount</span>
+                        }
+                    </span>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+                            <span>Pr. side</span>
+                            <select id="volunteerPreviewPageSizeSelect" class="form-select form-select-sm" style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                                @foreach (var size in new[] { 10, 25, 50 })
+                                {
+                                    if (size == 10)
+                                    {
+                                        <option value="@size" selected>@size</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@size">@size</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <nav aria-label="Sidenavigation">
+                            <ul class="pagination pagination-sm mb-0" id="volunteerPreviewPaginationList"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Luk
+                </button>
+                <button type="button"
+                        id="confirmVolunteerImportBtn"
+                        class="btn btn-sm"
+                        data-has-errors="@(Model.ErrorCount > 0 ? "true" : "false")"
+                        style="background: var(--clr-brand); color: #fff; border: none;"
+                        @(Model.ErrorCount > 0 ? "disabled" : null)>
+                    <i class="bi bi-upload me-1"></i>Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.import-error-tooltip .tooltip-inner {
+    background: #2a0a0a;
+    border: 1px solid var(--clr-alarm, #e53e3e);
+    color: #fca5a5;
+    text-align: left;
+    white-space: pre-line;
+    max-width: 320px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    padding: 0.5rem 0.75rem;
+}
+.import-error-tooltip .tooltip-arrow::before {
+    border-left-color: var(--clr-alarm, #e53e3e) !important;
+}
+</style>
+
+<script>
+(function () {
+    const modal = document.getElementById('volunteerImportPreviewModal');
+    if (!modal) return;
+
+    // Initialise tooltips on error badges (re-run after each render)
+    function initTooltips() {
+        modal.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+            const existing = bootstrap.Tooltip.getInstance(el);
+            if (existing) existing.dispose();
+            new bootstrap.Tooltip(el, { trigger: 'hover focus' });
+        });
+    }
+
+    const searchInput = modal.querySelector('#volunteerPreviewSearchInput');
+    const filterButtons = modal.querySelectorAll('[data-preview-filter]');
+    const pageSizeSelect = modal.querySelector('#volunteerPreviewPageSizeSelect');
+    const paginationList = modal.querySelector('#volunteerPreviewPaginationList');
+    const paginationInfo = modal.querySelector('#volunteerPreviewPaginationInfo');
+    const confirmImportBtn = modal.querySelector('#confirmVolunteerImportBtn');
+    const importForm = document.getElementById('volunteerImportForm');
+    const importAction = importForm ? importForm.dataset.importAction : null;
+    const rows = Array.from(modal.querySelectorAll('.preview-row'));
+    const emptyRow = modal.querySelector('#volunteerPreviewEmptyRow');
+    const totalRows = rows.length;
+    const totalErrorRows = rows.filter(row => row.dataset.hasErrors === 'true').length;
+    const state = { filter: 'all', q: '', page: 1, pageSize: 10 };
+    let debounceTimer;
+
+    function getFilteredRows() {
+        return rows.filter(row => {
+            const search = (row.dataset.search || '').toLowerCase();
+            const hasErrors = row.dataset.hasErrors === 'true';
+
+            if (state.filter === 'errors' && !hasErrors) return false;
+            if (state.q && !search.includes(state.q)) return false;
+            return true;
+        });
+    }
+
+    function renderPagination(totalCount) {
+        const totalPages = totalCount > 0 ? Math.ceil(totalCount / state.pageSize) : 1;
+        const currentPage = Math.min(Math.max(state.page, 1), totalPages);
+        state.page = currentPage;
+
+        if (!paginationList) return;
+        paginationList.innerHTML = '';
+
+        const addItem = (page, label, disabled = false, active = false, icon = '') => {
+            const li = document.createElement('li');
+            li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'page-link page-btn';
+            btn.dataset.page = page;
+            btn.disabled = disabled;
+            btn.style.background = active ? 'var(--clr-brand)' : 'var(--clr-surface)';
+            btn.style.borderColor = 'var(--clr-border)';
+            btn.style.color = active ? '#fff' : 'var(--clr-text-muted)';
+            btn.innerHTML = icon ? '<i class="bi ' + icon + '"></i>' : label;
+            if (!icon) btn.textContent = label;
+            li.appendChild(btn);
+            paginationList.appendChild(li);
+        };
+
+        const addEllipsis = () => {
+            const li = document.createElement('li');
+            li.className = 'page-item disabled';
+            li.innerHTML = '<span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>';
+            paginationList.appendChild(li);
+        };
+
+        addItem(currentPage - 1, '', currentPage === 1, false, 'bi-chevron-left');
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) addItem(i, String(i), false, i === currentPage);
+        } else {
+            addItem(1, '1', false, currentPage === 1);
+            if (currentPage > 3) addEllipsis();
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            for (let i = start; i <= end; i++) addItem(i, String(i), false, i === currentPage);
+            if (currentPage < totalPages - 2) addEllipsis();
+            addItem(totalPages, String(totalPages), false, currentPage === totalPages);
+        }
+
+        addItem(currentPage + 1, '', currentPage >= totalPages, false, 'bi-chevron-right');
+
+        document.querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const page = parseInt(this.dataset.page, 10);
+                if (!Number.isNaN(page)) {
+                    state.page = page;
+                    render();
+                }
+            });
+        });
+    }
+
+    function render() {
+        const filteredRows = getFilteredRows();
+        const totalCount = filteredRows.length;
+        const totalPages = totalCount > 0 ? Math.ceil(totalCount / state.pageSize) : 1;
+        if (state.page > totalPages) state.page = totalPages;
+
+        rows.forEach(row => row.classList.add('d-none'));
+        if (emptyRow) emptyRow.classList.add('d-none');
+
+        if (totalCount === 0) {
+            if (emptyRow) {
+                const cell = emptyRow.querySelector('td');
+                if (cell) {
+                    cell.innerHTML = state.filter === 'errors' && totalErrorRows === 0
+                        ? '<i class="bi bi-check2-circle fs-4 d-block mb-1"></i>Der er ingen fejl i filen'
+                        : '<i class="bi bi-inbox fs-4 d-block mb-1"></i>Ingen resultater fundet';
+                }
+                emptyRow.classList.remove('d-none');
+            }
+            if (paginationInfo) paginationInfo.innerHTML = '<span>Ingen resultater</span>';
+            renderPagination(0);
+            return;
+        }
+
+        const startIndex = (state.page - 1) * state.pageSize;
+        const pagedRows = filteredRows.slice(startIndex, startIndex + state.pageSize);
+        pagedRows.forEach(row => row.classList.remove('d-none'));
+
+        const rangeFrom = startIndex + 1;
+        const rangeTo = Math.min(startIndex + state.pageSize, totalCount);
+        if (paginationInfo) paginationInfo.innerHTML = '<span>' + rangeFrom + '–' + rangeTo + ' af ' + totalCount + '</span>';
+        renderPagination(totalCount);
+        initTooltips();
+    }
+
+    function setFilter(filter) {
+        state.filter = filter;
+        state.page = 1;
+        filterButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.previewFilter === filter));
+        render();
+    }
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            setFilter(this.dataset.previewFilter);
+        });
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                state.q = searchInput.value.trim().toLowerCase();
+                state.page = 1;
+                render();
+            }, 250);
+        });
+    }
+
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', function () {
+            state.pageSize = parseInt(this.value, 10) || 10;
+            state.page = 1;
+            render();
+        });
+    }
+
+    if (confirmImportBtn && importForm && importAction) {
+        confirmImportBtn.disabled = confirmImportBtn.dataset.hasErrors === 'true';
+
+        confirmImportBtn.addEventListener('click', async function () {
+            if (confirmImportBtn.disabled) return;
+
+            const formData = new FormData(importForm);
+            confirmImportBtn.disabled = true;
+
+            try {
+                const response = await fetch(importAction, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    showToast(result.message || 'Import fejlede.', 'error');
+                    confirmImportBtn.disabled = confirmImportBtn.dataset.hasErrors === 'true';
+                    return;
+                }
+
+                showToast(result.message || 'Import gennemført.', 'success');
+
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) modalInstance.hide();
+            } catch {
+                showToast('Der opstod en fejl under importen.', 'error');
+                confirmImportBtn.disabled = confirmImportBtn.dataset.hasErrors === 'true';
+            }
+        });
+    }
+
+    render();
+})();
+</script>

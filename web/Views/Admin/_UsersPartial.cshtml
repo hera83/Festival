@@ -1,0 +1,545 @@
+@model web.Models.AdminUsersViewModel
+
+@* ── Søgebar + Opret-knap ── *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="userSearchInput" class="form-control form-control-sm"
+               placeholder="Søg navn, e-mail eller brugernavn…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               autocomplete="off" />
+        <button type="button" id="userSearchClear" class="btn btn-sm d-none"
+                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted); border-left: none;"
+                tabindex="-1" aria-label="Ryd søgning">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <button type="button" class="btn btn-sm"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;"
+            data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <i class="bi bi-person-plus me-1"></i>Opret bruger
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-people me-2"></i>Brugere (<span id="userCount">@Model.TotalCount</span>)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--clr-border);">
+                        <th class="ps-3">Navn</th>
+                        <th>E-mail</th>
+                        <th>Roller</th>
+                        <th>Status</th>
+                        <th class="pe-3 text-end">Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    @if (!Model.Users.Any())
+                    {
+                        <tr id="emptyRow">
+                            <td colspan="5" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                <i class="bi bi-person-x fs-4 d-block mb-1"></i>
+                                Ingen brugere fundet
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <td class="ps-3 align-middle">
+                                <span class="fw-semibold">@user.DisplayName</span>
+                            </td>
+                            <td class="align-middle">@user.Email</td>
+                            <td class="align-middle">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var role in user.Roles)
+                                    {
+                                        var badgeClass = role switch {
+                                            "Administrator" => "badge-alarm",
+                                            "Koordinator"   => "badge-warn",
+                                            _               => "badge-info"
+                                        };
+                                        <span class="badge @badgeClass">@role</span>
+                                    }
+                                    @if (!user.Roles.Any())
+                                    {
+                                        <span style="color: var(--clr-text-muted); font-size: 0.8rem;">Ingen roller</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                @if (user.IsLockedOut)
+                                {
+                                    <span class="badge badge-alarm"><i class="bi bi-lock-fill me-1"></i>Låst</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-ok"><i class="bi bi-check-circle me-1"></i>Aktiv</span>
+                                }
+                            </td>
+                            <td class="pe-3 align-middle text-end">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    @* Rediger knap *@
+                                    @if (user.Id == Model.CurrentUserId)
+                                    {
+                                        <button type="button" class="btn btn-sm" disabled
+                                                style="background: var(--clr-surface); color: var(--clr-text-muted); border: 1px solid var(--clr-border); cursor: not-allowed;"
+                                                title="Du kan ikke redigere din egen bruger">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm" disabled
+                                                style="background: var(--clr-surface); color: var(--clr-text-muted); border: 1px solid var(--clr-border); cursor: not-allowed;"
+                                                title="Du kan ikke slette din egen bruger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                    <button type="button" class="btn btn-sm btn-edit-user"
+                                            style="background: var(--clr-info); color: #fff; border: none;"
+                                            title="Rediger bruger"
+                                            data-id="@user.Id"
+                                            data-displayname="@user.DisplayName"
+                                            data-email="@user.Email"
+                                            data-username="@user.UserName"
+                                            data-phonenumber="@user.PhoneNumber"
+                                            data-roles="@string.Join(",", user.Roles)"
+                                            data-lockedout="@user.IsLockedOut.ToString().ToLower()"
+                                            data-bs-toggle="modal" data-bs-target="#editUserModal">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    @* Slet knap — åbner bekræftelsesmodal *@
+                                    <button type="button" class="btn btn-sm btn-delete-user"
+                                            style="background: var(--clr-alarm); color: #fff; border: none;"
+                                            title="Slet bruger"
+                                            data-id="@user.Id"
+                                            data-displayname="@user.DisplayName"
+                                            data-bs-toggle="modal" data-bs-target="#deleteUserModal">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* ── Paginering ── *@
+<div id="paginationBar" class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+    @* Venstre: interval-tekst *@
+    <span id="paginationInfo" style="color: var(--clr-text-muted); font-size: 0.85rem;">
+        @if (Model.TotalCount == 0)
+        {
+            <span>Ingen resultater</span>
+        }
+        else
+        {
+            <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span>
+        }
+    </span>
+
+    @* Højre: pr-side + sidevælger *@
+    <div class="d-flex align-items-center gap-3">
+        @* Pr. side dropdown *@
+        <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+            <span>Pr. side</span>
+            <select id="pageSizeSelect" class="form-select form-select-sm"
+                    style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                @foreach (var size in new[] { 10, 25, 50 })
+                {
+                    if (Model.PageSize == size)
+                    {
+                        <option value="@size" selected>@size</option>
+                    }
+                    else
+                    {
+                        <option value="@size">@size</option>
+                    }
+                }
+            </select>
+        </div>
+
+        @* Sidevælger *@
+        <nav aria-label="Sidenavigation">
+            <ul class="pagination pagination-sm mb-0" id="paginationList">
+                @{
+                    var prev = Model.Page - 1;
+                    var next = Model.Page + 1;
+                    var tp   = Model.TotalPages;
+                    var cp   = Model.Page;
+
+                    // Byg hvilke sidenumre der vises: altid 1, altid last, +/- 1 om current
+                    var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+                    for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+                }
+
+                @* Forrige *@
+                <li class="page-item @(cp == 1 ? "disabled" : "")">
+                    <button class="page-link page-btn" data-page="@prev" @(cp == 1 ? "disabled" : "")
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                </li>
+
+                @{
+                    int? lastShown = null;
+                    foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            // ellipsis
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link page-btn" data-page="@p"
+                                    style="@(p == cp
+                                        ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;"
+                                        : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);"
+                                    )">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                }
+
+                @* Næste *@
+                <li class="page-item @(cp >= tp ? "disabled" : "")">
+                    <button class="page-link page-btn" data-page="@next" @(cp >= tp ? "disabled" : "")
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@* ── Rediger bruger modal ── *@
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="editUserModalLabel">
+                    <i class="bi bi-pencil-square me-2" style="color: var(--clr-info);"></i>Rediger bruger
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <form asp-action="EditUser" asp-controller="Admin" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="background: var(--clr-surface);">
+                    <input type="hidden" id="editUserId" name="Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-person me-1"></i>Visningsnavn
+                        </label>
+                        <input type="text" id="editDisplayName" name="DisplayName" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-at me-1"></i>Brugernavn
+                        </label>
+                        <input type="text" id="editUserName" name="UserName" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-envelope me-1"></i>E-mail
+                        </label>
+                        <input type="email" id="editEmail" name="Email" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-telephone me-1"></i>Telefonnummer
+                        </label>
+                        <input type="tel" id="editPhoneNumber" name="PhoneNumber" class="form-control form-control-sm"
+                               placeholder="+45 12 34 56 78"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-person-badge me-1"></i>Rolle
+                        </label>
+                        <select id="editRole" name="SelectedRoles" class="form-select form-select-sm"
+                                style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);">
+                            <option value="">— Ingen rolle —</option>
+                            @foreach (var role in Model.AllRoles)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-1 p-2 rounded" style="background: var(--clr-bg); border: 1px solid var(--clr-border);">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="editIsLockedOut" name="IsLockedOut" value="true" />
+                            <label class="form-check-label small" for="editIsLockedOut">
+                                <i class="bi bi-lock me-1" style="color: var(--clr-alarm);"></i>Spærret konto
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>Annuller
+                    </button>
+                    <button type="submit" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+                        <i class="bi bi-check-lg me-1"></i>Gem ændringer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Slet bruger bekræftelsesmodal ── *@
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="deleteUserModalLabel">
+                    <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet bruger
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                <p class="mb-1">Er du sikker på du vil slette</p>
+                <p class="fw-semibold mb-0" id="deleteUserName"></p>
+            </div>
+            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <form asp-action="DeleteUser" asp-controller="Admin" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="deleteUserId" name="userId" />
+                    <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>Annuller
+                    </button>
+                    <button type="submit" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                        <i class="bi bi-trash me-1"></i>Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Opret bruger modal ── *@
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="createUserModalLabel">
+                    <i class="bi bi-person-plus me-2" style="color: var(--clr-brand);"></i>Opret bruger
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <form asp-action="CreateUser" asp-controller="Admin" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="background: var(--clr-surface);">
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-person me-1"></i>Visningsnavn
+                        </label>
+                        <input type="text" name="DisplayName" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-at me-1"></i>Brugernavn
+                        </label>
+                        <input type="text" name="UserName" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-envelope me-1"></i>E-mail
+                        </label>
+                        <input type="email" name="Email" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-telephone me-1"></i>Telefonnummer
+                        </label>
+                        <input type="tel" name="PhoneNumber" class="form-control form-control-sm"
+                               placeholder="+45 12 34 56 78"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-lock me-1"></i>Adgangskode
+                        </label>
+                        <input type="password" name="Password" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" required />
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-person-badge me-1"></i>Rolle
+                        </label>
+                        <select name="SelectedRole" class="form-select form-select-sm"
+                                style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);">
+                            <option value="">— Ingen rolle —</option>
+                            @foreach (var role in Model.AllRoles)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>Annuller
+                    </button>
+                    <button type="submit" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+                        <i class="bi bi-person-check me-1"></i>Opret
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var editUserModal = document.getElementById('editUserModal');
+    editUserModal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        document.getElementById('editUserId').value = btn.dataset.id;
+        document.getElementById('editDisplayName').value = btn.dataset.displayname;
+        document.getElementById('editUserName').value = btn.dataset.username;
+        document.getElementById('editEmail').value = btn.dataset.email;
+        document.getElementById('editPhoneNumber').value = btn.dataset.phonenumber || '';
+
+        var userRoles = btn.dataset.roles ? btn.dataset.roles.split(',').map(r => r.trim()) : [];
+        var roleSelect = document.getElementById('editRole');
+        roleSelect.value = userRoles.length > 0 ? userRoles[0] : '';
+
+        document.getElementById('editIsLockedOut').checked = btn.dataset.lockedout === 'true';
+    });
+
+    var deleteUserModal = document.getElementById('deleteUserModal');
+    deleteUserModal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        document.getElementById('deleteUserId').value = btn.dataset.id;
+        document.getElementById('deleteUserName').textContent = btn.dataset.displayname;
+    });
+
+    // ── Live søgning + paginering ──
+    (function () {
+        var searchInput  = document.getElementById('userSearchInput');
+        var pageSizeSel  = document.getElementById('pageSizeSelect');
+        if (!searchInput) return;
+
+        var searchUrl    = '@Url.Action("UsersSearch", "Admin")';
+        var debounceTimer;
+        var currentPage  = @Model.Page;
+        var currentSize  = @Model.PageSize;
+
+        var tbody    = document.getElementById('usersTableBody');
+        var countEl  = document.getElementById('userCount');
+        var colCount = 5;
+
+        function showSpinner() {
+            tbody.innerHTML = '<tr><td colspan="' + colCount + '" class="text-center py-4" style="color: var(--clr-brand);">' +
+                '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Søger…</span></div>' +
+                '</td></tr>';
+        }
+
+        function showEmpty() {
+            tbody.innerHTML = '<tr><td colspan="' + colCount + '" class="text-center py-4" style="color: var(--clr-text-muted);">' +
+                '<i class="bi bi-person-x d-block mb-1" style="font-size:1.4rem;"></i>Ingen brugere fundet' +
+                '</td></tr>';
+        }
+
+        async function loadPage(page, size) {
+            currentPage = page;
+            currentSize = size;
+            showSpinner();
+
+            var q = searchInput.value.trim();
+            var url = searchUrl + '?q=' + encodeURIComponent(q) + '&page=' + page + '&pageSize=' + size;
+            var res  = await fetch(url);
+            var html = res.ok ? await res.text() : null;
+            if (!html) { showEmpty(); return; }
+
+            var parser = new DOMParser();
+            var doc    = parser.parseFromString(html, 'text/html');
+
+            // Opdater tabel
+            var newBody = doc.getElementById('usersTableBody');
+            if (newBody) tbody.innerHTML = newBody.innerHTML;
+            else showEmpty();
+
+            // Opdater tæller i card-header
+            var newCount = doc.getElementById('userCount');
+            if (newCount && countEl) countEl.textContent = newCount.textContent;
+
+            // Opdater pagineringsbar
+            var newPager = doc.getElementById('paginationBar');
+            var oldPager = document.getElementById('paginationBar');
+            if (newPager && oldPager) oldPager.outerHTML = newPager.outerHTML;
+
+            // Opdater info-tekst
+            var newInfo = doc.getElementById('paginationInfo');
+            var oldInfo = document.getElementById('paginationInfo');
+            if (newInfo && oldInfo) oldInfo.innerHTML = newInfo.innerHTML;
+
+            // Genregistrer events på de nye side-knapper og pr-side
+            bindPagerEvents();
+
+            if (!tbody.querySelector('tr')) showEmpty();
+        }
+
+        function bindPagerEvents() {
+            document.querySelectorAll('.page-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var p = parseInt(this.dataset.page);
+                    if (!isNaN(p)) loadPage(p, currentSize);
+                });
+            });
+
+            var ps = document.getElementById('pageSizeSelect');
+            if (ps) {
+                ps.addEventListener('change', function () {
+                    loadPage(1, parseInt(this.value));
+                });
+            }
+        }
+
+        // Ryd-knap
+        var clearBtn = document.getElementById('userSearchClear');
+        searchInput.addEventListener('input', function () {
+            clearBtn.classList.toggle('d-none', this.value === '');
+        });
+        clearBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            clearBtn.classList.add('d-none');
+            loadPage(1, currentSize);
+            searchInput.focus();
+        });
+
+        // Søg – nulstil til side 1
+        searchInput.addEventListener('keyup', function () {
+            clearTimeout(debounceTimer);
+            showSpinner();
+            debounceTimer = setTimeout(function () {
+                loadPage(1, currentSize);
+            }, 250);
+        });
+
+        // Første binding
+        bindPagerEvents();
+    })();
+</script>

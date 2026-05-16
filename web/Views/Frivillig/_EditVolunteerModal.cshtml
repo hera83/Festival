@@ -1,0 +1,73 @@
+@model web.Models.EditVolunteerViewModel
+
+<div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Rediger frivillig</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+</div>
+
+<form id="editVolForm" autocomplete="off">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="modal-body" style="background: var(--clr-surface); color: var(--clr-text);">
+
+        <div class="row g-3 mb-3">
+            <div class="col-sm-4">
+                <label class="form-label small fw-semibold">Nøgle <span class="text-danger">*</span></label>
+                <input type="text" name="Key" class="form-control form-control-sm"
+                       value="@Model.Key" maxlength="20"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+            </div>
+            <div class="col-sm-8">
+                <label class="form-label small fw-semibold">Navn <span class="text-danger">*</span></label>
+                <input type="text" name="Name" class="form-control form-control-sm"
+                       value="@Model.Name"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">E-mail</label>
+                <input type="email" name="Email" class="form-control form-control-sm"
+                       value="@(Model.Email ?? "")"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">Telefon</label>
+                <input type="tel" name="PhoneNumber" class="form-control form-control-sm"
+                       value="@(Model.PhoneNumber ?? "")"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+            </div>
+        </div>
+
+        @if (Model.AvailableShiftTypes.Any())
+        {
+            <div>
+                <label class="form-label small fw-semibold">Vagttyper</label>
+                <div class="border rounded p-2" style="border-color: var(--clr-border) !important; max-height: 220px; overflow-y: auto; background: var(--clr-bg);">
+                    @foreach (var st in Model.AvailableShiftTypes)
+                    {
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox"
+                                   name="ShiftTypeIds" value="@st.Id" id="est_@st.Id"
+                                   @(Model.ShiftTypeIds.Contains(st.Id) ? "checked" : "") />
+                            <label class="form-check-label small" for="est_@st.Id" style="color: var(--clr-text);">
+                                <span class="fw-semibold">@st.ShiftName</span>
+                                <span style="color: var(--clr-text-muted);">
+                                    — @st.StartTime.ToString("dd-MM HH:mm") – @st.EndTime.ToString("HH:mm")
+                                </span>
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-surface);">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuller</button>
+        <button type="submit" id="editVolSubmit" class="btn btn-sm btn-primary">
+            <i class="bi bi-floppy me-1"></i>Gem ændringer
+        </button>
+    </div>
+</form>

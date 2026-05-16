@@ -1,0 +1,135 @@
+@model web.Models.FrivilligIndexViewModel
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div class="page-header mb-0" style="border-bottom:none; padding-bottom:0;">
+        <h1><i class="bi bi-person-heart me-2" style="color: var(--clr-brand);"></i>Frivillig</h1>
+        <p class="mb-0">Overblik over frivillige, vagter og vagttyper</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2" id="statCards">
+        <div class="card stat-card" data-panel="volunteers" style="cursor:pointer; min-width:155px;" title="Vis frivillige">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-ok-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-people" style="color:var(--clr-ok);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div id="countVolunteers" style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;">@Model.VolunteerCount</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Frivillige</div>
+                </div>
+            </div>
+        </div>
+        <div class="card stat-card" data-panel="shifttypes" style="cursor:pointer; min-width:155px;" title="Vis vagttyper">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-brand-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-diagram-3" style="color:var(--clr-brand);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div id="countShiftTypes" style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;">@Model.ShiftTypeCount</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Vagttyper</div>
+                </div>
+            </div>
+        </div>
+        <div class="card stat-card" data-panel="shifts" style="cursor:pointer; min-width:155px;" title="Vis vagter">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-info-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-calendar3" style="color:var(--clr-info);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div id="countShifts" style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;">@Model.ShiftCount</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Vagter</div>
+                </div>
+            </div>
+        </div>
+        <div class="card stat-card" data-panel="behov" style="cursor:pointer; min-width:155px;" title="Vis behov">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-warn-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-bullseye" style="color:var(--clr-warn);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div id="countBehov" style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;">@Model.ShiftTypeCount</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Behov</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tableSpinner" class="d-none text-center py-5">
+    <div class="spinner-border" style="color: var(--clr-brand);" role="status">
+        <span class="visually-hidden">Indlæser...</span>
+    </div>
+</div>
+<div id="tablePane"></div>
+
+@section Scripts {
+    <script>
+    (function () {
+        const panelUrls = {
+            volunteers: '@Url.Action("VolunteersPartial", "Frivillig")',
+            shifttypes: '@Url.Action("ShiftTypesPartial", "Frivillig")',
+            shifts:     '@Url.Action("ShiftsPartial",     "Frivillig")',
+            behov:      '@Url.Action("BehovPartial",      "Frivillig")',
+        };
+        const countsUrl = '@Url.Action("GetCounts", "Frivillig")';
+
+        async function refreshCounts() {
+            const r = await fetch(countsUrl);
+            if (!r.ok) return;
+            const d = await r.json();
+            document.getElementById('countVolunteers').textContent = d.volunteerCount;
+            document.getElementById('countShiftTypes').textContent = d.shiftTypeCount;
+            document.getElementById('countShifts').textContent     = d.shiftCount;
+        }
+
+        // Lyt på event fra opret/slet-handlinger i partials
+        document.addEventListener('frivillig:countsChanged', refreshCounts);
+
+        const pane    = document.getElementById('tablePane');
+        const spinner = document.getElementById('tableSpinner');
+        let   active  = null;
+
+        async function loadPanel(key) {
+            if (active === key) {
+                // Klik på samme kort lukker tabellen
+                pane.innerHTML = '';
+                active = null;
+                document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('stat-card-active'));
+                return;
+            }
+
+            active = key;
+            document.querySelectorAll('.stat-card').forEach(c => {
+                c.classList.toggle('stat-card-active', c.dataset.panel === key);
+            });
+
+            spinner.classList.remove('d-none');
+            pane.innerHTML = '';
+
+            const res  = await fetch(panelUrls[key]);
+            const html = await res.text();
+            pane.innerHTML = html;
+
+            // Eksekvér scripts fra det indlæste partial
+            pane.querySelectorAll('script').forEach(function (oldScript) {
+                const newScript = document.createElement('script');
+                newScript.textContent = oldScript.textContent;
+                document.body.appendChild(newScript);
+                document.body.removeChild(newScript);
+            });
+
+            spinner.classList.add('d-none');
+        }
+
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('click', function () {
+                loadPanel(this.dataset.panel);
+            });
+        });
+    })();
+    </script>
+    <style>
+        .stat-card { transition: outline 0.15s, box-shadow 0.15s; }
+        .stat-card:hover { outline: 2px solid var(--clr-brand); }
+        .stat-card-active { outline: 2px solid var(--clr-brand); box-shadow: 0 0 0 4px var(--clr-brand-dim); }
+    </style>
+}

@@ -1,0 +1,256 @@
+@model web.Models.ShiftsPagedViewModel
+
+@* Søgefelt — aldrig erstattet af AJAX *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="shSearchInput" class="form-control form-control-sm"
+               placeholder="Søg frivillig navn eller vagttype…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               autocomplete="off" />
+        <button type="button" id="shSearchClear" class="btn btn-sm d-none"
+                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted); border-left: none;"
+                tabindex="-1" aria-label="Ryd søgning">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+
+@* Resultat-zone — kun denne div overskrives ved søgning/sideskift *@
+<div id="sh-result-zone">
+    <div class="card">
+        <div class="card-header">
+            <span><i class="bi bi-calendar3 me-2"></i>Vagter (<span>@Model.TotalCount</span>)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <th class="ps-3">Frivillig</th>
+                            <th>Vagttype</th>
+                            <th>Start</th>
+                            <th>Slut</th>
+                            <th class="pe-3" style="width:60px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Shifts.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                    <i class="bi bi-calendar-x fs-4 d-block mb-1"></i>
+                                    Ingen vagter fundet
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var s in Model.Shifts)
+                        {
+                            <tr style="border-bottom: 1px solid var(--clr-border);">
+                                <td class="ps-3 align-middle fw-semibold">@s.Volunteer.Name</td>
+                                <td class="align-middle">@s.ShiftType.ShiftName</td>
+                                <td class="align-middle">@s.ShiftType.StartTime.ToString("dd-MM-yyyy HH:mm")</td>
+                                <td class="align-middle">@s.ShiftType.EndTime.ToString("dd-MM-yyyy HH:mm")</td>
+                                <td class="pe-3 align-middle text-end">
+                                    <button type="button" class="btn btn-sm sh-delete-btn"
+                                            style="background: var(--clr-alarm); color: #fff; border: none;"
+                                            title="Slet vagt"
+                                            data-id="@s.Id"
+                                            data-name="@s.Volunteer.Name"
+                                            data-shift="@s.ShiftType.ShiftName"
+                                            data-bs-toggle="modal" data-bs-target="#deleteShiftModal">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+        <span style="color: var(--clr-text-muted); font-size: 0.85rem;">
+            @if (Model.TotalCount == 0) { <span>Ingen resultater</span> }
+            else { <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span> }
+        </span>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+                <span>Pr. side</span>
+                <select id="shPageSizeSelect" class="form-select form-select-sm"
+                        style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                    @foreach (var size in new[] { 10, 25, 50 })
+                    {
+                        if (Model.PageSize == size) { <!option value="@size" selected>@size</!option> }
+                        else { <!option value="@size">@size</!option> }
+                    }
+                </select>
+            </div>
+            <nav aria-label="Sidenavigation">
+                <ul class="pagination pagination-sm mb-0">
+                    @{
+                        var cp = Model.Page; var tp = Model.TotalPages;
+                        var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+                        for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+                    }
+                    <li class="page-item @(cp == 1 ? "disabled" : "")">
+                        <button class="page-link sh-page-btn" data-page="@(cp - 1)" @(cp == 1 ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                    </li>
+                    @{ int? lastShown = null; }
+                    @foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link sh-page-btn" data-page="@p"
+                                    style="@(p == cp ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;" : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);")">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                    <li class="page-item @(cp >= tp ? "disabled" : "")">
+                        <button class="page-link sh-page-btn" data-page="@(cp + 1)" @(cp >= tp ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@* Slet-modal *@
+<div class="modal fade" id="deleteShiftModal" tabindex="-1" aria-labelledby="deleteShiftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="deleteShiftModalLabel">
+                    <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet vagt
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                <p class="mb-1">Er du sikker på du vil fjerne vagten</p>
+                <p class="fw-semibold mb-1" id="deleteShiftName"></p>
+                <p class="mb-0">fra</p>
+                <p class="fw-semibold mb-0" id="deleteShiftVolunteer"></p>
+            </div>
+            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Annuller
+                </button>
+                <button type="button" id="deleteShiftConfirm" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                    <i class="bi bi-trash me-1"></i>Slet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var searchUrl     = '@Url.Action("ShiftsSearch",   "Frivillig")';
+    var deletePostUrl = '@Url.Action("DeleteShift",    "Frivillig")';
+    var debounce;
+    var currentSize   = @Model.PageSize;
+    var currentPage   = @Model.Page;
+
+    async function loadPage(page, size) {
+        currentPage = page;
+        currentSize = size;
+        var q   = document.getElementById('shSearchInput').value.trim();
+        var url = searchUrl + '?q=' + encodeURIComponent(q) + '&page=' + page + '&pageSize=' + size;
+        try {
+            var res = await fetch(url);
+            if (!res.ok) { showToast('Kunne ikke hente vagter.', 'error'); return; }
+            var doc  = new DOMParser().parseFromString(await res.text(), 'text/html');
+            var zone = doc.getElementById('sh-result-zone');
+            if (!zone) return;
+            document.getElementById('sh-result-zone').innerHTML = zone.innerHTML;
+            bindZoneEvents();
+        } catch (e) {
+            showToast('Netværksfejl – prøv igen.', 'error');
+        }
+    }
+
+    function bindZoneEvents() {
+        var sel = document.getElementById('shPageSizeSelect');
+        if (sel) sel.addEventListener('change', function () { loadPage(1, parseInt(this.value)); });
+        document.querySelectorAll('.sh-page-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var p = parseInt(this.dataset.page);
+                if (!isNaN(p) && p >= 1) loadPage(p, currentSize);
+            });
+        });
+    }
+
+    // ── Slet-modal ────────────────────────────────────────────────
+    var deleteModalEl   = document.getElementById('deleteShiftModal');
+    var bsDeleteModal   = new bootstrap.Modal(deleteModalEl);
+    var pendingDeleteId = null;
+
+    deleteModalEl.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        pendingDeleteId = parseInt(btn.dataset.id);
+        document.getElementById('deleteShiftName').textContent      = btn.dataset.shift;
+        document.getElementById('deleteShiftVolunteer').textContent = btn.dataset.name;
+    });
+
+    document.getElementById('deleteShiftConfirm').addEventListener('click', async function () {
+        if (!pendingDeleteId) return;
+        var btn = this;
+        btn.disabled = true;
+        try {
+            var fd = new FormData();
+            fd.append('id', pendingDeleteId);
+            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+            var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
+            var json = await res.json();
+            bsDeleteModal.hide();
+            if (json.success) {
+                showToast(json.message, 'success');
+                document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                await loadPage(currentPage, currentSize);
+            } else {
+                showToast(json.message, 'error');
+            }
+        } catch (e) {
+            bsDeleteModal.hide();
+            showToast('Netværksfejl – kunne ikke slette.', 'error');
+        } finally {
+            btn.disabled = false;
+            pendingDeleteId = null;
+        }
+    });
+
+    // ── Søgning ───────────────────────────────────────────────────
+    var shInput = document.getElementById('shSearchInput');
+    var shClear = document.getElementById('shSearchClear');
+
+    shInput.addEventListener('input', function () {
+        shClear.classList.toggle('d-none', this.value === '');
+    });
+    shClear.addEventListener('click', function () {
+        shInput.value = '';
+        shClear.classList.add('d-none');
+        loadPage(1, currentSize);
+        shInput.focus();
+    });
+    shInput.addEventListener('keyup', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { loadPage(1, currentSize); }, 250);
+    });
+
+    bindZoneEvents();
+})();
+</script>

@@ -1,0 +1,112 @@
+@{ 
+    var activeTab = ViewData["ActiveTab"] as string ?? "brugere";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-gear me-2" style="color: var(--clr-brand);"></i>Administration</h1>
+    <p>Administrer systemets brugere og indstillinger</p>
+</div>
+
+@* ── Tab navigation ── *@
+<ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist" style="border-bottom: 1px solid var(--clr-border);">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "brugere" ? "active" : "")"
+                id="tab-brugere"
+                data-tab="brugere"
+                type="button" role="tab">
+            <i class="bi bi-people me-2"></i>Brugere
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "importeksport" ? "active" : "")"
+                id="tab-importeksport"
+                data-tab="importeksport"
+                type="button" role="tab">
+            <i class="bi bi-arrow-left-right me-2"></i>Import &amp; Eksport
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "statistik" ? "active" : "")"
+                id="tab-statistik"
+                data-tab="statistik"
+                type="button" role="tab">
+            <i class="bi bi-graph-up me-2"></i>Statistik
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "qrscanner" ? "active" : "")"
+                id="tab-qrscanner"
+                data-tab="qrscanner"
+                type="button" role="tab">
+            <i class="bi bi-qr-code-scan me-2"></i>QR Scanner
+        </button>
+    </li>
+</ul>
+
+@* ── Tab indhold ── *@
+<div id="tabContent">
+    <div id="spinner" class="d-none text-center py-5">
+        <div class="spinner-border" style="color: var(--clr-brand);" role="status">
+            <span class="visually-hidden">Indlæser...</span>
+        </div>
+    </div>
+    <div id="tabPane"></div>
+</div>
+
+@section Scripts {
+    <script>
+    (function () {
+        const tabUrls = {
+            brugere: '@Url.Action("UsersPartial", "Admin")',
+            importeksport: '@Url.Action("ImportExportPartial", "Admin")',
+            statistik: '@Url.Action("StatistikPartial", "Admin")',
+            qrscanner: '@Url.Action("QrScannerPartial", "Admin")',
+        };
+
+        const pane    = document.getElementById('tabPane');
+        const spinner = document.getElementById('spinner');
+
+        async function loadTab(tab) {
+            spinner.classList.remove('d-none');
+            pane.innerHTML = '';
+
+            // Opdater URL uden reload
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tab);
+            window.history.replaceState({}, '', url);
+
+            const res  = await fetch(tabUrls[tab]);
+            const html = await res.text();
+
+            pane.innerHTML = html;
+            spinner.classList.add('d-none');
+
+            // Eksekvér scripts fra det indlæste partial
+            pane.querySelectorAll('script').forEach(function (oldScript) {
+                const newScript = document.createElement('script');
+                newScript.textContent = oldScript.textContent;
+                document.body.appendChild(newScript);
+                document.body.removeChild(newScript);
+            });
+
+            // Aktiver Bootstrap-validering i det indlæste partial
+            if (window.$.validator) {
+                $('form').removeData('validator').removeData('unobtrusiveValidation');
+                $.validator.unobtrusive.parse(document);
+            }
+        }
+
+        // Tab-klik
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                loadTab(this.dataset.tab);
+            });
+        });
+
+        // Indlæs aktiv tab ved sideload
+        loadTab('@activeTab');
+    })();
+    </script>
+}

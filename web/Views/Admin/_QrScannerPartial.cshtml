@@ -1,0 +1,357 @@
+<style>
+    #qr-video {
+        width: 100%;
+        border-radius: 8px;
+        background: #000;
+        display: block;
+    }
+    #qr-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+    #qr-overlay svg rect {
+        fill: none;
+        stroke: var(--clr-brand);
+        stroke-width: 3;
+        rx: 8;
+    }
+    .qr-camera-wrapper {
+        position: relative;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+        min-height: 280px;
+    }
+    #qr-status-badge {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: .75rem;
+        padding: .25rem .75rem;
+        border-radius: 99px;
+        background: rgba(0,0,0,.7);
+        color: var(--clr-text-muted);
+        white-space: nowrap;
+        border: 1px solid transparent;
+        transition: color .3s, border-color .3s;
+    }
+    #qr-status-badge.qr-pulse {
+        animation: qr-pulse-anim 1.2s ease-in-out infinite;
+    }
+    @@keyframes qr-pulse-anim {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: .45; }
+    }
+    #qr-fps {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        font-size: .65rem;
+        padding: .15rem .5rem;
+        border-radius: 99px;
+        background: rgba(0,0,0,.55);
+        color: var(--clr-text-muted);
+        font-family: monospace;
+    }
+    .volunteer-info-label {
+        font-size: .72rem;
+        color: var(--clr-text-muted);
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: 2px;
+    }
+    .volunteer-info-value {
+        font-size: .95rem;
+        color: var(--clr-text);
+        margin-bottom: .85rem;
+    }
+    #volunteer-panel {
+        transition: opacity .3s;
+    }
+</style>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-qr-code-scan me-2" style="color: var(--clr-brand);"></i>QR Scanner
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+
+            @* Venstre: kamera *@
+            <div class="col-12 col-md-6">
+                <div class="qr-camera-wrapper">
+                    <video id="qr-video" autoplay playsinline muted></video>
+                    <canvas id="qr-canvas" style="display:none;"></canvas>
+                    <span id="qr-status-badge"><i class="bi bi-camera me-1"></i>Starter kamera…</span>
+                    <span id="qr-fps"></span>
+                </div>
+                <div class="mt-2 text-center">
+                    <select id="camera-select" class="form-select form-select-sm" style="max-width:280px;display:inline-block;background:var(--clr-surface);color:var(--clr-text);border-color:var(--clr-border);"></select>
+                </div>
+
+                @* Scan-log: viser de seneste hændelser *@
+                <div class="mt-3">
+                    <div style="font-size:.72rem;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+                        <i class="bi bi-list-ul me-1"></i>Scan-log
+                    </div>
+                    <ul id="scan-log" style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;"></ul>
+                    <div id="scan-log-empty" style="font-size:.8rem;color:var(--clr-text-muted);">Ingen scans endnu…</div>
+                </div>
+            </div>
+
+            @* Højre: frivillig info *@
+            <div class="col-12 col-md-6 d-flex flex-column">
+                <div id="volunteer-panel" style="opacity:.4;">
+                    <div class="card h-100" style="background:var(--clr-surface);">
+                        <div class="card-header d-flex align-items-center gap-2">
+                            <i class="bi bi-person-circle" style="font-size:1.5rem;color:var(--clr-brand);"></i>
+                            <span id="vol-name" style="font-size:1.1rem;font-weight:600;">—</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="volunteer-info-label">Nøgle / ID</div>
+                            <div class="volunteer-info-value" id="vol-key">—</div>
+
+                            <div class="volunteer-info-label">E-mail</div>
+                            <div class="volunteer-info-value" id="vol-email">—</div>
+
+                            <div class="volunteer-info-label">Telefon</div>
+                            <div class="volunteer-info-value" id="vol-phone">—</div>
+
+                            <div class="volunteer-info-label">Sæson</div>
+                            <div class="volunteer-info-value" id="vol-season">—</div>
+
+                            <div class="volunteer-info-label">Vagter</div>
+                            <div class="volunteer-info-value" id="vol-shifts">—</div>
+
+                            <div class="volunteer-info-label">QR sendt</div>
+                            <div class="volunteer-info-value" id="vol-qrsent">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vol-not-found" class="d-none mt-3 text-center p-3 rounded" style="color:var(--clr-alarm);border:1px solid var(--clr-alarm);">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Ingen frivillig fundet for denne QR kode.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const video       = document.getElementById('qr-video');
+    const canvas      = document.getElementById('qr-canvas');
+    const statusBadge = document.getElementById('qr-status-badge');
+    const camSelect   = document.getElementById('camera-select');
+    const volPanel    = document.getElementById('volunteer-panel');
+    const volNotFound = document.getElementById('vol-not-found');
+    const fpsDisplay  = document.getElementById('qr-fps');
+    const scanLog     = document.getElementById('scan-log');
+    const scanLogEmpty= document.getElementById('scan-log-empty');
+    const ctx         = canvas.getContext('2d', { willReadFrequently: true });
+
+    const lookupUrl   = '@Url.Action("LookupQrToken", "Admin")';
+
+    // ── Lyd-feedback via Web Audio API ───────────────────────────
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playBeep(type) {
+        // success: to korte stigende toner  |  error: en lang faldende tone
+        const sequences = {
+            success: [{ freq: 880, dur: 0.12 }, { freq: 1320, dur: 0.18 }],
+            error:   [{ freq: 440, dur: 0.08 }, { freq: 280, dur: 0.30 }],
+        };
+        let offset = audioCtx.currentTime + 0.05;
+        for (const note of (sequences[type] || sequences.error)) {
+            const osc  = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(note.freq, offset);
+            gain.gain.setValueAtTime(0.35, offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, offset + note.dur);
+            osc.start(offset);
+            osc.stop(offset + note.dur);
+            offset += note.dur + 0.04;
+        }
+    }
+
+    let stream    = null;
+    let lastToken = null;
+    let cooldown  = false;
+    let rafId     = null;
+
+    // ── Scan-log ──────────────────────────────────────────────────
+    function addLog(icon, color, text) {
+        scanLogEmpty.style.display = 'none';
+        const time = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const li = document.createElement('li');
+        li.style.cssText = `font-size:.78rem;padding:4px 8px;border-radius:6px;background:var(--clr-surface);border:1px solid var(--clr-border);display:flex;align-items:center;gap:6px;`;
+        li.innerHTML = `<i class="bi ${icon}" style="color:${color};flex-shrink:0;"></i><span style="flex:1;word-break:break-all;">${text}</span><span style="color:var(--clr-text-muted);flex-shrink:0;">${time}</span>`;
+        scanLog.prepend(li);
+        // Maks 20 log-linjer
+        while (scanLog.children.length > 20) scanLog.removeChild(scanLog.lastChild);
+    }
+
+    // ── Status-badge ──────────────────────────────────────────────
+    function setStatus(state) {
+        const cfg = {
+            scanning: { icon: 'bi-qr-code-scan',        color: 'var(--clr-text-muted)', pulse: true,  text: 'Scanner efter QR kode…' },
+            detected: { icon: 'bi-arrow-repeat',         color: 'var(--clr-brand)',      pulse: true,  text: 'QR set – slår op…' },
+            found:    { icon: 'bi-check-circle-fill',    color: 'var(--clr-ok)',         pulse: false, text: 'Frivillig fundet!' },
+            notfound: { icon: 'bi-exclamation-triangle', color: 'var(--clr-alarm)',      pulse: false, text: 'Ukendt QR kode' },
+            error:    { icon: 'bi-wifi-off',             color: 'var(--clr-alarm)',      pulse: false, text: 'Fejl ved opslag' },
+            offline:  { icon: 'bi-camera-video-off',     color: 'var(--clr-alarm)',      pulse: false, text: 'Kamera ikke tilgængeligt' },
+        };
+        const c = cfg[state] || cfg.scanning;
+        statusBadge.innerHTML = `<i class="bi ${c.icon} me-1"></i>${c.text}`;
+        statusBadge.style.color = c.color;
+        statusBadge.style.borderColor = c.color;
+        statusBadge.classList.toggle('qr-pulse', c.pulse);
+    }
+
+    // ── Kamera ────────────────────────────────────────────────────
+    async function populateCameras(activeDeviceId) {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cams    = devices.filter(d => d.kind === 'videoinput');
+            camSelect.innerHTML = '';
+            camSelect.style.display = cams.length <= 1 ? 'none' : 'inline-block';
+            cams.forEach((cam, i) => {
+                const opt = document.createElement('option');
+                opt.value = cam.deviceId;
+                opt.textContent = cam.label || `Kamera ${i + 1}`;
+                if (cam.deviceId === activeDeviceId) opt.selected = true;
+                camSelect.appendChild(opt);
+            });
+        } catch {}
+    }
+
+    async function startCamera(deviceId) {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (rafId) cancelAnimationFrame(rafId);
+        lastToken = null;
+
+        const videoConstraints = deviceId
+            ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } };
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+        } catch {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            } catch {
+                setStatus('offline');
+                return;
+            }
+        }
+
+        video.srcObject = stream;
+        await video.play();
+
+        const track    = stream.getVideoTracks()[0];
+        const activeId = track?.getSettings()?.deviceId ?? null;
+        await populateCameras(activeId);
+
+        setStatus('scanning');
+        rafId = requestAnimationFrame(tick);
+    }
+
+    // ── Scan-loop ─────────────────────────────────────────────────
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+
+    function tick() {
+        frameCount++;
+        const now = performance.now();
+        if (now - lastFpsTime >= 1000) {
+            fpsDisplay.textContent = `${frameCount} fps · ${video.videoWidth}×${video.videoHeight}`;
+            frameCount = 0;
+            lastFpsTime = now;
+        }
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code    = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
+
+            if (code && !cooldown) {
+                const token = code.data.trim();
+                if (token !== lastToken) {
+                    lastToken = token;
+                    setStatus('detected');
+                    handleQr(token);
+                }
+            }
+        }
+        rafId = requestAnimationFrame(tick);
+    }
+
+    // ── Opslag ────────────────────────────────────────────────────
+    function showVolunteer(v) {
+        document.getElementById('vol-name').textContent   = v.name          || '—';
+        document.getElementById('vol-key').textContent    = v.key           || '—';
+        document.getElementById('vol-email').textContent  = v.email         || '—';
+        document.getElementById('vol-phone').textContent  = v.phoneNumber   || '—';
+        document.getElementById('vol-season').textContent = v.seasonId      ?? '—';
+        document.getElementById('vol-shifts').textContent = v.shiftCount    ?? '—';
+        document.getElementById('vol-qrsent').textContent = v.qrCodeSent ? 'Ja' : 'Nej';
+        volPanel.style.opacity = '1';
+        volNotFound.classList.add('d-none');
+        setStatus('found');
+        playBeep('success');
+        addLog('bi-check-circle-fill', 'var(--clr-ok)', `Fundet: ${v.name} (${v.key})`);
+        setTimeout(() => setStatus('scanning'), 4000);
+    }
+
+    function showNotFound(rawToken) {
+        volPanel.style.opacity = '0.4';
+        volNotFound.classList.remove('d-none');
+        setStatus('notfound');
+        playBeep('error');
+        addLog('bi-exclamation-triangle', 'var(--clr-alarm)', `Ingen frivillig fundet – indhold: "${rawToken}"`);
+        setTimeout(() => { setStatus('scanning'); volNotFound.classList.add('d-none'); }, 3500);
+    }
+
+    async function handleQr(token) {
+        cooldown = true;
+        setTimeout(() => { cooldown = false; lastToken = null; }, 3500);
+
+        addLog('bi-arrow-repeat', 'var(--clr-brand)', `QR aflæst – slår op: "${token}"`);
+
+        try {
+            const res = await fetch(`${lookupUrl}?token=${encodeURIComponent(token)}`);
+            if (res.ok) {
+                const data = await res.json();
+                showVolunteer(data);
+            } else if (res.status === 404) {
+                showNotFound(token);
+            } else {
+                setStatus('error');
+                playBeep('error');
+                addLog('bi-wifi-off', 'var(--clr-alarm)', `Serverfejl (${res.status}) ved opslag af "${token}"`);
+                setTimeout(() => setStatus('scanning'), 3000);
+            }
+        } catch {
+            setStatus('error');
+            playBeep('error');
+            addLog('bi-wifi-off', 'var(--clr-alarm)', 'Netværksfejl – kunne ikke kontakte server');
+            setTimeout(() => setStatus('scanning'), 3000);
+        }
+    }
+
+    camSelect.addEventListener('change', () => startCamera(camSelect.value));
+
+    (async () => { await startCamera(null); })();
+})();
+</script>

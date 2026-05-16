@@ -1,0 +1,413 @@
+@model web.Models.StatistikViewModel
+
+@* ── Søgebar ── *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="statSearchInput" class="form-control form-control-sm"
+               placeholder="Søg navn, nøgle eller e-mail…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               autocomplete="off" />
+        <button type="button" id="statSearchClear" class="btn btn-sm d-none"
+                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted); border-left: none;"
+                tabindex="-1" aria-label="Ryd søgning">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-graph-up me-2"></i>Frivillige – Check-in timer (<span id="statCount">@Model.TotalCount</span>)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--clr-border);">
+                        <th class="ps-3">Nøgle</th>
+                        <th>Navn</th>
+                        <th>E-mail</th>
+                        <th class="text-center">Antal check-ins</th>
+                        <th class="text-end">
+                            <i class="bi bi-clock me-1"></i>Total timer
+                            <i class="bi bi-arrow-down-short" style="color: var(--clr-brand);"></i>
+                        </th>
+                        <th class="pe-3 text-end">Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody id="statTableBody">
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr id="statEmptyRow">
+                            <td colspan="6" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                <i class="bi bi-person-x fs-4 d-block mb-1"></i>
+                                Ingen frivillige fundet
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <td class="ps-3 align-middle">
+                                <span class="badge badge-info">@row.Key</span>
+                            </td>
+                            <td class="align-middle fw-semibold">@row.Name</td>
+                            <td class="align-middle" style="color: var(--clr-text-muted);">@(row.Email ?? "–")</td>
+                            <td class="align-middle text-center">
+                                @if (row.CheckInCount > 0)
+                                {
+                                    <span class="badge badge-ok">@row.CheckInCount</span>
+                                }
+                                else
+                                {
+                                    <span style="color: var(--clr-text-muted);">0</span>
+                                }
+                            </td>
+                            <td class="align-middle text-end">
+                                @if (row.TotalHours > 0)
+                                {
+                                    <span class="fw-semibold" style="color: var(--clr-brand);">@row.TotalHours.ToString("0.0") t</span>
+                                }
+                                else
+                                {
+                                    <span style="color: var(--clr-text-muted);">0.0 t</span>
+                                }
+                            </td>
+                            <td class="pe-3 align-middle text-end">
+                                <button type="button" class="btn btn-sm btn-stat-detail"
+                                        style="background: var(--clr-info); color: #fff; border: none;"
+                                        title="Se detaljer"
+                                        data-volunteer-id="@row.Id"
+                                        data-volunteer-name="@row.Name"
+                                        data-volunteer-key="@row.Key">
+                                    <i class="bi bi-clock-history"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* ── Paginering ── *@
+<div id="statPaginationBar" class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+    <span id="statPaginationInfo" style="color: var(--clr-text-muted); font-size: 0.85rem;">
+        @if (Model.TotalCount == 0)
+        {
+            <span>Ingen resultater</span>
+        }
+        else
+        {
+            <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span>
+        }
+    </span>
+
+    <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+            <span>Pr. side</span>
+            <select id="statPageSizeSelect" class="form-select form-select-sm"
+                    style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                @foreach (var size in new[] { 10, 25, 50 })
+                {
+                    if (Model.PageSize == size)
+                    {
+                        <option value="@size" selected>@size</option>
+                    }
+                    else
+                    {
+                        <option value="@size">@size</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <nav aria-label="Sidenavigation">
+            <ul class="pagination pagination-sm mb-0" id="statPaginationList">
+                @{
+                    var prev = Model.Page - 1;
+                    var next = Model.Page + 1;
+                    var tp   = Model.TotalPages;
+                    var cp   = Model.Page;
+
+                    var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+                    for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+                }
+
+                <li class="page-item @(cp == 1 ? "disabled" : "")">
+                    <button class="page-link stat-page-btn" data-page="@prev" @(cp == 1 ? "disabled" : "")
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                </li>
+
+                @{
+                    int? lastShown = null;
+                    foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link stat-page-btn" data-page="@p"
+                                    style="@(p == cp
+                                        ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;"
+                                        : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);"
+                                    )">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                }
+
+                <li class="page-item @(cp >= tp ? "disabled" : "")">
+                    <button class="page-link stat-page-btn" data-page="@next" @(cp >= tp ? "disabled" : "")
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script>
+(function () {
+    var searchInput = document.getElementById('statSearchInput');
+    var clearBtn    = document.getElementById('statSearchClear');
+    if (!searchInput) return;
+
+    var searchUrl    = '@Url.Action("StatistikSearch", "Admin")';
+    var debounceTimer;
+    var currentPage  = @Model.Page;
+    var currentSize  = @Model.PageSize;
+    var colCount     = 6;
+
+    var tbody   = document.getElementById('statTableBody');
+    var countEl = document.getElementById('statCount');
+
+    function showSpinner() {
+        tbody.innerHTML = '<tr><td colspan="' + colCount + '" class="text-center py-4" style="color: var(--clr-brand);">' +
+            '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Søger…</span></div>' +
+            '</td></tr>';
+    }
+
+    function showEmpty() {
+        tbody.innerHTML = '<tr><td colspan="' + colCount + '" class="text-center py-4" style="color: var(--clr-text-muted);">' +
+            '<i class="bi bi-person-x d-block mb-1" style="font-size:1.4rem;"></i>Ingen frivillige fundet' +
+            '</td></tr>';
+    }
+
+    async function loadPage(page, size) {
+        currentPage = page;
+        currentSize = size;
+        showSpinner();
+
+        var q   = searchInput.value.trim();
+        var url = searchUrl + '?q=' + encodeURIComponent(q) + '&page=' + page + '&pageSize=' + size;
+        var res = await fetch(url);
+        var html = res.ok ? await res.text() : null;
+        if (!html) { showEmpty(); return; }
+
+        var parser = new DOMParser();
+        var doc    = parser.parseFromString(html, 'text/html');
+
+        var newBody = doc.getElementById('statTableBody');
+        if (newBody) tbody.innerHTML = newBody.innerHTML;
+        else showEmpty();
+
+        var newCount = doc.getElementById('statCount');
+        if (newCount && countEl) countEl.textContent = newCount.textContent;
+
+        var newPager = doc.getElementById('statPaginationBar');
+        var oldPager = document.getElementById('statPaginationBar');
+        if (newPager && oldPager) oldPager.outerHTML = newPager.outerHTML;
+
+        bindPagerEvents();
+        bindDetailEvents();
+    }
+
+    function bindPagerEvents() {
+        document.querySelectorAll('.stat-page-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var p = parseInt(this.dataset.page);
+                if (!isNaN(p)) loadPage(p, currentSize);
+            });
+        });
+
+        var ps = document.getElementById('statPageSizeSelect');
+        if (ps) {
+            ps.addEventListener('change', function () {
+                loadPage(1, parseInt(this.value));
+            });
+        }
+    }
+
+    clearBtn.addEventListener('click', function () {
+        searchInput.value = '';
+        clearBtn.classList.add('d-none');
+        loadPage(1, currentSize);
+        searchInput.focus();
+    });
+
+    searchInput.addEventListener('input', function () {
+        clearBtn.classList.toggle('d-none', this.value === '');
+    });
+
+    searchInput.addEventListener('keyup', function () {
+        clearTimeout(debounceTimer);
+        showSpinner();
+        debounceTimer = setTimeout(function () {
+            loadPage(1, currentSize);
+        }, 250);
+    });
+
+    bindPagerEvents();
+    bindDetailEvents();
+
+    function bindDetailEvents() {
+        document.querySelectorAll('.btn-stat-detail').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                openDetailModal(
+                    this.dataset.volunteerId,
+                    this.dataset.volunteerName,
+                    this.dataset.volunteerKey
+                );
+            });
+        });
+    }
+
+    var detailUrl = '@Url.Action("VolunteerCheckInDetail", "Admin")';
+
+    async function openDetailModal(volunteerId, name, key) {
+        var modal     = document.getElementById('statDetailModal');
+        var bsModal   = bootstrap.Modal.getOrCreateInstance(modal);
+        var titleEl   = document.getElementById('statDetailTitle');
+        var bodyEl    = document.getElementById('statDetailBody');
+
+        titleEl.innerHTML = '<i class="bi bi-clock-history me-2" style="color:var(--clr-brand);"></i>' +
+            '<span class="badge badge-info me-2">' + key + '</span>' + name;
+        bodyEl.innerHTML  = '<div class="text-center py-4" style="color:var(--clr-brand);">' +
+            '<div class="spinner-border spinner-border-sm"></div></div>';
+        bsModal.show();
+
+        var res  = await fetch(detailUrl + '?volunteerId=' + volunteerId);
+        if (!res.ok) {
+            bodyEl.innerHTML = '<p class="text-center py-3" style="color:var(--clr-alarm);">Kunne ikke hente data.</p>';
+            return;
+        }
+        var data = await res.json();
+        renderTimeline(bodyEl, data);
+    }
+
+    function renderTimeline(container, data) {
+        if (!data.sessions || data.sessions.length === 0) {
+            container.innerHTML = '<p class="text-center py-4" style="color:var(--clr-text-muted);">'+
+                '<i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;"></i>Ingen check-ins registreret.</p>';
+            return;
+        }
+
+        // Tidslinjen: mærker hvert 3. time
+        var hourMarks = '';
+        for (var h = 0; h <= 24; h += 3) {
+            var pct = (h / 24 * 100).toFixed(2);
+            hourMarks += '<div style="position:absolute;left:' + pct + '%;top:0;bottom:0;' +
+                'border-left:1px dashed var(--clr-border);pointer-events:none;"></div>' +
+                '<span style="position:absolute;left:' + pct + '%;top:-18px;font-size:0.65rem;' +
+                'color:var(--clr-text-muted);transform:translateX(-50%)">' +
+                String(h).padStart(2,'0') + ':00</span>';
+        }
+
+        var rows = data.sessions.map(function (s) {
+            var barColor  = s.isOpen
+                ? 'repeating-linear-gradient(45deg,var(--clr-warn),var(--clr-warn) 6px,var(--clr-surface) 6px,var(--clr-surface) 12px)'
+                : 'var(--clr-brand)';
+            var checkOut  = s.checkOutTime
+                ? s.checkOutTime
+                : '<span style="color:var(--clr-warn);font-size:0.75rem;"><i class="bi bi-record-circle"></i> Aktiv</span>';
+            var duration  = s.durationHours.toFixed(1) + ' t';
+
+            // Poster-badges under tidslinjen
+            var locationHtml = '';
+            if (s.locations && s.locations.length > 0) {
+                var icons = { CheckIn: 'bi-box-arrow-in-right', Move: 'bi-arrow-right-short', CheckOut: 'bi-box-arrow-right' };
+                var colors = { CheckIn: 'var(--clr-ok)', Move: 'var(--clr-info)', CheckOut: 'var(--clr-alarm)' };
+                var badges = s.locations.map(function (l) {
+                    var icon  = icons[l.eventType]  || 'bi-circle';
+                    var color = colors[l.eventType] || 'var(--clr-text-muted)';
+                    var label = l.location || 'CheckOut';
+                    return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.7rem;' +
+                        'background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:4px;' +
+                        'padding:1px 6px;color:' + color + ';">' +
+                        '<i class="bi ' + icon + '"></i>' +
+                        '<span style="color:var(--clr-text-muted);">' + l.time + '</span>' +
+                        '<span style="color:var(--clr-text);">' + label + '</span>' +
+                        '</span>';
+                }).join('<span style="color:var(--clr-border);font-size:0.7rem;"> › </span>');
+                locationHtml = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;' +
+                    'padding:5px 0 4px;border-bottom:1px solid var(--clr-border);">' + badges + '</div>';
+            }
+
+            var timelineRow = '<div class="d-flex align-items-center gap-3 pt-2 ' + (locationHtml ? '' : 'pb-2') + '" style="border-bottom:' + (locationHtml ? 'none' : '1px solid var(--clr-border)') + ';">' +
+                '<div style="min-width:110px;font-size:0.8rem;color:var(--clr-text-muted);">' + s.date + '</div>' +
+                '<div style="flex:1;position:relative;height:28px;margin-top:18px;">' +
+                    hourMarks +
+                    '<div style="position:absolute;top:4px;height:20px;' +
+                        'left:' + s.leftPct + '%;width:' + s.widthPct + '%;' +
+                        'background:' + barColor + ';border-radius:4px;' +
+                        'box-shadow:0 0 6px rgba(232,93,46,0.35);"' +
+                        'title="' + s.checkInTime + ' – ' + (s.checkOutTime || 'nu') + ' (' + duration + ')">' +
+                    '</div>' +
+                '</div>' +
+                '<div style="min-width:140px;font-size:0.78rem;text-align:right;">' +
+                    '<span style="color:var(--clr-ok);">' + s.checkInTime + '</span>' +
+                    '<span style="color:var(--clr-text-muted);"> – </span>' +
+                    checkOut +
+                    '<span style="color:var(--clr-text-muted);margin-left:6px;">(' + duration + ')</span>' +
+                '</div>' +
+            '</div>';
+
+            var locationsRow = locationHtml
+                ? '<div class="d-flex gap-3" style="border-bottom:1px solid var(--clr-border);padding-bottom:6px;">' +
+                    '<div style="min-width:110px;"></div>' +
+                    '<div style="flex:1;">' + locationHtml + '</div>' +
+                    '<div style="min-width:140px;"></div>' +
+                  '</div>'
+                : '';
+
+            return timelineRow + locationsRow;
+        }).join('');
+
+        var totalLine = '<div class="d-flex justify-content-end pt-2" style="font-size:0.85rem;">' +
+            '<span style="color:var(--clr-text-muted);">Total: </span>' +
+            '<span class="fw-semibold ms-2" style="color:var(--clr-brand);">' + data.totalHours.toFixed(1) + ' timer</span>' +
+            '</div>';
+
+        container.innerHTML = '<div class="px-1">' + rows + totalLine + '</div>';
+    }
+})();
+</script>
+
+@* ── Detaljer modal ── *@
+<div class="modal fade" id="statDetailModal" tabindex="-1" aria-labelledby="statDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);color:var(--clr-text);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);background:var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="statDetailTitle"></h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" id="statDetailBody" style="background:var(--clr-surface);min-height:120px;"></div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);background:var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

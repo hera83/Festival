@@ -1,0 +1,187 @@
+﻿@using web.Models
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Antiforgery
+@inject UserManager<AppUser> UserManager
+@inject IAntiforgery Antiforgery
+<!DOCTYPE html>
+@{
+    AppUser? layoutUser = null;
+    if (User.Identity?.IsAuthenticated == true)
+        layoutUser = await UserManager.GetUserAsync(User);
+    var colorMode = layoutUser?.ColorMode ?? "system";
+}
+<html lang="en" data-theme="@colorMode">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Festival Vagtstyring</title>
+    <script>
+        // Løs system-mode FØR CSS renderes, så ingen flash opstår
+        (function () {
+            var el = document.documentElement;
+            if (el.getAttribute('data-theme') === 'system') {
+                el.setAttribute('data-theme',
+                    window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/web.styles.css" asp-append-version="true" />
+    <meta name="RequestVerificationToken" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+</head>
+<body>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        var currentUser = layoutUser;
+        var displayName = string.IsNullOrWhiteSpace(currentUser?.DisplayName)
+            ? User.Identity?.Name
+            : currentUser.DisplayName;
+        var avatarFile = currentUser?.AvatarFileName;
+        var avatarUrl  = avatarFile is not null
+            ? Url.Action("Avatar", "Profile", new { fileName = avatarFile })
+            : null;
+
+        <div class="app-shell sidebar-collapsed" id="appShell">
+        <script>if(localStorage.getItem("sidebarCollapsed")==="false"){document.getElementById("appShell").classList.remove("sidebar-collapsed");}</script>
+            <aside class="side-menu">
+                <div class="side-menu-top">
+
+                    <!-- Brand / Toggle -->
+                    <button id="menuToggle" type="button" class="menu-item menu-brand" aria-expanded="false" aria-label="Skift menuvisning">
+                        <span class="menu-icon"><i class="bi bi-music-note-beamed"></i></span>
+                        <span class="menu-text fw-semibold">Festival Controller</span>
+                    </button>
+
+                    <hr class="menu-divider" />
+
+                    <!-- Navigation -->
+                    <nav class="menu-nav" aria-label="Hovednavigation">
+                        <a class="menu-item" asp-area="" asp-controller="Home" asp-action="Index">
+                            <span class="menu-icon"><i class="bi bi-speedometer2"></i></span>
+                            <span class="menu-text">Dashboard</span>
+                        </a>
+                        <a class="menu-item" asp-area="" asp-controller="Frivillig" asp-action="Index">
+                            <span class="menu-icon"><i class="bi bi-person-heart"></i></span>
+                            <span class="menu-text">Frivillig</span>
+                        </a>
+
+                    </nav>
+                </div>
+
+                <div class="side-menu-bottom">
+
+                    <!-- Bruger / Profil -->
+                    <a class="menu-item menu-item-user" asp-controller="Profile" asp-action="Index">
+                        <span class="menu-icon">
+                            @if (avatarUrl is not null)
+                            {
+                                <img src="@avatarUrl" alt="Avatar"
+                                     style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-person-circle"></i>
+                            }
+                        </span>
+                        <span class="menu-text">
+                            <span class="menu-username d-block">@displayName</span>
+                            <span class="menu-userrole d-block">@(User.IsInRole("Administrator") ? "Administrator" : User.IsInRole("Koordinator") ? "Koordinator" : "Bruger")</span>
+                        </span>
+                    </a>
+
+                    <hr class="menu-divider" />
+
+                    <!-- Administrator -->
+                    @if (User.IsInRole("Administrator"))
+                    {
+                        <a class="menu-item" asp-controller="Admin" asp-action="Index">
+                            <span class="menu-icon"><i class="bi bi-gear"></i></span>
+                            <span class="menu-text">Administration</span>
+                        </a>
+                        <hr class="menu-divider" />
+                    }
+
+                    <!-- Log ud -->
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="menu-form">
+                        <button type="submit" class="menu-item menu-item-logout">
+                            <span class="menu-icon"><i class="bi bi-box-arrow-left"></i></span>
+                            <span class="menu-text">Log ud</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            <main role="main" class="app-content">
+                @RenderBody()
+            </main>
+        </div>
+    }
+    else
+    {
+        <div class="container">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+    }
+
+    <div id="toast-container"></div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        // ── Global toast ──────────────────────────────────────────
+        function showToast(message, type) {
+            type = type || 'success';
+            var icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', warn: 'bi-exclamation-triangle-fill', info: 'bi-info-circle-fill' };
+            var icon  = icons[type] || icons.success;
+            var el    = document.createElement('div');
+            el.className = 'fv-toast fv-toast-' + type;
+            el.innerHTML =
+                '<i class="bi ' + icon + ' fv-toast-icon"></i>' +
+                '<span>' + message + '</span>' +
+                '<button class="fv-toast-close" aria-label="Luk"><i class="bi bi-x"></i></button>';
+            document.getElementById('toast-container').appendChild(el);
+            el.querySelector('.fv-toast-close').addEventListener('click', function () { dismissToast(el); });
+            setTimeout(function () { dismissToast(el); }, 3000);
+        }
+        function dismissToast(el) {
+            if (el._dismissing) return;
+            el._dismissing = true;
+            el.classList.add('fv-toast-hide');
+            setTimeout(function () { el.remove(); }, 300);
+        }
+        // ── TempData toasts ───────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            @if (TempData["Success"] is string s) { <text>showToast('@Html.Raw(s.Replace("'", "\\'"))', 'success');</text> }
+            @if (TempData["Error"]   is string e) { <text>showToast('@Html.Raw(e.Replace("'", "\\'"))', 'error');</text> }
+            @if (TempData["Warning"] is string w) { <text>showToast('@Html.Raw(w.Replace("'", "\\'"))', 'warn');</text> }
+            @if (TempData["Info"]    is string i) { <text>showToast('@Html.Raw(i.Replace("'", "\\'"))', 'info');</text> }
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const appShell = document.getElementById("appShell");
+            const menuToggle = document.getElementById("menuToggle");
+
+            if (!appShell || !menuToggle) {
+                return;
+            }
+
+            // Sæt aria-expanded korrekt baseret på aktuel tilstand (sat synkront ovenfor)
+            menuToggle.setAttribute("aria-expanded", String(!appShell.classList.contains("sidebar-collapsed")));
+
+            menuToggle.addEventListener("click", function () {
+                const isCollapsed = appShell.classList.toggle("sidebar-collapsed");
+                menuToggle.setAttribute("aria-expanded", String(!isCollapsed));
+                localStorage.setItem("sidebarCollapsed", String(isCollapsed));
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</body>
+</html>

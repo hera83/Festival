@@ -1,0 +1,1773 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="page-header mb-0" style="border-bottom:none; padding-bottom:0;">
+        <h1><i class="bi bi-speedometer2 me-2" style="color: var(--clr-brand);"></i>Dashboard</h1>
+        <p class="mb-0">Overblik over aktiv drift og frivillige</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <div class="card card-clickable" style="min-width:155px;cursor:pointer;" data-bs-toggle="modal" data-bs-target="#checkInModal" title="Klik for at checke frivillige ind">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-ok-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-person-check" style="color:var(--clr-ok);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="checkedInCount">—</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Checkede ind</div>
+                </div>
+            </div>
+        </div>
+        <div class="card card-clickable" style="min-width:155px;cursor:pointer;" data-bs-toggle="modal" data-bs-target="#noShowModal" title="Klik for at se udeblivelser">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-warn-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-person-x" style="color:var(--clr-warn);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="noShowCount">—</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Udeblivelser</div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="min-width:155px;">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-info-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-people" style="color:var(--clr-info);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="pitCount">—</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">I pitten</div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="min-width:155px;">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-brand-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-geo-alt" style="color:var(--clr-brand);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activePostsCount">—</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive poster</div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="min-width:155px;">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-alarm-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-bell" style="color:var(--clr-alarm);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activeAlarmsCount">—</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive alarmer</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr style="border-color:var(--clr-border);margin:0.75rem 0 1rem;">
+
+<div class="row g-3 flex-grow-1">
+    <!-- Pitten-spalte -->
+    <div class="col-12 col-xl" style="display:flex; flex-direction:column;">
+        <div class="card" style="flex:1; display:flex; flex-direction:column;">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="d-flex align-items-center gap-1">
+                    <i class="bi bi-people me-1" style="color:var(--clr-brand);"></i> Pitten
+                    <span id="pitAlarmBadge" class="alarm-badge ms-1" style="display:none;"><i class="bi bi-bell-fill me-1"></i><span id="pitAlarmBadgeMinutes"></span> min</span>
+                </span>
+                <button type="button" id="pitSettingsBtn" class="btn btn-sm" title="Pit indstillinger"
+                        data-bs-toggle="modal" data-bs-target="#pitAlarmModal"
+                        style="background:none;border:none;color:var(--clr-text-muted);padding:0.15rem 0.3rem;font-size:0.85rem;">
+                    <i class="bi bi-gear"></i>
+                </button>
+            </div>
+            <div class="card-body" style="padding:0.75rem; display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                <!-- Ikon-række -->
+                <div class="d-flex gap-1 mb-2" style="flex-shrink:0;">
+                    <button type="button" class="btn btn-sm" title="Opret post"
+                            data-bs-toggle="modal" data-bs-target="#createPostModal"
+                            style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
+                        <i class="bi bi-signpost-2"></i>
+                    </button>
+                    <button type="button" id="toggleAlarmsBtn" class="btn btn-sm" title="Deaktiver alarmer"
+                            style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
+                        <i class="bi bi-alarm"></i>
+                    </button>
+                    <button type="button" id="collapseAllBtn" class="btn btn-sm" title="Minimer alle poster"
+                            style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
+                        <i class="bi bi-arrows-collapse"></i>
+                    </button>
+                    <button type="button" id="qrPitScanBtn" class="btn btn-sm" title="QR Scanner – tænd/sluk"
+                            style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
+                        <i class="bi bi-qr-code-scan"></i>
+                    </button>
+                </div>
+
+                <!-- Søgefelt -->
+                <div class="input-group mb-2" style="flex-shrink:0;">
+                    <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="pitSearch" class="form-control" placeholder="Søg efter frivillig..."
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
+                </div>
+
+                <!-- Spinner -->
+                <div id="pitSpinner" class="text-center py-3 d-none" style="flex-shrink:0;">
+                    <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+                </div>
+
+                <!-- Liste over frivillige i pitten (drop-zone) -->
+                <div id="pitList"
+                     data-drop-zone="Pit"
+                     style="overflow-y:auto; flex:1; min-height:60px; border-radius:var(--radius-md); transition:background 0.15s;">
+                    <!-- JS fylder dette -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drop-zone spalter (1-5) -->
+    @for (int col = 1; col <= 5; col++)
+    {
+        <div class="col-12 col-xl" style="display:flex; flex-direction:column;">
+            <div class="card" style="flex:1; display:flex; flex-direction:column;">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span><i class="bi bi-grid-1x2 me-1" style="color:var(--clr-brand);"></i> Zone @col</span>
+                </div>
+                <div class="card-body" style="padding:0.75rem; display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                    <!-- Post-drop-zone -->
+                    <div id="col@(col)Posts"
+                         data-column="@col"
+                         style="display:flex; flex-direction:column; gap:0.5rem; flex:1; min-height:60px; border-radius:var(--radius-md); overflow-y:auto; transition:background 0.15s;">
+                        <!-- JS renderer poster her -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Check-in Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1" aria-labelledby="checkInModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="checkInModalLabel">
+                    <i class="bi bi-person-check me-2" style="color:var(--clr-ok);"></i>Check-in
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="checkInSearch" class="form-control" placeholder="Søg på frivillig..."
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
+                    <button type="button" id="checkInSearchClear" class="btn btn-sm d-none"
+                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);border-left:none;"
+                            tabindex="-1" aria-label="Ryd søgning">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div id="checkInSpinner" class="text-center py-3 d-none">
+                    <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+                </div>
+
+                <div id="checkInTableWrapper">
+                    <table class="table table-hover" style="color:var(--clr-text);">
+                        <thead>
+                            <tr style="color:var(--clr-text-muted);font-size:0.8rem;border-color:var(--clr-border);">
+                                <th>Navn</th>
+                                <th>Telefon</th>
+                                <th>Vagt i dag</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="checkInTbody">
+                            <tr id="checkInLoadingRow">
+                                <td colspan="4" class="text-center py-3" style="color:var(--clr-text-muted);">
+                                    <div class="spinner-border spinner-border-sm me-2" style="color:var(--clr-brand);"></div>Henter frivillige...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="checkInEmpty" class="text-center py-4 d-none" style="color:var(--clr-text-muted);">
+                        <i class="bi bi-person-x" style="font-size:2rem;"></i>
+                        <p class="mt-2 mb-0">Ingen frivillige fundet</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Udeblivelser Modal -->
+<div class="modal fade" id="noShowModal" tabindex="-1" aria-labelledby="noShowModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="noShowModalLabel">
+                    <i class="bi bi-person-x me-2" style="color:var(--clr-warn);"></i>Udeblivelser
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" style="font-size:0.85rem;color:var(--clr-text-muted);">
+                    Frivillige med en vagt i dag hvor mødetidspunktet er passeret, men som ikke er checket ind.
+                </p>
+                <div class="input-group mb-3">
+                    <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="noShowSearch" class="form-control" placeholder="Søg på navn..."
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
+                    <button type="button" id="noShowSearchClear" class="btn btn-sm d-none"
+                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);border-left:none;"
+                            tabindex="-1" aria-label="Ryd søgning">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div id="noShowSpinner" class="text-center py-3 d-none">
+                    <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+                </div>
+
+                <div id="noShowTableWrapper">
+                    <table class="table table-hover" style="color:var(--clr-text);">
+                        <thead>
+                            <tr style="color:var(--clr-text-muted);font-size:0.8rem;border-color:var(--clr-border);">
+                                <th>Navn</th>
+                                <th>Telefon</th>
+                                <th>Vagtstart</th>
+                            </tr>
+                        </thead>
+                        <tbody id="noShowTbody">
+                            <tr>
+                                <td colspan="3" class="text-center py-3" style="color:var(--clr-text-muted);">
+                                    <div class="spinner-border spinner-border-sm me-2" style="color:var(--clr-brand);"></div>Henter...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="noShowEmpty" class="text-center py-4 d-none" style="color:var(--clr-text-muted);">
+                        <i class="bi bi-check2-circle" style="font-size:2rem;color:var(--clr-ok);"></i>
+                        <p class="mt-2 mb-0">Ingen udeblivelser – alle er mødt op!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <span id="noShowFooterCount" style="font-size:0.8rem;color:var(--clr-text-muted);margin-right:auto;"></span>
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pit Alarm Modal -->
+<div class="modal fade" id="pitAlarmModal" tabindex="-1" aria-labelledby="pitAlarmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="pitAlarmModalLabel" style="font-size:0.95rem;color:#e6edf3;">
+                    <i class="bi bi-gear me-2" style="color:var(--clr-brand);"></i>Pit indstillinger
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" style="font-size:0.85rem;color:var(--clr-text-muted);">
+                    Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                </label>
+                <input type="number" id="pitAlarmInput" class="form-control" placeholder="fx 30" min="1"
+                       style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
+                <div class="mt-2" style="font-size:0.78rem;color:var(--clr-text-muted);">
+                    Frivillige der har stået i pitten længere end dette vil blive vist øverst med en alarm.
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <button type="button" id="clearPitAlarmBtn" class="btn btn-sm"
+                        style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);">
+                    <i class="bi bi-x-lg me-1"></i>Ryd alarm
+                </button>
+                <button type="button" id="savePitAlarmBtn" class="btn btn-sm"
+                        style="background:var(--clr-brand);border:none;color:#fff;">
+                    <i class="bi bi-check-lg me-1"></i>Gem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Opret Post Modal -->
+<div class="modal fade" id="createPostModal" tabindex="-1" aria-labelledby="createPostModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="createPostModalLabel">
+                    <i class="bi bi-signpost-2 me-2" style="color:var(--clr-brand);"></i>Opret post
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Postnavn</label>
+                    <input type="text" id="newPostName" class="form-control" placeholder="fx Bar 8, Blå Scene..."
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off" maxlength="128">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Placér i zone</label>
+                    <select id="newPostColumn" class="form-select"
+                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
+                        <option value="1">Zone 1</option>
+                        <option value="2">Zone 2</option>
+                        <option value="3">Zone 3</option>
+                        <option value="4">Zone 4</option>
+                        <option value="5">Zone 5</option>
+                    </select>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">
+                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                    </label>
+                    <input type="number" id="newPostAlarm" class="form-control" placeholder="fx 60"
+                           min="1" max="9999"
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="createPostBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
+                    <i class="bi bi-plus-lg me-1"></i>Opret post
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rediger Post Modal -->
+<div class="modal fade" id="editPostModal" tabindex="-1" aria-labelledby="editPostModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="editPostModalLabel">
+                    <i class="bi bi-pencil me-2" style="color:var(--clr-info);"></i>Rediger post
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editPostId">
+                <div class="mb-3">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Postnavn</label>
+                    <input type="text" id="editPostName" class="form-control" placeholder="fx Bar 8, Blå Scene..."
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off" maxlength="128">
+                </div>
+                <div class="mb-1">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">
+                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                    </label>
+                    <input type="number" id="editPostAlarm" class="form-control" placeholder="fx 60"
+                           min="1" max="9999"
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="saveEditPostBtn" class="btn btn-sm" style="background:var(--clr-info);color:#fff;border:none;">
+                    <i class="bi bi-check-lg me-1"></i>Gem ændringer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slet Post Bekræft Modal -->
+<div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="deletePostModalLabel">
+                    <i class="bi bi-trash3 me-2" style="color:var(--clr-alarm);"></i>Slet post
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deletePostId">
+                <p class="mb-2" style="color:var(--clr-text);font-size:0.88rem;">
+                    Er du sikker på at du vil slette posten <strong id="deletePostName" style="color:#e6edf3;"></strong>?
+                </p>
+                <div id="deletePostWarning" class="d-none p-2" style="background:var(--clr-warn-bg);border:1px solid var(--clr-warn);border-radius:var(--radius-md);font-size:0.8rem;color:var(--clr-warn);">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <span id="deletePostVolunteerCount"></span> frivillig(e) på posten flyttes automatisk tilbage til Pitten.
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="confirmDeletePostBtn" class="btn btn-sm" style="background:var(--clr-alarm);color:#fff;border:none;">
+                    <i class="bi bi-trash3 me-1"></i>Slet post
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+    .card-clickable { transition: outline 0.15s, box-shadow 0.15s; }
+    .card-clickable:hover { outline: 2px solid var(--clr-brand); box-shadow: 0 0 0 4px var(--clr-brand-dim); }
+
+    .post-card {
+        background: var(--clr-bg);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-md);
+        padding: 0.5rem 0.6rem;
+        cursor: grab;
+        user-select: none;
+    }
+    .post-card:active { cursor: grabbing; }
+    .post-card.dragging { opacity: 0.4; }
+
+    .volunteer-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.5rem;
+        background: var(--clr-surface);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-md);
+        cursor: grab;
+        user-select: none;
+        font-size: 0.78rem;
+        color: #e6edf3;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .volunteer-chip:active { cursor: grabbing; }
+    .volunteer-chip.dragging { opacity: 0.4; }
+
+    .pit-volunteer-row {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: var(--radius-md);
+        cursor: grab;
+        user-select: none;
+    }
+    .pit-volunteer-row:active { cursor: grabbing; }
+    .pit-volunteer-row.dragging { opacity: 0.4; }
+
+    .vol-menu-btn { opacity: 0.4; transition: opacity 0.15s; }
+    .pit-volunteer-row:hover .vol-menu-btn,
+    .volunteer-chip:hover .vol-menu-btn,
+    .vol-menu-btn:hover { opacity: 1 !important; }
+
+    #vol-ctx-menu .dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: 6px 14px;
+        color: var(--clr-text);
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    #vol-ctx-menu .dropdown-item:hover {
+        background: rgba(255,255,255,0.06);
+        color: var(--clr-text);
+    }
+
+    .drop-zone-active {
+        background: rgba(232, 93, 46, 0.06) !important;
+        outline: 2px dashed var(--clr-brand);
+        outline-offset: -2px;
+    }
+    .post-drop-zone-active {
+        background: rgba(232, 93, 46, 0.08) !important;
+        outline: 1px dashed var(--clr-brand);
+        outline-offset: -1px;
+    }
+
+    .alarm-badge {
+        font-size: 0.68rem;
+        padding: 0.1rem 0.35rem;
+        border-radius: 99px;
+        background: var(--clr-warn-bg);
+        color: var(--clr-warn);
+        white-space: nowrap;
+    }
+    .alarm-firing {
+        border-color: var(--clr-alarm) !important;
+        box-shadow: 0 0 0 2px rgba(220,53,69,0.25);
+    }
+</style>
+<script>
+(function () {
+    // ── Globals ──────────────────────────────────────────────────────────────
+    let searchTimer = null;
+    let pitSearchTimer = null;
+    let dragPayload = null; // { type: 'volunteer'|'post', id, fromLocation, element }
+
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const modal        = document.getElementById('checkInModal');
+    const searchInput  = document.getElementById('checkInSearch');
+    const searchClear  = document.getElementById('checkInSearchClear');
+    const tbody        = document.getElementById('checkInTbody');
+    const emptyDiv     = document.getElementById('checkInEmpty');
+    const spinner      = document.getElementById('checkInSpinner');
+    const tableWrapper = document.getElementById('checkInTableWrapper');
+
+    const pitSearchInput = document.getElementById('pitSearch');
+    const pitList        = document.getElementById('pitList');
+    const pitEmpty       = null; // Tom-tilstand renderes nu inde i pitList
+    const pitSpinner     = document.getElementById('pitSpinner');
+
+    // ── Event delegation for frivillig kontekstmenu ──────────────────────────
+    document.addEventListener('pointerdown', (e) => {
+        const btn = e.target.closest('.vol-menu-btn');
+        if (!btn) return;
+        e.stopPropagation();
+    });
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.vol-menu-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        e.preventDefault();
+        openVolunteerMenu(btn);
+    });
+
+    // ── Check-in Modal ────────────────────────────────────────────────────────
+    modal.addEventListener('shown.bs.modal', () => {
+        searchInput.value = '';
+        searchClear.classList.add('d-none');
+        loadVolunteers('');
+        searchInput.focus();
+    });
+    modal.addEventListener('hidden.bs.modal', () => {
+        updateCheckedInCount();
+        updateNoShowCount();
+        loadPitVolunteers('');
+        loadAllPosts();
+    });
+    searchInput.addEventListener('keyup', () => {
+        searchClear.classList.toggle('d-none', searchInput.value === '');
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => loadVolunteers(searchInput.value), 250);
+    });
+    searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchClear.classList.add('d-none');
+        loadVolunteers('');
+        searchInput.focus();
+    });
+
+    function loadVolunteers(q) {
+        spinner.classList.remove('d-none');
+        tableWrapper.classList.add('d-none');
+        const today = new Date().toISOString().slice(0, 10);
+        fetch(`/Home/CheckInSearch?q=${encodeURIComponent(q)}&date=${today}`)
+            .then(r => r.json())
+            .then(data => { spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none'); renderRows(data); })
+            .catch(() => {
+                spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none');
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                emptyDiv.classList.add('d-none');
+            });
+    }
+
+    function renderRows(volunteers) {
+        tbody.innerHTML = '';
+        if (!volunteers || volunteers.length === 0) { emptyDiv.classList.remove('d-none'); return; }
+        emptyDiv.classList.add('d-none');
+        volunteers.forEach(v => {
+            const tr = document.createElement('tr');
+            tr.style.borderColor = 'var(--clr-border)';
+            const actionBtn = v.isCheckedIn
+                ? `<button class="btn btn-sm checkout-btn" data-id="${v.id}" data-name="${escHtml(v.name)}" style="background:var(--clr-warn-bg);color:var(--clr-warn);border:1px solid var(--clr-warn);font-size:0.78rem;"><i class="bi bi-box-arrow-right me-1"></i>Check ud</button>`
+                : `<button class="btn btn-sm checkin-btn" data-id="${v.id}" data-name="${escHtml(v.name)}" style="background:var(--clr-ok-bg);color:var(--clr-ok);border:1px solid var(--clr-ok);font-size:0.78rem;"><i class="bi bi-box-arrow-in-right me-1"></i>Check ind</button>`;
+            tr.innerHTML = `
+                <td><span style="font-weight:600;">${escHtml(v.name)}</span>
+                ${v.isCheckedIn ? '<span class="badge-ok ms-2" style="font-size:0.68rem;"><i class="bi bi-check2-circle me-1"></i>Checket ind</span>' : ''}
+                ${v.email ? `<br><small style="color:var(--clr-text-muted);">${escHtml(v.email)}</small>` : ''}</td>
+                <td style="color:var(--clr-text-muted);">${v.phoneNumber ? escHtml(v.phoneNumber) : '—'}</td>
+                <td>${v.hasShiftToday ? '<span class="badge-ok" style="font-size:0.72rem;"><i class="bi bi-check2 me-1"></i>Ja</span>' : '<span style="color:var(--clr-text-dim);font-size:0.8rem;">Ingen vagt</span>'}</td>
+                <td class="text-end">${actionBtn}</td>`;
+            tbody.appendChild(tr);
+        });
+        document.querySelectorAll('.checkin-btn').forEach(btn => btn.addEventListener('click', function () { doCheckIn(parseInt(this.dataset.id), this.dataset.name, this); }));
+        document.querySelectorAll('.checkout-btn').forEach(btn => btn.addEventListener('click', function () { doCheckOut(parseInt(this.dataset.id), this.dataset.name, this); }));
+    }
+
+    function doCheckIn(volunteerId, name, btn) {
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        postJson('/Home/CheckIn', { volunteerId })
+            .then(res => {
+                if (res.success) { showToast(res.message, 'success'); updateCheckedInCount(); updateNoShowCount(); loadVolunteers(searchInput.value); }
+                else { showToast(res.message, 'warning'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; }
+            })
+            .catch(() => { showToast('Noget gik galt. Prøv igen.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; });
+    }
+
+    function doCheckOut(volunteerId, name, btn) {
+        if (btn && btn.disabled !== undefined) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
+        postJson('/Home/CheckOut', { volunteerId })
+            .then(res => {
+                if (res.success) {
+                    disabledAlarmVolunteers.delete(volunteerId);
+                    showToast(res.message, 'success'); updateCheckedInCount(); updateNoShowCount(); loadVolunteers(searchInput.value);
+                    clearPitSearch(); loadPitVolunteers(''); loadAllPosts();
+                }
+                else { showToast(res.message, 'warning'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } }
+            })
+            .catch(() => { showToast('Noget gik galt. Prøv igen.', 'error'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } });
+    }
+
+    // ── Tæller ────────────────────────────────────────────────────────────────
+    function updateCheckedInCount() {
+        fetch('/Home/GetCheckedInCount').then(r => r.json()).then(data => {
+            const el = document.getElementById('checkedInCount');
+            if (el) el.textContent = data.count;
+            const pit = document.getElementById('pitCount');
+            if (pit) pit.textContent = data.pitCount;
+        }).catch(() => {});
+    }
+    window.updateCheckedInCount = updateCheckedInCount;
+
+    function updateNoShowCount() {
+        fetch('/Home/GetNoShowCount').then(r => r.json()).then(data => {
+            const el = document.getElementById('noShowCount');
+            if (el) el.textContent = data.count;
+        }).catch(() => {});
+    }
+
+    // ── Udeblivelser Modal ────────────────────────────────────────────────────
+    const noShowModal      = document.getElementById('noShowModal');
+    const noShowSearchInput = document.getElementById('noShowSearch');
+    const noShowSearchClear = document.getElementById('noShowSearchClear');
+    const noShowTbody      = document.getElementById('noShowTbody');
+    const noShowEmpty      = document.getElementById('noShowEmpty');
+    const noShowSpinner    = document.getElementById('noShowSpinner');
+    const noShowWrapper    = document.getElementById('noShowTableWrapper');
+    const noShowFooter     = document.getElementById('noShowFooterCount');
+    let noShowSearchTimer  = null;
+    let _lastNoShows       = [];
+
+    noShowModal.addEventListener('shown.bs.modal', () => {
+        noShowSearchInput.value = '';
+        noShowSearchClear.classList.add('d-none');
+        loadNoShows('');
+        noShowSearchInput.focus();
+    });
+
+    noShowSearchInput.addEventListener('keyup', () => {
+        noShowSearchClear.classList.toggle('d-none', noShowSearchInput.value === '');
+        clearTimeout(noShowSearchTimer);
+        noShowSearchTimer = setTimeout(() => loadNoShows(noShowSearchInput.value), 250);
+    });
+
+    noShowSearchClear.addEventListener('click', () => {
+        noShowSearchInput.value = '';
+        noShowSearchClear.classList.add('d-none');
+        loadNoShows('');
+        noShowSearchInput.focus();
+    });
+
+    function loadNoShows(q) {
+        noShowSpinner.classList.remove('d-none');
+        noShowWrapper.classList.add('d-none');
+        fetch(`/Home/GetNoShowList?q=${encodeURIComponent(q || '')}`)
+            .then(r => r.json())
+            .then(data => {
+                _lastNoShows = data;
+                noShowSpinner.classList.add('d-none');
+                noShowWrapper.classList.remove('d-none');
+                renderNoShowRows(data);
+            })
+            .catch(() => {
+                noShowSpinner.classList.add('d-none');
+                noShowWrapper.classList.remove('d-none');
+                noShowTbody.innerHTML = '<tr><td colspan="3" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                noShowEmpty.classList.add('d-none');
+            });
+    }
+
+    function renderNoShowRows(list) {
+        noShowTbody.innerHTML = '';
+        if (!list || list.length === 0) {
+            noShowEmpty.classList.remove('d-none');
+            noShowFooter.textContent = '';
+            return;
+        }
+        noShowEmpty.classList.add('d-none');
+        noShowFooter.textContent = `${list.length} udeblivelse${list.length !== 1 ? 'r' : ''}`;
+        list.forEach(v => {
+            const tr = document.createElement('tr');
+            tr.style.borderColor = 'var(--clr-border)';
+            const phone = v.phoneNumber
+                ? `<a href="tel:${escHtml(v.phoneNumber)}" style="color:var(--clr-info);text-decoration:none;" title="Ring op"><i class="bi bi-telephone me-1"></i>${escHtml(v.phoneNumber)}</a>`
+                : '<span style="color:var(--clr-text-dim);">—</span>';
+            const start = new Date(v.earliestStart + 'Z');
+            const startStr = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+            const minsLate = Math.floor((Date.now() - start.getTime()) / 60000);
+            const lateLabel = minsLate > 0
+                ? `<span class="badge-warn ms-2" style="font-size:0.68rem;"><i class="bi bi-clock me-1"></i>${minsLate} min forsinket</span>`
+                : '';
+            tr.innerHTML = `
+                <td><span style="font-weight:600;">${escHtml(v.name)}</span>${lateLabel}</td>
+                <td>${phone}</td>
+                <td style="color:var(--clr-text-muted);white-space:nowrap;">${startStr}</td>`;
+            noShowTbody.appendChild(tr);
+        });
+    }
+
+    // ── Pitten ────────────────────────────────────────────────────────────────
+    pitSearchInput.addEventListener('keyup', () => {
+        clearTimeout(pitSearchTimer);
+        pitSearchTimer = setTimeout(() => loadPitVolunteers(pitSearchInput.value), 250);
+    });
+
+    function loadPitVolunteers(q) {
+        pitSpinner.classList.remove('d-none');
+        pitList.classList.add('d-none');
+        fetch(`/Home/GetPitVolunteers?q=${encodeURIComponent(q || '')}`)
+            .then(r => r.json())
+            .then(data => { pitSpinner.classList.add('d-none'); renderPitList(data, q || ''); })
+            .catch(() => {
+                pitSpinner.classList.add('d-none');
+                pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</div>';
+                pitList.classList.remove('d-none');
+            });
+    }
+    window.loadPitVolunteers = loadPitVolunteers;
+
+    function renderPitList(volunteers, q) {
+        pitList.classList.remove('d-none');
+        pitList.innerHTML = '';
+        const hasQuery = q && q.trim() !== '';
+
+        // Filtrer post-chips baseret på søgningen
+        filterPostChips(hasQuery ? volunteers.map(v => v.volunteerId) : null);
+
+        const pitVolunteers = volunteers.filter(v => v.currentLocation === 'Pit' || !v.currentLocation);
+
+        if (!hasQuery && pitVolunteers.length === 0) {
+            pitList.innerHTML = `<div id="pitEmpty" class="text-center py-4" style="color:var(--clr-text-muted);">
+                <i class="bi bi-person-x" style="font-size:2rem;"></i>
+                <p class="mt-2 mb-0">Ingen i pitten</p>
+            </div>`;
+            setupPitDropZone();
+            return;
+        }
+
+        if (hasQuery && volunteers.length === 0) {
+            pitList.innerHTML = `<div id="pitEmpty" class="text-center py-4" style="color:var(--clr-text-muted);">
+                <i class="bi bi-search" style="font-size:2rem;"></i>
+                <p class="mt-2 mb-0">Ingen resultater</p>
+            </div>`;
+            setupPitDropZone();
+            return;
+        }
+
+        // Sorter: alarmerede øverst, derefter alfabetisk
+        const now = Date.now();
+        const withAlarm = (v) => alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
+            && !disabledAlarmVolunteers.has(v.volunteerId)
+            ? (now - new Date(v.arrivedAtPit + 'Z').getTime()) >= pitAlarmMinutes * 60 * 1000
+            : false;
+
+        // Opdater pit alarm count og den globale tæller
+        _pitAlarmCount = pitVolunteers.filter(v => withAlarm(v)).length;
+        updateAlarmCounter();
+
+        const sorted = [...pitVolunteers].sort((a, b) => {
+            const aFiring = withAlarm(a);
+            const bFiring = withAlarm(b);
+            if (aFiring && !bFiring) return -1;
+            if (!aFiring && bFiring) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        // Vis pit-frivillige
+        sorted.forEach(v => {
+            const firing = withAlarm(v);
+            const alarmMuted = disabledAlarmVolunteers.has(v.volunteerId);
+            const row = document.createElement('div');
+            row.className = 'pit-volunteer-row';
+            if (firing) row.style.cssText = 'border-left:3px solid var(--clr-alarm);padding-left:0.4rem;';
+            row.draggable = true;
+            row.dataset.volunteerId = v.volunteerId;
+            row.dataset.name = v.name;
+            row.dataset.location = 'Pit';
+            row.innerHTML = `
+                <div style="width:26px;height:26px;border-radius:50%;background:${firing ? 'var(--clr-alarm-bg)' : 'var(--clr-brand-dim)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${firing ? 'var(--clr-alarm)' : 'var(--clr-brand)'};font-weight:700;font-size:0.75rem;">
+                    ${escHtml(v.name).charAt(0).toUpperCase()}
+                </div>
+                <span style="font-size:0.875rem;color:#e6edf3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+                ${firing ? '<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.75rem;" title="Over alarmtid"></i>' : ''}
+                ${alarmMuted ? '<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.7rem;" title="Alarm deaktiveret"></i>' : ''}
+                <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="Pit" draggable="false"
+                    style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>`
+            row.addEventListener('dragstart', onVolunteerDragStart);
+            row.addEventListener('dragend', onDragEnd);
+            pitList.appendChild(row);
+        });
+
+        // Vis frivillige i poster som søgeresultat (ikke i Pit)
+        const postVolunteers = volunteers.filter(v => v.currentLocation && v.currentLocation !== 'Pit');
+        if (hasQuery && postVolunteers.length > 0) {
+            const sep = document.createElement('div');
+            sep.style.cssText = 'font-size:0.7rem;color:var(--clr-text-muted);padding:0.4rem 0.25rem 0.1rem;text-transform:uppercase;letter-spacing:0.05em;';
+            sep.textContent = 'I post';
+            pitList.appendChild(sep);
+            postVolunteers.forEach(v => {
+                const row = document.createElement('div');
+                row.className = 'pit-volunteer-row';
+                row.style.opacity = '0.7';
+                row.innerHTML = `
+                    <div style="width:26px;height:26px;border-radius:50%;background:var(--clr-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--clr-text-muted);font-weight:700;font-size:0.75rem;border:1px solid var(--clr-border);">
+                        ${escHtml(v.name).charAt(0).toUpperCase()}
+                    </div>
+                    <span style="font-size:0.875rem;color:#e6edf3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+                    <span style="font-size:0.7rem;color:var(--clr-text-muted);white-space:nowrap;">${escHtml(v.currentLocation)}</span>
+                    <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(v.currentLocation)}" draggable="false"
+                        style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>`;
+                pitList.appendChild(row);
+            });
+        }
+
+        setupPitDropZone();
+    }
+
+    // Skjul/vis volunteer-chips i poster baseret på søgning
+    function filterPostChips(matchingIds) {
+        document.querySelectorAll('.volunteer-chip').forEach(chip => {
+            if (!matchingIds) {
+                chip.style.display = '';
+            } else {
+                chip.style.display = matchingIds.includes(parseInt(chip.dataset.volunteerId)) ? '' : 'none';
+            }
+        });
+    }
+
+    // Ryd søgefeltet og nulstil visningen
+    function clearPitSearch() {
+        if (pitSearchInput.value === '') return;
+        pitSearchInput.value = '';
+        filterPostChips(null);
+    }
+
+    // ── Poster ────────────────────────────────────────────────────────────────
+    function loadAllPosts() {
+        fetch('/Post/GetAll').then(r => r.json()).then(renderAllPosts).catch(() => {});
+    }
+
+    function renderAllPosts(posts) {
+        _lastPosts = posts;
+        // Ryd alle 5 kolonner
+        for (let c = 1; c <= 5; c++) {
+            const col = document.getElementById(`col${c}Posts`);
+            if (col) col.innerHTML = '';
+        }
+        // Render poster
+        posts.forEach(p => renderPost(p));
+        // Setup drop-zones for kolonner
+        for (let c = 1; c <= 5; c++) {
+            setupColumnDropZone(document.getElementById(`col${c}Posts`));
+        }
+
+        // Opdater stat-kort
+        const now = Date.now();
+        let alarmCount = 0;
+        if (alarmsEnabled) {
+            posts.forEach(p => {
+                if (!p.alarmAfterMinutes) return;
+                (p.volunteers || []).forEach(v => {
+                    if (disabledAlarmVolunteers.has(v.volunteerId)) return;
+                    const ms = now - new Date(v.arrivedAtPost + 'Z').getTime();
+                    if (ms >= p.alarmAfterMinutes * 60 * 1000) alarmCount++;
+                });
+            });
+        }
+
+        const postsEl = document.getElementById('activePostsCount');
+        if (postsEl) postsEl.textContent = posts.length;
+
+        updateAlarmCounter();
+
+        updateCollapseAllBtn(posts);
+    }
+
+    function updateAlarmCounter() {
+        const alarmsEl = document.getElementById('activeAlarmsCount');
+        if (!alarmsEl) return;
+        const now = Date.now();
+        let postAlarmCount = 0;
+        if (alarmsEnabled) {
+            _lastPosts.forEach(p => {
+                if (!p.alarmAfterMinutes) return;
+                (p.volunteers || []).forEach(v => {
+                    if (disabledAlarmVolunteers.has(v.volunteerId)) return;
+                    const ms = now - new Date(v.arrivedAtPost + 'Z').getTime();
+                    if (ms >= p.alarmAfterMinutes * 60 * 1000) postAlarmCount++;
+                });
+            });
+        }
+        const total = postAlarmCount + _pitAlarmCount;
+        alarmsEl.textContent = total;
+        alarmsEl.style.color = total > 0 ? 'var(--clr-alarm)' : '#e6edf3';
+    }
+
+    function renderPost(p) {
+        const col = document.getElementById(`col${p.columnIndex}Posts`);
+        if (!col) return;
+
+        const card = document.createElement('div');
+        card.className = 'post-card';
+        card.draggable = true;
+        card.dataset.postId = p.id;
+        card.dataset.postName = p.name;
+        card.dataset.column = p.columnIndex;
+
+        const alarmBadge = (alarmsEnabled && p.alarmAfterMinutes)
+            ? `<span class="alarm-badge ms-1"><i class="bi bi-bell-fill me-1"></i>${p.alarmAfterMinutes} min</span>`
+            : '';
+
+        // Check om nogen frivillige er over alarmtiden
+        const now = Date.now();
+        const firingVolunteers = alarmsEnabled ? (p.volunteers || []).filter(v => {
+            if (!p.alarmAfterMinutes) return false;
+            if (disabledAlarmVolunteers.has(v.volunteerId)) return false;
+            const ms = now - new Date(v.arrivedAtPost + 'Z').getTime();
+            return ms >= p.alarmAfterMinutes * 60 * 1000;
+        }) : [];
+        const alarmFiring = firingVolunteers.length > 0;
+
+        const isCollapsed = collapsedPosts.has(p.id);
+        const volunteerCount = (p.volunteers || []).length;
+
+        card.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="d-flex align-items-center gap-1" style="font-size:0.82rem;font-weight:600;color:#e6edf3;flex:1;min-width:0;cursor:pointer;" data-collapse-toggle>
+                    <i class="bi bi-signpost-2" style="color:var(--clr-brand);font-size:0.78rem;"></i>
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.name)}</span>
+                    ${alarmBadge}
+                    ${alarmFiring ? `<span style="color:var(--clr-alarm);font-size:0.75rem;" title="${firingVolunteers.length} frivillig(e) har oversteget alarmtiden"><i class="bi bi-exclamation-triangle-fill"></i></span>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-1" style="flex-shrink:0;">
+                    <button class="btn btn-sm post-collapse-btn" title="${isCollapsed ? 'Udvid post' : 'Minimer post'}"
+                            style="padding:0.1rem 0.3rem;background:none;border:none;color:var(--clr-text-dim);font-size:0.8rem;">
+                        <i class="bi ${isCollapsed ? 'bi-chevron-down' : 'bi-chevron-up'}"></i>
+                    </button>
+                    <div class="dropdown" style="line-height:1;">
+                        <button class="btn btn-sm post-menu-btn" data-bs-toggle="dropdown" aria-expanded="false"
+                                style="padding:0.1rem 0.3rem;background:none;border:none;color:var(--clr-text-dim);font-size:0.8rem;" title="Indstillinger">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="background:var(--clr-surface);border:1px solid var(--clr-border);min-width:130px;">
+                            <li>
+                                <button class="dropdown-item edit-post-btn d-flex align-items-center gap-2"
+                                        data-post-id="${p.id}" data-post-name="${escHtml(p.name)}" data-alarm="${p.alarmAfterMinutes ?? ''}"
+                                        style="color:var(--clr-text);font-size:0.82rem;">
+                                    <i class="bi bi-pencil" style="color:var(--clr-info);"></i> Rediger
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:0.25rem 0;"></li>
+                            <li>
+                                <button class="dropdown-item delete-post-btn d-flex align-items-center gap-2"
+                                        data-post-id="${p.id}" data-post-name="${escHtml(p.name)}" data-volunteer-count="${volunteerCount}"
+                                        style="color:var(--clr-alarm);font-size:0.82rem;">
+                                    <i class="bi bi-trash3"></i> Slet
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="post-volunteer-zone d-flex flex-wrap gap-1" data-post-name="${escHtml(p.name)}" style="min-height:${isCollapsed ? '0' : '28px'};${isCollapsed ? 'display:none!important;' : ''}">
+                ${(p.volunteers || []).map(v => volunteerChipHtml(v, p.name, p.alarmAfterMinutes)).join('')}
+            </div>
+            ${isCollapsed ? `<div class="post-collapsed-summary" style="font-size:0.75rem;color:var(--clr-text-muted);padding-top:0.1rem;">
+                <i class="bi bi-people" style="margin-right:0.25rem;"></i>${volunteerCount} frivillig${volunteerCount !== 1 ? 'e' : ''}
+                ${alarmFiring ? `<span style="color:var(--clr-alarm);margin-left:0.4rem;"><i class="bi bi-exclamation-triangle-fill"></i> Alarm</span>` : ''}
+            </div>` : ''}`;
+
+        card.addEventListener('dragstart', onPostDragStart);
+        card.addEventListener('dragend', onDragEnd);
+
+        // Collapse toggle via knap og header-klik
+        const collapseBtn = card.querySelector('.post-collapse-btn');
+        const collapseToggle = card.querySelector('[data-collapse-toggle]');
+        const toggleCollapse = (e) => {
+            e.stopPropagation();
+            if (collapsedPosts.has(p.id)) collapsedPosts.delete(p.id);
+            else collapsedPosts.add(p.id);
+            // Re-render kun denne post
+            const parent = card.parentElement;
+            card.remove();
+            renderPost(p);
+            updateCollapseAllBtn(_lastPosts);
+            // Genåbn den nye card i samme parent
+            if (parent) {
+                const newCard = parent.querySelector(`[data-post-id="${p.id}"]`);
+                // kort er allerede appended af renderPost
+            }
+        };
+        collapseBtn.addEventListener('click', toggleCollapse);
+        collapseToggle.addEventListener('click', toggleCollapse);
+
+        card.querySelector('.edit-post-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const btn = e.currentTarget;
+            openEditPostModal(parseInt(btn.dataset.postId), btn.dataset.postName, btn.dataset.alarm);
+        });
+
+        card.querySelector('.delete-post-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const btn = e.currentTarget;
+            openDeletePostModal(parseInt(btn.dataset.postId), btn.dataset.postName, parseInt(btn.dataset.volunteerCount) || 0);
+        });
+
+        // Setup volunteer drop-zone på posten
+        const vZone = card.querySelector('.post-volunteer-zone');
+        setupVolunteerDropZoneOnPost(vZone, p.name);
+
+        // Drag events for volunteer chips
+        card.querySelectorAll('.volunteer-chip').forEach(chip => {
+            chip.addEventListener('dragstart', onVolunteerDragStart);
+            chip.addEventListener('dragend', onDragEnd);
+        });
+
+        if (alarmFiring) card.classList.add('alarm-firing');
+        col.appendChild(card);
+    }
+
+    function volunteerChipHtml(v, postName, alarmAfterMinutes) {
+        let alarmIcon = '';
+        if (alarmsEnabled && alarmAfterMinutes && !disabledAlarmVolunteers.has(v.volunteerId)) {
+            const ms = Date.now() - new Date(v.arrivedAtPost + 'Z').getTime();
+            if (ms >= alarmAfterMinutes * 60 * 1000) {
+                alarmIcon = `<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.7rem;" title="Over alarmtid"></i>`;
+            }
+        }
+        const alarmMuted = disabledAlarmVolunteers.has(v.volunteerId);
+        return `<span class="volunteer-chip" draggable="true" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}" style="display:flex;align-items:center;gap:4px;position:relative;">
+            <span style="width:20px;height:20px;border-radius:50%;background:var(--clr-brand-dim);display:flex;align-items:center;justify-content:center;color:var(--clr-brand);font-weight:700;font-size:0.65rem;flex-shrink:0;">
+                ${escHtml(v.name).charAt(0).toUpperCase()}
+            </span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+            ${alarmIcon}
+            ${alarmMuted ? `<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.65rem;" title="Alarm deaktiveret"></i>` : ''}
+            <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(postName)}" draggable="false"
+                style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.8rem;cursor:pointer;flex-shrink:0;line-height:1;"
+                >
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
+        </span>`;
+    }
+
+    // ── Frivillig kontekstmenu ────────────────────────────────────────────────
+    let _volMenuOpen = null; // reference til åben dropdown
+
+    function openVolunteerMenu(btn) {
+        // Luk eksisterende menu
+        closeVolunteerMenu();
+
+        const volunteerId = parseInt(btn.dataset.vid);
+        const name = btn.dataset.vname;
+        const currentLocation = btn.dataset.vloc;
+        const isMuted = disabledAlarmVolunteers.has(volunteerId);
+        const rect = btn.getBoundingClientRect();
+
+        // Byg post-submenu items (Pit øverst, derefter alle poster)
+        const pitItem = `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="Pit"><i class="bi bi-arrow-left-circle me-2" style="color:var(--clr-brand);"></i>Pitten</a></li>`;
+        const postItems = _lastPosts.map(p =>
+            `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="${escHtml(p.name)}"><i class="bi bi-geo-alt me-2"></i>${escHtml(p.name)}</a></li>`
+        ).join('');
+
+        const menu = document.createElement('div');
+        menu.id = 'vol-ctx-menu';
+        menu.dataset.vid = volunteerId;
+        menu.dataset.vname = name;
+        menu.style.cssText = `position:fixed;z-index:9999;min-width:200px;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);padding:4px 0;font-size:0.85rem;`;
+        menu.innerHTML = `
+            <div style="padding:6px 12px 4px;font-size:0.75rem;color:var(--clr-text-muted);border-bottom:1px solid var(--clr-border);margin-bottom:2px;">${escHtml(name)}</div>
+            <li class="dropdown-item-submenu" style="list-style:none;position:relative;">
+                <a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="vol-submenu-toggle">
+                    <span><i class="bi bi-arrow-left-right me-2" style="color:var(--clr-brand);"></i>Flyt til funktion</span>
+                    <i class="bi bi-chevron-right" style="font-size:0.7rem;color:var(--clr-text-muted);"></i>
+                </a>
+                <div class="vol-submenu" style="display:none;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.5);padding:4px 0;margin-top:2px;margin-left:8px;margin-right:8px;">
+                    <ul style="list-style:none;margin:0;padding:0;">${pitItem}${postItems ? '<li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>' + postItems : ''}</ul>
+                </div>
+            </li>
+            <li style="list-style:none;"><a class="dropdown-item" href="#" id="vol-alarm-toggle">
+                <i class="bi ${isMuted ? 'bi-bell' : 'bi-bell-slash'} me-2" style="color:${isMuted ? 'var(--clr-ok)' : 'var(--clr-warn)'};"></i>${isMuted ? 'Aktiver alarm' : 'Deaktiver alarm'}
+            </a></li>
+            <li style="list-style:none;"><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>
+            <li style="list-style:none;"><a class="dropdown-item" href="#" id="vol-checkout-btn">
+                <i class="bi bi-box-arrow-right me-2" style="color:var(--clr-alarm);"></i>Check ud
+            </a></li>`;
+
+        document.body.appendChild(menu);
+
+        // Bind events via JS (ingen inline onclick med strings)
+        menu.querySelector('#vol-submenu-toggle').addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            toggleVolSubmenu(e.currentTarget);
+        });
+        menu.querySelectorAll('.vol-move-item').forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                volMenuMove(parseInt(a.dataset.vid), a.dataset.vtarget);
+            });
+        });
+        menu.querySelector('#vol-alarm-toggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            volMenuToggleAlarm(parseInt(menu.dataset.vid));
+        });
+        menu.querySelector('#vol-checkout-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            volMenuCheckOut(parseInt(menu.dataset.vid), menu.dataset.vname);
+        });
+
+        // Positioner menuen
+        const menuW = 210;
+        const menuH = 180;
+        let top = rect.bottom + 4;
+        let left = rect.right - menuW;
+        if (left < 4) left = 4;
+        if (top + menuH > window.innerHeight - 8) top = rect.top - menuH - 4;
+        menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+
+        _volMenuOpen = menu;
+
+        // Luk ved klik udenfor
+        setTimeout(() => document.addEventListener('click', closeVolunteerMenu, { once: true }), 10);
+    }
+
+    function closeVolunteerMenu() {
+        if (_volMenuOpen) { _volMenuOpen.remove(); _volMenuOpen = null; }
+    }
+
+    function toggleVolSubmenu(el) {
+        const sub = el.closest('li').querySelector('.vol-submenu');
+        if (!sub) return;
+        sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+        // Tilpas menuens højde dynamisk
+        if (_volMenuOpen) {
+            const rect2 = _volMenuOpen.getBoundingClientRect();
+            if (rect2.bottom > window.innerHeight - 8) {
+                _volMenuOpen.style.top = Math.max(8, window.innerHeight - _volMenuOpen.offsetHeight - 8) + 'px';
+            }
+        }
+    }
+
+    function volMenuMove(volunteerId, targetLocation) {
+        closeVolunteerMenu();
+        disabledAlarmVolunteers.delete(volunteerId);
+        moveVolunteer(volunteerId, targetLocation);
+    }
+
+    function volMenuToggleAlarm(volunteerId) {
+        closeVolunteerMenu();
+        if (disabledAlarmVolunteers.has(volunteerId)) {
+            disabledAlarmVolunteers.delete(volunteerId);
+            showToast('Alarm aktiveret igen.', 'info');
+        } else {
+            disabledAlarmVolunteers.add(volunteerId);
+            showToast('Alarm deaktiveret for denne frivillig.', 'info');
+        }
+        // Opdater visning
+        loadPitVolunteers(pitSearchInput.value);
+        if (_lastPosts.length) renderAllPosts(_lastPosts);
+        updateAlarmCounter();
+    }
+
+    function volMenuCheckOut(volunteerId, name) {
+        closeVolunteerMenu();
+        // Simuler et checkout via doCheckOut — find eller opret en knap-reference
+        const fakeBtn = { disabled: false, innerHTML: '' };
+        doCheckOut(volunteerId, name, fakeBtn);
+    }
+
+    // ── Opret Post ────────────────────────────────────────────────────────────
+    document.getElementById('createPostBtn').addEventListener('click', () => {
+        const name = document.getElementById('newPostName').value.trim();
+        const col  = parseInt(document.getElementById('newPostColumn').value);
+        const alarmVal = document.getElementById('newPostAlarm').value.trim();
+        const alarmMinutes = alarmVal ? parseInt(alarmVal) : null;
+
+        if (!name) { showToast('Indtast et navn til posten.', 'warning'); return; }
+
+        const btn = document.getElementById('createPostBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        postJson('/Post/Create', { name, columnIndex: col, alarmAfterMinutes: alarmMinutes })
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Opret post';
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createPostModal')).hide();
+                    document.getElementById('newPostName').value = '';
+                    document.getElementById('newPostAlarm').value = '';
+                    clearPitSearch();
+                    loadAllPosts();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Opret post';
+                showToast('Noget gik galt. Prøv igen.', 'error');
+            });
+    });
+
+    // ── Rediger Post ──────────────────────────────────────────────────────────
+    document.getElementById('saveEditPostBtn').addEventListener('click', () => {
+        const postId = parseInt(document.getElementById('editPostId').value);
+        const name = document.getElementById('editPostName').value.trim();
+        const alarmVal = document.getElementById('editPostAlarm').value.trim();
+        const alarmMinutes = alarmVal ? parseInt(alarmVal) : null;
+
+        if (!name) { showToast('Indtast et navn til posten.', 'warning'); return; }
+
+        const btn = document.getElementById('saveEditPostBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        postJson('/Post/Update', { postId, name, alarmAfterMinutes: alarmMinutes })
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Gem ændringer';
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('editPostModal')).hide();
+                    clearPitSearch();
+                    loadAllPosts();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Gem ændringer';
+                showToast('Noget gik galt. Prøv igen.', 'error');
+            });
+    });
+
+    // ── Slet Post Bekræft ─────────────────────────────────────────────────────
+    document.getElementById('confirmDeletePostBtn').addEventListener('click', () => {
+        const postId = parseInt(document.getElementById('deletePostId').value);
+        const btn = document.getElementById('confirmDeletePostBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        deletePost(postId);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash3 me-1"></i>Slet post';
+    });
+
+    function openEditPostModal(postId, postName, alarmVal) {
+        document.getElementById('editPostId').value = postId;
+        document.getElementById('editPostName').value = postName;
+        document.getElementById('editPostAlarm').value = alarmVal || '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editPostModal')).show();
+    }
+
+    function openDeletePostModal(postId, postName, volunteerCount) {
+        document.getElementById('deletePostId').value = postId;
+        document.getElementById('deletePostName').textContent = postName;
+        const warning = document.getElementById('deletePostWarning');
+        warning.classList.toggle('d-none', volunteerCount === 0);
+        if (volunteerCount > 0) {
+            document.getElementById('deletePostVolunteerCount').textContent = volunteerCount;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('deletePostModal')).show();
+    }
+
+    function deletePost(postId) {
+        postJson('/Post/Delete', { postId })
+            .then(res => {
+                bootstrap.Modal.getInstance(document.getElementById('deletePostModal'))?.hide();
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    clearPitSearch();
+                    loadAllPosts();
+                    loadPitVolunteers('');
+                    updateCheckedInCount();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => showToast('Noget gik galt.', 'error'));
+    }
+
+    // ── Drag & Drop ───────────────────────────────────────────────────────────
+    function onPostDragStart(e) {
+        dragPayload = { type: 'post', id: parseInt(this.dataset.postId), element: this };
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function onVolunteerDragStart(e) {
+        if (e.target.closest('.vol-menu-btn')) { e.preventDefault(); return; }
+        dragPayload = {
+            type: 'volunteer',
+            id: parseInt(this.dataset.volunteerId),
+            name: this.dataset.name,
+            fromLocation: this.dataset.location,
+            element: this
+        };
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.stopPropagation();
+    }
+
+    function onDragEnd() {
+        this.classList.remove('dragging');
+        dragPayload = null;
+        // Fjern alle drop-zone highlights
+        document.querySelectorAll('.drop-zone-active').forEach(el => el.classList.remove('drop-zone-active'));
+        document.querySelectorAll('.post-drop-zone-active').forEach(el => el.classList.remove('post-drop-zone-active'));
+    }
+
+    // Drop-zone: pit-listen (frivillige kan droppes her → flyttes til Pit)
+    function setupPitDropZone() {
+        pitList.addEventListener('dragover', e => {
+            if (dragPayload?.type !== 'volunteer') return;
+            e.preventDefault();
+            pitList.classList.add('drop-zone-active');
+        });
+        pitList.addEventListener('dragleave', () => pitList.classList.remove('drop-zone-active'));
+        pitList.addEventListener('drop', e => {
+            e.preventDefault();
+            pitList.classList.remove('drop-zone-active');
+            if (!dragPayload || dragPayload.type !== 'volunteer') return;
+            if (dragPayload.fromLocation === 'Pit') return;
+            moveVolunteer(dragPayload.id, 'Pit');
+        });
+    }
+
+    // Drop-zone: kolonne (poster kan droppes her)
+    function setupColumnDropZone(colEl) {
+        colEl.addEventListener('dragover', e => {
+            if (dragPayload?.type !== 'post') return;
+            e.preventDefault();
+            colEl.classList.add('drop-zone-active');
+        });
+        colEl.addEventListener('dragleave', () => colEl.classList.remove('drop-zone-active'));
+        colEl.addEventListener('drop', e => {
+            e.preventDefault();
+            colEl.classList.remove('drop-zone-active');
+            if (!dragPayload || dragPayload.type !== 'post') return;
+            const newCol = parseInt(colEl.dataset.column);
+            if (dragPayload.element.dataset.column == newCol) return;
+            movePost(dragPayload.id, newCol);
+        });
+    }
+
+    // Drop-zone: frivillig-zone på en post
+    function setupVolunteerDropZoneOnPost(zone, postName) {
+        zone.addEventListener('dragover', e => {
+            if (dragPayload?.type !== 'volunteer') return;
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.add('post-drop-zone-active');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('post-drop-zone-active'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.remove('post-drop-zone-active');
+            if (!dragPayload || dragPayload.type !== 'volunteer') return;
+            if (dragPayload.fromLocation === postName) return;
+            moveVolunteer(dragPayload.id, postName);
+        });
+    }
+
+    function movePost(postId, newColumnIndex) {
+        postJson('/Post/UpdateColumn', { postId, columnIndex: newColumnIndex })
+            .then(res => { if (res.success) { clearPitSearch(); loadAllPosts(); } else showToast(res.message, 'warning'); })
+            .catch(() => showToast('Noget gik galt.', 'error'));
+    }
+
+    function moveVolunteer(volunteerId, targetLocation) {
+        disabledAlarmVolunteers.delete(volunteerId); // nulstil per-frivillig alarm ved flytning
+        postJson('/Home/MoveVolunteer', { volunteerId, targetLocation })
+            .then(res => {
+                if (res.success) {
+                    clearPitSearch();
+                    loadPitVolunteers('');
+                    loadAllPosts();
+                    updateCheckedInCount();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => showToast('Noget gik galt.', 'error'));
+    }
+
+    // ── Hjælpefunktioner ──────────────────────────────────────────────────────
+    function postJson(url, data) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getAntiForgeryToken() },
+            body: JSON.stringify(data)
+        }).then(r => r.json());
+    }
+
+    function getAntiForgeryToken() {
+        const el = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (el) return el.value;
+        const meta = document.querySelector('meta[name="RequestVerificationToken"]');
+        if (meta) return meta.content;
+        return '';
+    }
+
+    function escHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Alarm toggle ──────────────────────────────────────────────────────────
+    let alarmsEnabled = true;
+    let pitAlarmMinutes = null;
+    let _pitAlarmCount = 0;
+    const collapsedPosts = new Set();
+    const disabledAlarmVolunteers = new Set(); // lokal per-frivillig alarm deaktivering
+    let _lastPosts = [];
+
+    // Opdater minimer-alle ikonet baseret på om alle poster er minimerede
+    function updateCollapseAllBtn(allPosts) {
+        const btn = document.getElementById('collapseAllBtn');
+        if (!btn) return;
+        const allCollapsed = allPosts.length > 0 && allPosts.every(p => collapsedPosts.has(p.id));
+        const icon = btn.querySelector('i');
+        if (allCollapsed) {
+            icon.className = 'bi bi-arrows-expand';
+            btn.title = 'Udvid alle poster';
+            btn.style.opacity = '0.5';
+        } else {
+            icon.className = 'bi bi-arrows-collapse';
+            btn.title = 'Minimer alle poster';
+            btn.style.opacity = '1';
+        }
+    }
+    const toggleAlarmsBtn = document.getElementById('toggleAlarmsBtn');
+    if (toggleAlarmsBtn) {
+        toggleAlarmsBtn.addEventListener('click', () => {
+            alarmsEnabled = !alarmsEnabled;
+            const icon = toggleAlarmsBtn.querySelector('i');
+            if (alarmsEnabled) {
+                icon.className = 'bi bi-alarm';
+                toggleAlarmsBtn.title = 'Deaktiver alarmer';
+                toggleAlarmsBtn.style.color = 'var(--clr-text-muted)';
+                showToast('Alarmer aktiveret', 'success');
+            } else {
+                icon.className = 'bi bi-alarm-fill';
+                toggleAlarmsBtn.title = 'Aktiver alarmer';
+                toggleAlarmsBtn.style.color = 'var(--clr-text-dim)';
+                toggleAlarmsBtn.style.opacity = '0.5';
+                showToast('Alarmer deaktiveret', 'warn');
+            }
+            if (alarmsEnabled) toggleAlarmsBtn.style.opacity = '1';
+            loadAllPosts();
+            loadPitVolunteers(pitSearchInput.value);
+        });
+    }
+
+    // ── Collapse alle poster ──────────────────────────────────────────────────
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', () => {
+            const allCollapsed = _lastPosts.length > 0 && _lastPosts.every(p => collapsedPosts.has(p.id));
+            if (allCollapsed) {
+                // Udvid alle
+                _lastPosts.forEach(p => collapsedPosts.delete(p.id));
+            } else {
+                // Minimer alle
+                _lastPosts.forEach(p => collapsedPosts.add(p.id));
+            }
+            // Re-render alle poster
+            for (let c = 1; c <= 5; c++) {
+                const col = document.getElementById(`col${c}Posts`);
+                if (col) col.innerHTML = '';
+            }
+            _lastPosts.forEach(p => renderPost(p));
+            for (let c = 1; c <= 5; c++) {
+                setupColumnDropZone(document.getElementById(`col${c}Posts`));
+            }
+            updateCollapseAllBtn(_lastPosts);
+        });
+    }
+
+    // ── Pit alarm modal ───────────────────────────────────────────────────────
+    const pitAlarmModal = document.getElementById('pitAlarmModal');
+    const pitAlarmInput = document.getElementById('pitAlarmInput');
+
+    function updateGearIcon() {
+        const gearIcon = document.querySelector('#pitSettingsBtn i');
+        if (gearIcon) gearIcon.className = pitAlarmMinutes ? 'bi bi-gear-fill' : 'bi bi-gear';
+        const badge = document.getElementById('pitAlarmBadge');
+        const badgeMin = document.getElementById('pitAlarmBadgeMinutes');
+        if (badge && badgeMin) {
+            badgeMin.textContent = pitAlarmMinutes ?? '';
+            badge.style.display = pitAlarmMinutes ? '' : 'none';
+        }
+    }
+
+    function syncPitAlarm() {
+        return fetch('/DashboardSetting/Get?key=PitAlarmMinutes')
+            .then(r => r.json())
+            .then(data => {
+                const val = parseInt(data.value);
+                pitAlarmMinutes = (!isNaN(val) && val > 0) ? val : null;
+                updateGearIcon();
+            })
+            .catch(() => {});
+    }
+
+    pitAlarmModal.addEventListener('show.bs.modal', () => {
+        pitAlarmInput.value = pitAlarmMinutes ?? '';
+    });
+
+    document.getElementById('savePitAlarmBtn').addEventListener('click', () => {
+        const val = parseInt(pitAlarmInput.value);
+        pitAlarmMinutes = (!isNaN(val) && val > 0) ? val : null;
+        postJson('/DashboardSetting/Set', { key: 'PitAlarmMinutes', value: pitAlarmMinutes?.toString() ?? '' })
+            .catch(() => {});
+        bootstrap.Modal.getInstance(pitAlarmModal).hide();
+        updateGearIcon();
+        loadPitVolunteers(pitSearchInput.value);
+    });
+
+    document.getElementById('clearPitAlarmBtn').addEventListener('click', () => {
+        pitAlarmMinutes = null;
+        pitAlarmInput.value = '';
+        postJson('/DashboardSetting/Set', { key: 'PitAlarmMinutes', value: '' })
+            .catch(() => {});
+        bootstrap.Modal.getInstance(pitAlarmModal).hide();
+        updateGearIcon();
+        loadPitVolunteers(pitSearchInput.value);
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    updateCheckedInCount();
+    updateNoShowCount();
+    syncPitAlarm().then(() => loadPitVolunteers(''));
+    loadAllPosts();
+
+    // Alarm-tjek hvert minut
+    setInterval(() => {
+        loadAllPosts();
+        syncPitAlarm().then(() => loadPitVolunteers(pitSearchInput.value));
+    }, 60 * 1000);
+})();
+</script>
+
+@* ── QR Pit-scanner: skjult kamera ── *@
+<video id="qrPitVideo" autoplay playsinline muted style="display:none;position:fixed;bottom:12px;right:12px;width:1px;height:1px;opacity:0;pointer-events:none;"></video>
+<canvas id="qrPitCanvas" style="display:none;"></canvas>
+
+<script>
+(function () {
+    const btn        = document.getElementById('qrPitScanBtn');
+    const video      = document.getElementById('qrPitVideo');
+    const canvas     = document.getElementById('qrPitCanvas');
+    const ctx        = canvas.getContext('2d', { willReadFrequently: true });
+    const scanUrl    = '@Url.Action("QrScanPit", "Home")';
+    const csrfToken  = document.querySelector('meta[name="RequestVerificationToken"]').content;
+
+    let active    = false;
+    let stream    = null;
+    let rafId     = null;
+    let lastKey   = null;
+    let cooldown  = false;
+
+    // ── Audio ─────────────────────────────────────────────────────
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(type) {
+        const seqs = {
+            success:     [{ f: 880, d: 0.12 }, { f: 1320, d: 0.18 }],
+            error:       [{ f: 440, d: 0.08 }, { f: 280,  d: 0.30 }],
+            alreadyinpit:[{ f: 600, d: 0.06 }, { f: 400,  d: 0.06 }, { f: 280, d: 0.20 }],
+        };
+        let t = audioCtx.currentTime + 0.05;
+        for (const n of (seqs[type] || seqs.error)) {
+            const osc = audioCtx.createOscillator();
+            const g   = audioCtx.createGain();
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(n.f, t);
+            g.gain.setValueAtTime(0.35, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + n.d);
+            osc.start(t); osc.stop(t + n.d);
+            t += n.d + 0.04;
+        }
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showQrToast(message, type) {
+        // type: 'success' | 'warning' | 'error'
+        const colorMap = { success: 'var(--clr-ok)', warning: 'var(--clr-brand)', error: 'var(--clr-alarm)' };
+        const iconMap  = { success: 'bi-check-circle-fill', warning: 'bi-exclamation-triangle-fill', error: 'bi-x-circle-fill' };
+        const color    = colorMap[type] || colorMap.warning;
+        const icon     = iconMap[type]  || iconMap.warning;
+
+        const el = document.createElement('div');
+        el.style.cssText = `position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;
+            background:var(--clr-surface);border:1px solid ${color};border-left:4px solid ${color};
+            color:var(--clr-text);padding:.65rem 1.1rem;border-radius:8px;font-size:.88rem;
+            display:flex;align-items:center;gap:.5rem;box-shadow:0 4px 16px rgba(0,0,0,.4);
+            min-width:260px;max-width:420px;`;
+        el.innerHTML = `<i class="bi ${icon}" style="color:${color};font-size:1rem;flex-shrink:0;"></i><span>${message}</span>`;
+        document.body.appendChild(el);
+
+        // Fade ud efter 10 sek
+        setTimeout(() => {
+            el.style.transition = 'opacity .5s';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 500);
+        }, 10000);
+    }
+
+    // ── Knap tænd/sluk ───────────────────────────────────────────
+    btn.addEventListener('click', () => {
+        if (active) stopScanner();
+        else        startScanner();
+    });
+
+    async function startScanner() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+        } catch {
+            try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
+            catch { showQrToast('Kamera ikke tilgængeligt', 'error'); return; }
+        }
+        video.srcObject = stream;
+        await video.play();
+        active = true;
+        lastKey = null;
+        workerBusy = false;
+        lastScanTime = 0;
+        btn.style.background   = 'var(--clr-brand)';
+        btn.style.color        = '#fff';
+        btn.style.borderColor  = 'var(--clr-brand)';
+        btn.title              = 'QR Scanner – sluk';
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function stopScanner() {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (rafId)  cancelAnimationFrame(rafId);
+        stream = null; rafId = null; active = false; lastKey = null; workerBusy = false;
+        btn.style.background  = 'var(--clr-bg)';
+        btn.style.color       = 'var(--clr-text-muted)';
+        btn.style.borderColor = 'var(--clr-border)';
+        btn.title             = 'QR Scanner – tænd';
+    }
+
+    const SCAN_W  = 640; // nedskaleret scanopløsning – QR kræver ikke fuld HD
+    const SCAN_H  = 480;
+    let workerBusy = false;
+
+    // ── Web Worker ────────────────────────────────────────────────
+    const worker = new Worker('/js/qr-worker.js');
+    worker.onmessage = function (e) {
+        workerBusy = false;
+        if (!active || cooldown) return;
+        const key = e.data;
+        if (key && key !== lastKey) {
+            lastKey = key;
+            handleScan(key);
+        }
+    };
+
+    // ── Scan-loop (throttled til ~8fps) ───────────────────────────
+    let lastScanTime = 0;
+    function tick(now) {
+        if (active) rafId = requestAnimationFrame(tick);
+        if (workerBusy || cooldown) return;
+        if (now - lastScanTime < 125) return; // ~8 fps
+        lastScanTime = now;
+
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+        canvas.width  = SCAN_W;
+        canvas.height = SCAN_H;
+        ctx.drawImage(video, 0, 0, SCAN_W, SCAN_H);
+        const imgData = ctx.getImageData(0, 0, SCAN_W, SCAN_H);
+
+        workerBusy = true;
+        worker.postMessage({ data: imgData.data, width: SCAN_W, height: SCAN_H }, [imgData.data.buffer]);
+    }
+
+    // ── Opslag ────────────────────────────────────────────────────
+    async function handleScan(key) {
+        cooldown = true;
+        setTimeout(() => { cooldown = false; lastKey = null; }, 3500);
+
+        try {
+            const res  = await fetch(scanUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': csrfToken },
+                body: JSON.stringify({ key })
+            });
+            const data = await res.json();
+
+            switch (data.result) {
+                case 'checkedin':
+                    playBeep('success');
+                    showQrToast(data.message, 'success');
+                    if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
+                    if (typeof loadAllPosts === 'function') loadAllPosts();
+                    if (typeof updateCheckedInCount === 'function') updateCheckedInCount();
+                    break;
+                case 'moved':
+                    playBeep('success');
+                    showQrToast(data.message, 'success');
+                    // Fjern chippen øjeblikkeligt fra alle poster i DOM
+                    document.querySelectorAll(`[data-volunteer-id="${data.volunteerId}"]`)
+                        .forEach(el => el.remove());
+                    if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
+                    if (typeof loadAllPosts === 'function') loadAllPosts();
+                    break;
+                case 'alreadyinpit':
+                    playBeep('alreadyinpit');
+                    showQrToast(data.message, 'warning');
+                    break;
+                default:
+                    playBeep('error');
+                    showQrToast(data.message || 'Ukendt fejl', 'error');
+            }
+        } catch {
+            playBeep('error');
+            showQrToast('Netværksfejl – kunne ikke kontakte server', 'error');
+        }
+    }
+})();
+</script>
+}

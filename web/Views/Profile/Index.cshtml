@@ -1,0 +1,266 @@
+@model ProfileViewModel
+
+@{
+    ViewData["Title"] = "Min profil";
+    var hasAvatar = !string.IsNullOrEmpty(Model.AvatarFileName);
+    var avatarUrl = hasAvatar ? Url.Action("Avatar", "Profile", new { fileName = Model.AvatarFileName }) : null;
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-person-circle me-2" style="color: var(--clr-brand);"></i>Min profil</h1>
+    <p>Rediger dine oplysninger og adgangskode</p>
+</div>
+
+<form asp-action="Index" method="post" id="profileForm" style="max-width: 780px; margin-left: auto; margin-right: auto;">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+    <input type="hidden" asp-for="CroppedImageBase64" id="croppedImageBase64" />
+    <input type="hidden" asp-for="ColorMode" id="colorModeInput" />
+
+    @* ── Profilbillede ── *@
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-image"></i> Profilbillede</div>
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+
+                @* Nuværende billede / placeholder *@
+                <div id="avatarPreviewWrap" style="flex-shrink:0;">
+                    @if (hasAvatar)
+                    {
+                        <img id="avatarCurrent" src="@avatarUrl" alt="Profilbillede"
+                             style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:2px solid var(--clr-border);" />
+                    }
+                    else
+                    {
+                        <div id="avatarCurrent" style="width:90px;height:90px;border-radius:50%;background:var(--clr-surface-2);
+                             border:2px solid var(--clr-border);display:flex;align-items:center;justify-content:center;">
+                            <i class="bi bi-person-fill" style="font-size:2.5rem;color:var(--clr-text-dim);"></i>
+                        </div>
+                    }
+                </div>
+
+                <div>
+                    <label class="btn btn-secondary mb-2" for="avatarFileInput" style="cursor:pointer;">
+                        <i class="bi bi-upload me-2"></i>Vælg billede
+                    </label>
+                    <input type="file" id="avatarFileInput" accept="image/png,image/jpeg,image/webp"
+                           class="d-none" />
+                    <p class="mb-0" style="font-size:0.78rem;color:var(--clr-text-muted);">
+                        PNG, JPG eller WebP · Maks. 5 MB · Beskæres automatisk til cirkel
+                    </p>
+                </div>
+            </div>
+
+            @* Cropper modal-agtig sektion *@
+            <div id="cropperSection" class="mt-4 d-none">
+                <div style="position:relative;max-width:400px;height:400px;
+                            background:var(--clr-surface-2);border-radius:var(--radius-md);overflow:hidden;">
+                    <img id="cropperImage" style="max-width:100%;" />
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button" class="btn btn-primary btn-sm" id="cropConfirmBtn">
+                        <i class="bi bi-check-lg me-1"></i>Brug dette billede
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cropCancelBtn">
+                        <i class="bi bi-x-lg me-1"></i>Annuller
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Udseende ── *@
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-palette"></i> Udseende</div>
+        <div class="card-body">
+            <p class="mb-3" style="font-size:0.825rem;color:var(--clr-text-muted);">
+                Vælg dit foretrukne farvetema. Valget gemmes når du trykker "Gem ændringer".
+            </p>
+            <div class="d-flex gap-3 flex-wrap">
+                <button type="button" id="modeSystem"
+                        class="btn btn-sm @(Model.ColorMode == "system" || string.IsNullOrEmpty(Model.ColorMode) ? "btn-primary" : "btn-secondary")"
+                        onclick="selectColorMode('system')">
+                    <i class="bi bi-circle-half me-1"></i>System
+                </button>
+                <button type="button" id="modeDark"
+                        class="btn btn-sm @(Model.ColorMode == "dark" ? "btn-primary" : "btn-secondary")"
+                        onclick="selectColorMode('dark')">
+                    <i class="bi bi-moon-stars-fill me-1"></i>Mørkt tema
+                </button>
+                <button type="button" id="modeLight"
+                        class="btn btn-sm @(Model.ColorMode == "light" ? "btn-primary" : "btn-secondary")"
+                        onclick="selectColorMode('light')">
+                    <i class="bi bi-sun-fill me-1"></i>Lyst tema
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @* ── Personlige oplysninger ── *@
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-person"></i> Personlige oplysninger</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label asp-for="DisplayName" class="form-label"></label>
+                    <input asp-for="DisplayName" class="form-control" placeholder="Dit navn" />
+                    <span asp-validation-for="DisplayName" class="field-validation-error"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="UserName" class="form-label"></label>
+                    <input asp-for="UserName" class="form-control" placeholder="brugernavn" />
+                    <span asp-validation-for="UserName" class="field-validation-error"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" placeholder="din@email.dk" />
+                    <span asp-validation-for="Email" class="field-validation-error"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="PhoneNumber" class="form-label"></label>
+                    <input asp-for="PhoneNumber" class="form-control" placeholder="+45 12 34 56 78" />
+                    <span asp-validation-for="PhoneNumber" class="field-validation-error"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Adgangskode ── *@
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-lock"></i> Skift adgangskode</div>
+        <div class="card-body">
+            <p class="mb-3" style="font-size:0.825rem;color:var(--clr-text-muted);">
+                Lad felterne stå tomme for at beholde din nuværende adgangskode.
+            </p>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label asp-for="NewPassword" class="form-label"></label>
+                    <input asp-for="NewPassword" class="form-control" placeholder="••••••••" autocomplete="new-password" />
+                    <span asp-validation-for="NewPassword" class="field-validation-error"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" placeholder="••••••••" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmPassword" class="field-validation-error"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Annuller
+        </a>
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-floppy me-1"></i>Gem ændringer
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    @* Cropper.js *@
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <style>
+        /* Circular crop box overlay */
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 50%;
+        }
+    </style>
+
+    <script>
+    (function () {
+        let cropper = null;
+
+        const fileInput      = document.getElementById('avatarFileInput');
+        const cropperSection = document.getElementById('cropperSection');
+        const cropperImage   = document.getElementById('cropperImage');
+        const confirmBtn     = document.getElementById('cropConfirmBtn');
+        const cancelBtn      = document.getElementById('cropCancelBtn');
+        const hiddenInput    = document.getElementById('croppedImageBase64');
+        const avatarCurrent  = document.getElementById('avatarCurrent');
+
+        fileInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Billedet er for stort. Maks. 5 MB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                cropperImage.src = e.target.result;
+                cropperSection.classList.remove('d-none');
+
+                if (cropper) { cropper.destroy(); }
+
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    cropBoxResizable: true,
+                    background: false,
+                    modal: true,
+                    guides: false,
+                    highlight: false,
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        confirmBtn.addEventListener('click', function () {
+            if (!cropper) return;
+
+            const canvas = cropper.getCroppedCanvas({ width: 256, height: 256, imageSmoothingQuality: 'high' });
+
+            // Rund maske
+            const rounded = document.createElement('canvas');
+            rounded.width = rounded.height = 256;
+            const ctx = rounded.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(128, 128, 128, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(canvas, 0, 0, 256, 256);
+
+            hiddenInput.value = rounded.toDataURL('image/png');
+
+            // Vis preview med det nye billede
+            if (avatarCurrent.tagName === 'IMG') {
+                avatarCurrent.src = hiddenInput.value;
+            } else {
+                const img = document.createElement('img');
+                img.id = 'avatarCurrent';
+                img.src = hiddenInput.value;
+                img.alt = 'Profilbillede';
+                img.style.cssText = 'width:90px;height:90px;border-radius:50%;object-fit:cover;border:2px solid var(--clr-border);';
+                avatarCurrent.replaceWith(img);
+            }
+
+            cropper.destroy();
+            cropper = null;
+            cropperSection.classList.add('d-none');
+            fileInput.value = '';
+        });
+
+        cancelBtn.addEventListener('click', function () {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            cropperSection.classList.add('d-none');
+            fileInput.value = '';
+        });
+    })();
+
+    // ── Color Mode Selector (gemmes ved form submit) ───────────────
+    function selectColorMode(mode) {
+        document.getElementById('colorModeInput').value = mode;
+        document.getElementById('modeSystem').className = 'btn btn-sm ' + (mode === 'system' ? 'btn-primary' : 'btn-secondary');
+        document.getElementById('modeDark').className   = 'btn btn-sm ' + (mode === 'dark'   ? 'btn-primary' : 'btn-secondary');
+        document.getElementById('modeLight').className  = 'btn btn-sm ' + (mode === 'light'  ? 'btn-primary' : 'btn-secondary');
+    }
+    </script>
+}

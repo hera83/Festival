@@ -1,0 +1,298 @@
+@model web.Models.BehovPagedViewModel
+
+@* Søgefelt — aldrig erstattet af AJAX *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="bhSearchInput" class="form-control form-control-sm"
+               placeholder="Søg vagttype navn…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               autocomplete="off" />
+        <button type="button" id="bhSearchClear" class="btn btn-sm d-none"
+                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted); border-left: none;"
+                tabindex="-1" aria-label="Ryd søgning">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+
+@* Resultat-zone — kun denne div overskrives ved søgning/sideskift *@
+<div id="bh-result-zone">
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-bullseye me-2"></i>Behov (<span id="bh-total-count">@Model.TotalCount</span>)</span>
+            @if (Model.TotalMissing > 0)
+            {
+                <span class="badge" style="background: var(--clr-alarm-bg); color: var(--clr-alarm); font-size: 0.8rem; font-weight: 600;">
+                    <i class="bi bi-exclamation-triangle me-1"></i>@Model.TotalMissing mangler i alt
+                </span>
+            }
+            else if (Model.TotalCount > 0)
+            {
+                <span class="badge" style="background: var(--clr-ok-bg); color: var(--clr-ok); font-size: 0.8rem; font-weight: 600;">
+                    <i class="bi bi-check-circle me-1"></i>Alle behov opfyldt
+                </span>
+            }
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <th class="ps-3">Vagttype</th>
+                            <th>Start</th>
+                            <th>Slut</th>
+                            <th class="text-center">Behov</th>
+                            <th class="text-center">Tilmeldt</th>
+                            <th class="text-center">Mangler</th>
+                            <th class="pe-3" style="width: 60px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Rows.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                    <i class="bi bi-bullseye fs-4 d-block mb-1"></i>
+                                    Ingen vagttyper fundet
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var row in Model.Rows)
+                        {
+                            string missingBg, missingClr, missingIcon;
+                            if (row.RequiredCount == 0)
+                            {
+                                missingBg = "var(--clr-surface)"; missingClr = "var(--clr-text-muted)"; missingIcon = "bi-dash";
+                            }
+                            else if (row.Missing == 0)
+                            {
+                                missingBg = "var(--clr-ok-bg)"; missingClr = "var(--clr-ok)"; missingIcon = "bi-check-circle";
+                            }
+                            else if (row.Missing <= 3)
+                            {
+                                missingBg = "var(--clr-warn-bg)"; missingClr = "var(--clr-warn)"; missingIcon = "bi-exclamation-circle";
+                            }
+                            else
+                            {
+                                missingBg = "var(--clr-alarm-bg)"; missingClr = "var(--clr-alarm)"; missingIcon = "bi-exclamation-triangle";
+                            }
+                            <tr style="border-bottom: 1px solid var(--clr-border);">
+                                <td class="ps-3 align-middle fw-semibold">@row.ShiftName</td>
+                                <td class="align-middle">@row.StartTime.ToString("dd-MM-yyyy HH:mm")</td>
+                                <td class="align-middle">@row.EndTime.ToString("dd-MM-yyyy HH:mm")</td>
+                                <td class="align-middle text-center">
+                                    <span style="font-weight: 600;">@(row.RequiredCount == 0 ? "—" : row.RequiredCount.ToString())</span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span style="font-weight: 600; color: var(--clr-info);">@row.SignedUpCount</span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span class="badge rounded-pill px-2 py-1"
+                                          style="background: @missingBg; color: @missingClr; font-size: 0.8rem;">
+                                        <i class="bi @missingIcon me-1"></i>@(row.RequiredCount == 0 ? "—" : row.Missing.ToString())
+                                    </span>
+                                </td>
+                                <td class="pe-3 align-middle text-end">
+                                    <button type="button" class="btn btn-sm bh-edit-btn"
+                                            style="background: var(--clr-brand); color: #fff; border: none;"
+                                            title="Rediger behov"
+                                            data-id="@row.ShiftTypeId"
+                                            data-name="@row.ShiftName"
+                                            data-required="@row.RequiredCount"
+                                            data-bs-toggle="modal" data-bs-target="#editBehovModal">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+        <span style="color: var(--clr-text-muted); font-size: 0.85rem;">
+            @if (Model.TotalCount == 0) { <span>Ingen resultater</span> }
+            else { <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span> }
+        </span>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+                <span>Pr. side</span>
+                <select id="bhPageSizeSelect" class="form-select form-select-sm"
+                        style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                    @foreach (var size in new[] { 10, 25, 50 })
+                    {
+                        if (Model.PageSize == size) { <option value="@size" selected>@size</option> }
+                        else { <option value="@size">@size</option> }
+                    }
+                </select>
+            </div>
+            <nav aria-label="Sidenavigation">
+                <ul class="pagination pagination-sm mb-0">
+                    @{
+                        var cp = Model.Page; var tp = Model.TotalPages;
+                        var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+                        for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+                    }
+                    <li class="page-item @(cp == 1 ? "disabled" : "")">
+                        <button class="page-link bh-page-btn" data-page="@(cp - 1)" @(cp == 1 ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                    </li>
+                    @{ int? lastShown = null; }
+                    @foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link bh-page-btn" data-page="@p"
+                                    style="@(p == cp ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;" : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);")">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                    <li class="page-item @(cp >= tp ? "disabled" : "")">
+                        <button class="page-link bh-page-btn" data-page="@(cp + 1)" @(cp >= tp ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@* Rediger behov modal *@
+<div class="modal fade" id="editBehovModal" tabindex="-1" aria-labelledby="editBehovModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                <h5 class="modal-title" id="editBehovModalLabel"><i class="bi bi-bullseye me-2" style="color: var(--clr-brand);"></i>Rediger behov</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" style="color: var(--clr-text-muted);">Angiv det ønskede antal frivillige for <strong id="editBehovName" style="color: var(--clr-text);"></strong>.</p>
+                <div class="mb-0">
+                    <label for="editBehovCount" class="form-label" style="font-size: 0.9rem;">Behov (antal frivillige)</label>
+                    <input type="number" id="editBehovCount" class="form-control form-control-sm" min="0" max="9999"
+                           style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text); max-width: 140px;" />
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x me-1"></i>Annuller</button>
+                <button type="button" class="btn btn-sm" id="editBehovConfirm"
+                        style="background: var(--clr-brand); color: #fff; border: none;">
+                    <i class="bi bi-check-lg me-1"></i>Gem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var searchUrl  = '@Url.Action("BehovSearch", "Frivillig")';
+    var setUrl     = '@Url.Action("SetBehov",    "Frivillig")';
+    var debounce;
+    var currentSize = @Model.PageSize;
+    var currentPage = @Model.Page;
+
+    async function loadPage(page, size) {
+        currentPage = page;
+        currentSize = size;
+        var q   = document.getElementById('bhSearchInput').value.trim();
+        var url = searchUrl + '?q=' + encodeURIComponent(q) + '&page=' + page + '&pageSize=' + size;
+        try {
+            var res = await fetch(url);
+            if (!res.ok) { showToast('Kunne ikke hente behov.', 'error'); return; }
+            var doc  = new DOMParser().parseFromString(await res.text(), 'text/html');
+            var zone = doc.getElementById('bh-result-zone');
+            if (!zone) return;
+            document.getElementById('bh-result-zone').innerHTML = zone.innerHTML;
+            bindZoneEvents();
+        } catch (e) {
+            showToast('Netværksfejl – prøv igen.', 'error');
+        }
+    }
+
+    function bindZoneEvents() {
+        var sel = document.getElementById('bhPageSizeSelect');
+        if (sel) sel.addEventListener('change', function () { loadPage(1, parseInt(this.value)); });
+        document.querySelectorAll('.bh-page-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var p = parseInt(this.dataset.page);
+                if (!isNaN(p) && p >= 1) loadPage(p, currentSize);
+            });
+        });
+    }
+
+    // ── Søgning ───────────────────────────────────────────────────
+    var bhInput = document.getElementById('bhSearchInput');
+    var bhClear = document.getElementById('bhSearchClear');
+
+    bhInput.addEventListener('input', function () {
+        bhClear.classList.toggle('d-none', this.value === '');
+    });
+    bhClear.addEventListener('click', function () {
+        bhInput.value = '';
+        bhClear.classList.add('d-none');
+        loadPage(1, currentSize);
+        bhInput.focus();
+    });
+    bhInput.addEventListener('keyup', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { loadPage(1, currentSize); }, 250);
+    });
+
+    // ── Rediger behov modal ───────────────────────────────────────
+    var editModalEl      = document.getElementById('editBehovModal');
+    var bsEditModal      = new bootstrap.Modal(editModalEl);
+    var pendingTypeId    = null;
+
+    editModalEl.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        pendingTypeId = parseInt(btn.dataset.id);
+        document.getElementById('editBehovName').textContent  = btn.dataset.name;
+        document.getElementById('editBehovCount').value       = btn.dataset.required;
+    });
+
+    document.getElementById('editBehovConfirm').addEventListener('click', async function () {
+        if (!pendingTypeId) return;
+        var btn = this;
+        var count = parseInt(document.getElementById('editBehovCount').value);
+        if (isNaN(count) || count < 0) { showToast('Angiv et gyldigt tal (min. 0).', 'warning'); return; }
+        btn.disabled = true;
+        try {
+            var fd = new FormData();
+            fd.append('shiftTypeId',  pendingTypeId);
+            fd.append('requiredCount', count);
+            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+            var res  = await fetch(setUrl, { method: 'POST', body: fd });
+            var json = await res.json();
+            bsEditModal.hide();
+            if (json.success) {
+                showToast(json.message, 'success');
+                await loadPage(currentPage, currentSize);
+            } else {
+                showToast(json.message, 'error');
+            }
+        } catch (e) {
+            bsEditModal.hide();
+            showToast('Netværksfejl – kunne ikke gemme.', 'error');
+        } finally {
+            btn.disabled = false;
+            pendingTypeId = null;
+        }
+    });
+
+    bindZoneEvents();
+})();
+</script>

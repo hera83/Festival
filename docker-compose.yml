@@ -1,0 +1,18 @@
+services:
+  festival-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: festival-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+    volumes:
+      - festival_app_dbs:/app/App_dbs
+      - festival_app_files:/app/App_files
+
+volumes:
+  festival_app_dbs:
+  festival_app_files:

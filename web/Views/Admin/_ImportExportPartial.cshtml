@@ -1,0 +1,159 @@
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-arrow-left-right me-2" style="color: var(--clr-brand);"></i>
+        <strong>Frivillige</strong>
+    </div>
+    <div class="card-body">
+
+        @* ── Række 1: Handlingsknapper ── *@
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex gap-2">
+                <button type="button" id="importVolunteerBtn" class="btn btn-sm btn-outline-success" disabled>
+                    <i class="bi bi-upload me-1"></i>Import
+                </button>
+                <a asp-controller="Admin"
+                   asp-action="ExportVolunteers"
+                   class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-download me-1"></i>Eksport
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="deleteDatasetBtn">
+                    <i class="bi bi-trash3 me-1"></i>Slet dataset
+                </button>
+            </div>
+            <div>
+                <a asp-controller="Admin"
+                   asp-action="DownloadVolunteerTemplate"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Download template
+                </a>
+            </div>
+        </div>
+
+        @* ── Række 2: Fil-uploader ── *@
+<form id="volunteerImportForm"
+      asp-controller="Admin"
+      asp-action="PreviewVolunteerImport"
+      data-import-action="@Url.Action("ImportVolunteerData", "Admin")"
+      method="post"
+      enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div>
+                <label class="form-label" for="volunteerImportFile" style="color: var(--clr-text-muted); font-size: .85rem;">
+                    <i class="bi bi-file-earmark-excel me-1" style="color: var(--clr-ok);"></i>
+                    Vælg Excel-fil (.xlsx)
+                </label>
+                <input type="file"
+                       id="volunteerImportFile"
+                       name="file"
+                       class="form-control form-control-sm"
+                       accept=".xlsx" />
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<div id="volunteerImportPreviewHost"></div>
+
+@* ── Statistik eksport ── *@
+<div class="card mt-3">
+    <div class="card-header">
+        <i class="bi bi-graph-up me-2" style="color: var(--clr-brand);"></i>
+        <strong>Statistik</strong>
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+            <span style="color: var(--clr-text-muted); font-size: .875rem;">
+                <i class="bi bi-clock me-1"></i>Eksportér frivillige med total check-in timer for indeværende sæson
+            </span>
+            <a asp-controller="Admin"
+               asp-action="ExportStatistik"
+               class="btn btn-sm btn-outline-info">
+                <i class="bi bi-download me-1"></i>Eksport statistik
+            </a>
+        </div>
+    </div>
+</div>
+
+@* ── Slet dataset bekræftelsesmodal ── *@
+<div class="modal fade" id="deleteDatasetModal" tabindex="-1" aria-labelledby="deleteDatasetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="deleteDatasetModalLabel">
+                    <i class="bi bi-trash3 me-2" style="color: var(--clr-alarm);"></i>Slet dataset
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                <p class="mb-1">Dette sletter <strong>alle frivillige, vagter og statistik</strong> for</p>
+                <p class="fw-semibold mb-2" id="deleteDatasetSeasonLabel"></p>
+                <p class="mb-0 small" style="color: var(--clr-text-muted);">Handlingen kan ikke fortrydes.</p>
+            </div>
+            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <form asp-action="DeleteDataset" asp-controller="Admin" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>Annuller
+                    </button>
+                    <button type="submit" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                        <i class="bi bi-trash3 me-1"></i>Slet alt
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const fileInput = document.getElementById('volunteerImportFile');
+    const importBtn = document.getElementById('importVolunteerBtn');
+    const form = document.getElementById('volunteerImportForm');
+    const host = document.getElementById('volunteerImportPreviewHost');
+    if (!fileInput || !importBtn || !form || !host) return;
+
+    fileInput.addEventListener('change', function () {
+        importBtn.disabled = !this.files || this.files.length === 0;
+    });
+
+    importBtn.addEventListener('click', async function () {
+        if (importBtn.disabled || !fileInput.files || fileInput.files.length === 0) return;
+
+        const formData = new FormData(form);
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData
+        });
+
+        const html = await response.text();
+        host.innerHTML = html;
+
+        host.querySelectorAll('script').forEach(function (oldScript) {
+            const newScript = document.createElement('script');
+            newScript.textContent = oldScript.textContent;
+            document.body.appendChild(newScript);
+            document.body.removeChild(newScript);
+        });
+
+        const modalEl = document.getElementById('volunteerImportPreviewModal');
+        if (!modalEl) return;
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    });
+
+    // Slet dataset
+    const deleteBtn = document.getElementById('deleteDatasetBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function () {
+            const year = new Date().getFullYear();
+            const label = document.getElementById('deleteDatasetSeasonLabel');
+            if (label) label.textContent = 'sæson ' + year;
+            const modalEl = document.getElementById('deleteDatasetModal');
+            if (modalEl) new bootstrap.Modal(modalEl).show();
+        });
+    }
+})();
+</script>
