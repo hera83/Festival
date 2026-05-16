@@ -51,6 +51,17 @@
                 </div>
             </div>
         </div>
+        <div class="card stat-card" data-panel="overblik" style="cursor:pointer; min-width:155px;" title="Vis overblik">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-brand-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-grid-1x2" style="color:var(--clr-brand);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;">&#8203;</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">Overblik</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -69,6 +80,7 @@
             shifttypes: '@Url.Action("ShiftTypesPartial", "Frivillig")',
             shifts:     '@Url.Action("ShiftsPartial",     "Frivillig")',
             behov:      '@Url.Action("BehovPartial",      "Frivillig")',
+            overblik:   '@Url.Action("OverblikPartial",   "Frivillig")',
         };
         const countsUrl = '@Url.Action("GetCounts", "Frivillig")';
 

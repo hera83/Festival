@@ -13,7 +13,7 @@ public class VolunteerCheckIn
     /// <summary>Dato for check-in (dato-del af CheckedInAt, gemt separat for hurtig søgning).</summary>
     public DateOnly CheckInDate { get; set; }
 
-    public DateTime CheckedInAt { get; set; } = DateTime.UtcNow;
+    public DateTime CheckedInAt { get; set; } = DateTime.Now;
 
     /// <summary>Null = stadig indchecket. Sat ved checkout.</summary>
     public DateTime? CheckedOutAt { get; set; }

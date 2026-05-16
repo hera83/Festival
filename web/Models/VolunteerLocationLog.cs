@@ -17,7 +17,7 @@ public class VolunteerLocationLog
     /// <summary>Lokation efter hændelsen, fx "Pit", "Bar8". Null ved CheckOut.</summary>
     public string? Location { get; set; }
 
-    public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
+    public DateTime OccurredAt { get; set; } = DateTime.Now;
 
     public VolunteerCheckIn CheckIn { get; set; } = null!;
     public Volunteer Volunteer { get; set; } = null!;

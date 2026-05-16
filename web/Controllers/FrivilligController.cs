@@ -9,7 +9,7 @@ namespace web.Controllers;
 [Authorize]
 public class FrivilligController(ApplicationDbContext db) : Controller
 {
-    private static int CurrentSeason => DateTime.UtcNow.Year;
+    private static int CurrentSeason => DateTime.Now.Year;
 
     public async Task<IActionResult> Index()
     {
@@ -22,6 +22,85 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         };
 
         return View(vm);
+    }
+
+    // ── Overblik ──────────────────────────────────────────────────
+    public IActionResult OverblikPartial() => PartialView("_OverblikPartial");
+
+    public async Task<IActionResult> OverblikDage()
+    {
+        var shiftTypes = await db.ShiftTypes
+            .Where(st => st.SeasonId == CurrentSeason)
+            .Select(st => st.StartTime)
+            .ToListAsync();
+
+        var dates = shiftTypes
+            .Select(dt => dt.Date)
+            .Distinct()
+            .OrderBy(d => d)
+            .Select(d => d.ToString("yyyy-MM-dd"))
+            .ToList();
+
+        return Json(dates);
+    }
+
+    public async Task<IActionResult> OverblikData(string date, int startHour = 0)
+    {
+        if (!DateOnly.TryParse(date, out var dateOnly))
+            return BadRequest("Ugyldig dato");
+
+        var windowStart = dateOnly.ToDateTime(new TimeOnly(startHour, 0));
+        var windowEnd   = windowStart.AddHours(24);
+        var now         = DateTime.Now;
+
+        // ── Vagttyper + tilmeldte ────────────────────────────────
+        var shiftTypes = await db.ShiftTypes
+            .Where(st => st.SeasonId == CurrentSeason && st.StartTime < windowEnd && st.EndTime > windowStart)
+            .Include(st => st.Shifts)
+            .ToListAsync();
+
+        // ── Check-ins der overlapper vinduet ────────────────────
+        var checkIns = await db.VolunteerCheckIns
+            .Where(ci => ci.SeasonId == CurrentSeason
+                      && ci.CheckedInAt < windowEnd
+                      && (ci.CheckedOutAt == null || ci.CheckedOutAt > windowStart))
+            .ToListAsync();
+
+        var staffed  = new int[24];
+        var required = new int[24];
+        var checkedIn = new int[24];
+        var isPast    = new bool[24];
+
+        for (int i = 0; i < 24; i++)
+        {
+            var slotStart = windowStart.AddHours(i);
+            var slotEnd   = slotStart.AddHours(1);
+
+            isPast[i] = slotEnd <= now;
+
+            foreach (var st in shiftTypes)
+            {
+                if (st.StartTime < slotEnd && st.EndTime > slotStart)
+                {
+                    required[i] += st.RequiredCount;
+                    staffed[i]  += st.Shifts.Count;
+                }
+            }
+
+            // Tæl frivillige der var tjekket ind i dette slot
+            foreach (var ci in checkIns)
+            {
+                var ciOut = ci.CheckedOutAt ?? now; // åben session tæller til nu
+                if (ci.CheckedInAt < slotEnd && ciOut > slotStart)
+                    checkedIn[i]++;
+            }
+        }
+
+        var labels = Enumerable.Range(0, 24)
+            .Select(i => windowStart.AddHours(i).ToString("HH:00"))
+            .ToList();
+
+        return Json(new { labels, staffed, required, checkedIn, isPast });
     }
 
     // ── Frivillige ────────────────────────────────────────────────
@@ -248,7 +327,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         volunteer.Name        = vm.Name.Trim();
         volunteer.Email       = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
         volunteer.PhoneNumber = string.IsNullOrWhiteSpace(vm.PhoneNumber) ? null : vm.PhoneNumber.Trim();
-        volunteer.UpdatedAt   = DateTime.UtcNow;
+        volunteer.UpdatedAt   = DateTime.Now;
 
         // Synkroniser vagter
         var existingIds = volunteer.Shifts.Select(s => s.ShiftTypeId).ToHashSet();
@@ -385,7 +464,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         if (requiredCount < 0) return Json(new { success = false, message = "Behov kan ikke være negativt." });
 
         shiftType.RequiredCount = requiredCount;
-        shiftType.UpdatedAt     = DateTime.UtcNow;
+        shiftType.UpdatedAt     = DateTime.Now;
         await db.SaveChangesAsync();
 
         return Json(new { success = true, message = $"Behov for '{shiftType.ShiftName}' sat til {requiredCount}." });

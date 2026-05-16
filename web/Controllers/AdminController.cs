@@ -42,7 +42,7 @@ public class AdminController : Controller
         if (string.IsNullOrWhiteSpace(token))
             return BadRequest();
 
-        var seasonId = DateTime.UtcNow.Year;
+        var seasonId = DateTime.Now.Year;
 
         // QR-koden indeholder frivilligens Key (ikke QrToken)
         var volunteer = await _db.Volunteers
@@ -73,7 +73,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> StatistikSearch(string q = "", int page = 1, int pageSize = 10)
     {
-        var seasonId = DateTime.UtcNow.Year;
+        var seasonId = DateTime.Now.Year;
 
         // Hent alle frivillige for sæsonen
         var volunteersQuery = _db.Volunteers
@@ -142,7 +142,7 @@ public class AdminController : Controller
     // ── Statistik detaljer (JSON) ─────────────────────────────────
     public async Task<IActionResult> VolunteerCheckInDetail(int volunteerId)
     {
-        var seasonId = DateTime.UtcNow.Year;
+        var seasonId = DateTime.Now.Year;
 
         var volunteer = await _db.Volunteers
             .FirstOrDefaultAsync(v => v.Id == volunteerId && v.SeasonId == seasonId);
@@ -162,14 +162,14 @@ public class AdminController : Controller
             .ToListAsync();
         var logsByCheckIn = locationLogs.ToLookup(l => l.CheckInId);
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
 
         var sessions = checkIns.Select(c =>
         {
             var checkOut  = c.CheckedOutAt ?? now;
             var isOpen    = c.CheckedOutAt == null;
-            var local     = c.CheckedInAt.ToLocalTime();
-            var localOut  = checkOut.ToLocalTime();
+            var local     = c.CheckedInAt;
+            var localOut  = checkOut;
 
             var midnightLocal = local.Date;
             var startMin  = (local - midnightLocal).TotalMinutes;
@@ -189,7 +189,7 @@ public class AdminController : Controller
                 })
                 .Select(l => new LocationEventDto
                 {
-                    Time      = l.OccurredAt.ToLocalTime().ToString("HH:mm"),
+                    Time      = l.OccurredAt.ToString("HH:mm"),
                     EventType = l.EventType,
                     Location  = l.Location,
                 })
@@ -312,7 +312,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> ExportVolunteers()
     {
-        var seasonId = DateTime.UtcNow.Year;
+        var seasonId = DateTime.Now.Year;
 
         var shifts = await _db.Shifts
             .Include(s => s.Volunteer)
@@ -360,8 +360,8 @@ public class AdminController : Controller
             ws.Cell(row, 2).Value = s.Volunteer.Name;
             ws.Cell(row, 3).Value = s.Volunteer.Email ?? string.Empty;
             ws.Cell(row, 4).Value = s.Volunteer.PhoneNumber ?? string.Empty;
-            ws.Cell(row, 5).Value = s.ShiftType.StartTime.ToLocalTime().ToString("dd-MM-yyyy HH:mm");
-            ws.Cell(row, 6).Value = s.ShiftType.EndTime.ToLocalTime().ToString("dd-MM-yyyy HH:mm");
+            ws.Cell(row, 5).Value = s.ShiftType.StartTime.ToString("dd-MM-yyyy HH:mm");
+            ws.Cell(row, 6).Value = s.ShiftType.EndTime.ToString("dd-MM-yyyy HH:mm");
             ws.Cell(row, 7).Value = s.ShiftType.ShiftName == DefaultShiftName ? string.Empty : s.ShiftType.ShiftName;
             row++;
         }
@@ -391,7 +391,7 @@ public class AdminController : Controller
 
     public async Task<IActionResult> ExportStatistik()
     {
-        var seasonId = DateTime.UtcNow.Year;
+        var seasonId = DateTime.Now.Year;
 
         var volunteers = await _db.Volunteers
             .Where(v => v.SeasonId == seasonId)
@@ -457,7 +457,7 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteDataset()
     {
-        var seasonId = DateTime.UtcNow.Year;
+        var seasonId = DateTime.Now.Year;
 
         var locationLogs = await _db.VolunteerLocationLogs.Where(l => l.SeasonId == seasonId).ToListAsync();
         _db.VolunteerLocationLogs.RemoveRange(locationLogs);
@@ -506,7 +506,7 @@ public class AdminController : Controller
         if (validRows.Count == 0)
             return BadRequest(new { success = false, message = "Der er ingen gyldige rækker at importere." });
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var currentSeasonId = DateTime.Now.Year;
         var seasonIds = new List<int> { currentSeasonId };
         var keys = validRows.Select(r => r.Key).Distinct().ToList();

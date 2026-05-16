@@ -1,0 +1,339 @@
+<div class="card mt-3">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-grid-1x2" style="color:var(--clr-brand);"></i>
+        <strong>Overblik — frivillige på pladsen</strong>
+    </div>
+    <div class="card-body">
+
+
+        <div style="position:relative; width:100%; height:300px;">
+            <canvas id="overblikChart"></canvas>
+            <div id="overblikChartEmpty"
+                 style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+                        justify-content:center;gap:6px;color:var(--clr-text-muted);font-size:0.9rem;pointer-events:none;">
+                <i class="bi bi-calendar-x" style="font-size:2rem;"></i>
+                Vælg en dag herunder for at se data
+            </div>
+        </div>
+
+
+        <div class="d-flex flex-wrap gap-4 justify-content-center mt-2" id="overblikLegend"
+             style="font-size:0.8rem;color:var(--clr-text-muted);">
+            <span class="d-flex align-items-center gap-1">
+                <span style="display:inline-block;width:14px;height:14px;border-radius:3px;
+                             background:var(--clr-ok-bg);border:2px solid var(--clr-ok);"></span>
+                Tilmeldt (vagt)
+            </span>
+            <span class="d-flex align-items-center gap-1">
+                <span style="display:inline-block;width:18px;height:3px;border-radius:2px;
+                             background:var(--clr-brand);margin:0 2px;"></span>
+                Tjekket ind (faktisk)
+            </span>
+            <span class="d-flex align-items-center gap-1">
+                <span style="display:inline-block;width:18px;height:3px;border-radius:2px;
+                             background:var(--clr-warn);margin:0 2px;"></span>
+                Behov
+            </span>
+            <span class="d-flex align-items-center gap-1" style="opacity:0.55;">
+                <span style="display:inline-block;width:18px;height:3px;border-radius:2px;
+                             background:var(--clr-text-muted);margin:0 2px;border-top:2px dashed var(--clr-text-muted);"></span>
+                Fremtid (ingen check-in endnu)
+            </span>
+        </div>
+
+        <hr style="border-color:var(--clr-border);margin:14px 0 10px;" />
+
+
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+
+            <div class="d-flex align-items-center gap-2">
+                <label for="overblikStartHour"
+                       style="font-size:0.82rem;color:var(--clr-text-muted);white-space:nowrap;">
+                    <i class="bi bi-clock me-1"></i>Døgn starter kl.
+                </label>
+                <input type="time" id="overblikStartHour" value="06:00" step="3600"
+                       class="form-control form-control-sm"
+                       style="width:110px;background:var(--clr-surface);
+                              border-color:var(--clr-border);color:var(--clr-text);" />
+            </div>
+
+            <div id="overblikDageBtns" class="d-flex flex-wrap gap-2 justify-content-center">
+                <span style="font-size:0.82rem;color:var(--clr-text-muted);">Indlæser dage…</span>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const dageUrl    = '@Url.Action("OverblikDage", "Frivillig")';
+    const dataUrl    = '@Url.Action("OverblikData", "Frivillig")';
+    const LS_KEY     = 'overblik_startHour';
+
+    const btnsEl     = document.getElementById('overblikDageBtns');
+    const startInput = document.getElementById('overblikStartHour');
+    const emptyEl    = document.getElementById('overblikChartEmpty');
+    const canvas     = document.getElementById('overblikChart');
+
+    let activeDate = null;
+    let chart      = null;
+
+    // ── CSS-variabel helpers ───────────────────────────────────
+    function cv(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function hexToRgba(hex, alpha) {
+        // Understøtter #rrggbb og #rgb
+        let h = hex.replace('#', '');
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        const r = parseInt(h.substring(0,2),16);
+        const g = parseInt(h.substring(2,4),16);
+        const b = parseInt(h.substring(4,6),16);
+        return 'rgba('+r+','+g+','+b+','+alpha+')';
+    }
+
+    function c() {
+        const ok   = cv('--clr-ok')   || '#4ade80';
+        const brand = cv('--clr-brand') || '#6366f1';
+        const warn  = cv('--clr-warn') || '#fbbf24';
+        const muted = cv('--clr-text-muted') || '#6b7280';
+        const border = cv('--clr-border') || '#374151';
+        return {
+            // Tilmeldt (vagt)
+            staffedBorder:  ok,
+            staffedFill:    hexToRgba(ok, 0.25),
+            // Tjekket ind
+            checkedBorder:  brand,
+            checkedFill:    hexToRgba(brand, 0.35),
+            // Behov (linje)
+            reqLine:        warn,
+            reqFill:        hexToRgba(warn, 0.08),
+            // Grid/tekst
+            grid:           border,
+            text:           muted,
+        };
+    }
+
+    // ── Byg chart (tom) ───────────────────────────────────────
+    function initChart() {
+        const col = c();
+        chart = new Chart(canvas, {
+            data: {
+                labels: [],
+                datasets: [
+                    // 0 — Tilmeldt (bar, bagved)
+                    {
+                        type: 'bar',
+                        label: 'Tilmeldt',
+                        data: [],
+                        backgroundColor: col.staffedFill,
+                        borderColor: col.staffedBorder,
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        order: 3,
+                    },
+                    // 1 — Tjekket ind (linje)
+                    {
+                        type: 'line',
+                        label: 'Tjekket ind',
+                        data: [],
+                        borderColor: col.checkedBorder,
+                        backgroundColor: col.checkedFill,
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.3,
+                        order: 2,
+                    },
+                    // 2 — Behov (linje)
+                    {
+                        type: 'line',
+                        label: 'Behov',
+                        data: [],
+                        borderColor: col.reqLine,
+                        backgroundColor: col.reqFill,
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.3,
+                        order: 1,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        titleColor: col.text,
+                        bodyColor:  '#e6edf3',
+                        borderColor: col.grid,
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            afterBody: function(ctx) {
+                                const staffed  = ctx.find(function(x) { return x.datasetIndex === 0; })?.parsed?.y ?? 0;
+                                const checked  = ctx.find(function(x) { return x.datasetIndex === 1; })?.parsed?.y ?? 0;
+                                const need     = ctx.find(function(x) { return x.datasetIndex === 2; })?.parsed?.y ?? 0;
+                                const lines = [];
+                                if (checked > 0) {
+                                    const diff = checked - need;
+                                    if (diff > 0)       lines.push('\u2B06 ' + diff + ' over behov (tjekket ind)');
+                                    else if (diff < 0)  lines.push('\u2B07 ' + Math.abs(diff) + ' mangler (tjekket ind)');
+                                    else                lines.push('\u2713 Præcis dækket (tjekket ind)');
+                                } else if (staffed > 0) {
+                                    const diff = staffed - need;
+                                    if (diff > 0)       lines.push('\u2B06 ' + diff + ' over behov (tilmeldt)');
+                                    else if (diff < 0)  lines.push('\u2B07 ' + Math.abs(diff) + ' mangler (tilmeldt)');
+                                    else                lines.push('\u2713 Præcis dækket (tilmeldt)');
+                                } else if (need > 0) {
+                                    lines.push('\u2B07 ' + need + ' mangler — ingen tilmeldt');
+                                }
+                                return lines;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid:  { color: col.grid },
+                        ticks: { color: col.text, font: { size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid:  { color: col.grid },
+                        ticks: { color: col.text, stepSize: 1, font: { size: 11 } },
+                        title: { display: true, text: 'Antal frivillige', color: col.text, font: { size: 11 } }
+                    }
+                }
+            }
+        });
+
+        emptyEl.style.display = 'flex';
+        canvas.style.opacity  = '0.15';
+    }
+
+    // ── Opdater chart med data ─────────────────────────────────
+    function updateChart(d) {
+        const col = c();
+
+        // Byg per-bar farver: fremtidige slots vises med stiplet / nedtonet effekt
+        const staffedBg  = d.labels.map(function(_, i) {
+            return d.isPast[i] ? col.staffedFill : hexToRgba(cv('--clr-ok') || '#4ade80', 0.10);
+        });
+        const staffedBdr = d.labels.map(function(_, i) {
+            return d.isPast[i] ? col.staffedBorder : hexToRgba(cv('--clr-ok') || '#4ade80', 0.35);
+        });
+        const checkedBg  = d.labels.map(function(_, i) {
+            return d.isPast[i] ? col.checkedFill : 'transparent';
+        });
+        const checkedBdr = d.labels.map(function(_, i) {
+            return d.isPast[i] ? col.checkedBorder : 'transparent';
+        });
+
+        chart.data.labels = d.labels;
+
+        chart.data.datasets[0].data            = d.staffed;
+        chart.data.datasets[0].backgroundColor = staffedBg;
+        chart.data.datasets[0].borderColor      = staffedBdr;
+
+        chart.data.datasets[1].data            = d.checkedIn;
+        chart.data.datasets[1].backgroundColor = checkedBg;
+        chart.data.datasets[1].borderColor      = checkedBdr;
+
+        chart.data.datasets[2].data = d.required;
+
+        chart.update();
+        emptyEl.style.display = 'none';
+        canvas.style.opacity  = '1';
+    }
+
+    // ── Hent data ─────────────────────────────────────────────
+    async function loadData() {
+        if (!activeDate) return;
+        const [hh] = startInput.value.split(':');
+        const startHour = parseInt(hh, 10) || 0;
+        const res = await fetch(dataUrl + '?date=' + activeDate + '&startHour=' + startHour);
+        if (!res.ok) return;
+        updateChart(await res.json());
+    }
+
+    // ── Byg dagsknapper ───────────────────────────────────────
+    async function loadDage() {
+        const res = await fetch(dageUrl);
+        if (!res.ok) {
+            btnsEl.innerHTML = '<span style="color:var(--clr-alarm);font-size:0.82rem;">Fejl ved hentning af dage</span>';
+            return;
+        }
+        const dates = await res.json();
+
+        if (dates.length === 0) {
+            btnsEl.innerHTML = '<span style="font-size:0.82rem;color:var(--clr-text-muted);">Ingen vagter oprettet endnu</span>';
+            return;
+        }
+
+        btnsEl.innerHTML = '';
+        const today = new Date().toISOString().slice(0, 10);
+
+        dates.forEach(function(d) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm overblik-dag-btn';
+            btn.dataset.date = d;
+
+            const dt = new Date(d + 'T00:00:00');
+            const label = dt.toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' });
+
+            // Er det i dag?
+            const isToday = (d === today);
+            btn.innerHTML = label + (isToday ? ' <span style="font-size:0.65rem;vertical-align:middle;opacity:0.75;">(i dag)</span>' : '');
+
+            btn.style.cssText = 'background:var(--clr-surface);border:1px solid var(--clr-border);color:var(--clr-text);transition:all 0.15s;';
+
+            btn.addEventListener('mouseover', function() {
+                if (!this.classList.contains('active')) this.style.borderColor = 'var(--clr-brand)';
+            });
+            btn.addEventListener('mouseout', function() {
+                if (!this.classList.contains('active')) this.style.borderColor = 'var(--clr-border)';
+            });
+            btn.addEventListener('click', async function() {
+                document.querySelectorAll('.overblik-dag-btn').forEach(function(b) {
+                    b.classList.remove('active');
+                    b.style.background  = 'var(--clr-surface)';
+                    b.style.borderColor = 'var(--clr-border)';
+                    b.style.color       = 'var(--clr-text)';
+                });
+                this.classList.add('active');
+                this.style.background  = 'var(--clr-brand)';
+                this.style.borderColor = 'var(--clr-brand)';
+                this.style.color       = '#fff';
+                activeDate = this.dataset.date;
+                await loadData();
+            });
+
+            btnsEl.appendChild(btn);
+
+            // Auto-vælg dagens dato hvis den findes
+            if (isToday) btn.click();
+        });
+    }
+
+    startInput.addEventListener('change', function() {
+        localStorage.setItem(LS_KEY, startInput.value);
+        loadData();
+    });
+
+    // Gendan gemt starttid
+    const saved = localStorage.getItem(LS_KEY);
+    startInput.value = saved || '06:00';
+
+    initChart();
+    loadDage();
+})();
+</script>

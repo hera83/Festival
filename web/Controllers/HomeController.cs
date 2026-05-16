@@ -95,7 +95,7 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 VolunteerId = request.VolunteerId,
                 CheckInDate = today,
-                CheckedInAt = DateTime.UtcNow,
+                CheckedInAt = DateTime.Now,
                 CurrentLocation = "Pit"
             };
             _db.VolunteerCheckIns.Add(checkIn);
@@ -108,7 +108,7 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 EventType = "CheckIn",
                 Location = "Pit",
-                OccurredAt = DateTime.UtcNow
+                OccurredAt = DateTime.Now
             };
             _db.VolunteerLocationLogs.Add(log);
             await _db.SaveChangesAsync();
@@ -304,7 +304,7 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 EventType = "Move",
                 Location = to,
-                OccurredAt = DateTime.UtcNow
+                OccurredAt = DateTime.Now
             });
 
             await _db.SaveChangesAsync();
@@ -339,7 +339,7 @@ namespace web.Controllers
             var existing = await _db.VolunteerCheckIns
                 .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == volunteer.Id && c.CheckInDate == today && c.CheckedOutAt == null);
 
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             if (existing == null)
             {
@@ -412,9 +412,9 @@ namespace web.Controllers
             if (existing == null)
                 return Json(new { success = false, message = $"{volunteer.Name} er ikke checket ind." });
 
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
-            // Hvis personen ikke er i pitten – flyt til pit og log det
+            // Hvis personen ikke er i pitten
             if (existing.CurrentLocation != "Pit")
             {
                 existing.CurrentLocation = "Pit";

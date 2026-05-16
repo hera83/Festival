@@ -12,8 +12,8 @@ public class Volunteer
     public bool QrCodeSent { get; set; }
     public DateTime? QrCodeSentAt { get; set; }
     public string? QrCodeSentBy { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
     public ICollection<Shift> Shifts { get; set; } = [];
 }
