@@ -36,6 +36,7 @@
                         <th>E-mail</th>
                         <th>Roller</th>
                         <th>Status</th>
+                        <th>Sidste login</th>
                         <th class="pe-3 text-end">Handlinger</th>
                     </tr>
                 </thead>
@@ -43,7 +44,7 @@
                     @if (!Model.Users.Any())
                     {
                         <tr id="emptyRow">
-                            <td colspan="5" class="text-center py-4" style="color: var(--clr-text-muted);">
+                            <td colspan="6" class="text-center py-4" style="color: var(--clr-text-muted);">
                                 <i class="bi bi-person-x fs-4 d-block mb-1"></i>
                                 Ingen brugere fundet
                             </td>
@@ -82,6 +83,9 @@
                                 {
                                     <span class="badge badge-ok"><i class="bi bi-check-circle me-1"></i>Aktiv</span>
                                 }
+                            </td>
+                            <td class="align-middle" style="color: var(--clr-text-muted); font-size: 0.85rem;">
+                                @(user.LastLogin.HasValue ? user.LastLogin.Value.ToString("dd-MM-yyyy HH:mm") : "—")
                             </td>
                             <td class="pe-3 align-middle text-end">
                                 <div class="d-flex gap-2 justify-content-end">

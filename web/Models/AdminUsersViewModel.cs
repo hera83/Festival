@@ -9,6 +9,7 @@ public class AdminUserRow
     public string? PhoneNumber { get; set; }
     public IList<string> Roles { get; set; } = [];
     public bool IsLockedOut { get; set; }
+    public DateTime? LastLogin { get; set; }
 }
 
 public class AdminUsersViewModel

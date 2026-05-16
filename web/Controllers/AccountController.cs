@@ -44,6 +44,13 @@ public class AccountController(SignInManager<AppUser> signInManager, UserManager
 
         if (result.Succeeded)
         {
+            var user = await userManager.FindByNameAsync(model.Username);
+            if (user != null)
+            {
+                user.LastLogin = DateTime.Now;
+                await userManager.UpdateAsync(user);
+            }
+
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);

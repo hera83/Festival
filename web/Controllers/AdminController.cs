@@ -926,6 +926,7 @@ public class AdminController : Controller
                 PhoneNumber = u.PhoneNumber,
                 Roles       = await _userManager.GetRolesAsync(u),
                 IsLockedOut = await _userManager.IsLockedOutAsync(u),
+                LastLogin   = u.LastLogin,
             });
         }
 

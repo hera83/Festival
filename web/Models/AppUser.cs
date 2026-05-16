@@ -14,4 +14,6 @@ public class AppUser : IdentityUser
 
     // "system" (default), "dark" eller "light"
     public string ColorMode { get; set; } = "system";
+
+    public DateTime? LastLogin { get; set; }
 }
