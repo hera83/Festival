@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Festival SQLite database files
+web/App_dbs/**
+
+# Data files
+web/App_data/**
