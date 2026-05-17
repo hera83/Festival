@@ -1,0 +1,338 @@
+@{
+    Layout = null;
+    var antiForgeryToken = Html.AntiForgeryToken();
+}
+<!DOCTYPE html>
+<html lang="da" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Check-In — Festival Vagtstyring</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#e85d2e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Check-In" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+    <style>
+        html, body {
+            height: 100%;
+            background: var(--clr-bg);
+            color: var(--clr-text);
+            overflow: hidden;
+        }
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        #camera-container {
+            position: fixed;
+            inset: 0;
+            background: #000;
+        }
+        #qr-overlay-frame {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(70vw, 260px);
+            height: min(70vw, 260px);
+            pointer-events: none;
+        }
+        #qr-overlay-frame::before, #qr-overlay-frame::after,
+        #qr-overlay-frame > span::before, #qr-overlay-frame > span::after {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-color: var(--clr-brand);
+            border-style: solid;
+        }
+        #qr-overlay-frame::before { top: 0; left: 0; border-width: 3px 0 0 3px; }
+        #qr-overlay-frame::after  { top: 0; right: 0; border-width: 3px 3px 0 0; }
+        #qr-overlay-frame > span::before { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+        #qr-overlay-frame > span::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+        #status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0; right: 0;
+            padding: 14px 20px;
+            background: rgba(13, 17, 23, 0.88);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: .9rem;
+            color: var(--clr-text-muted);
+            border-top: 1px solid rgba(255,255,255,.08);
+        }
+        #status-icon { font-size: 1.15rem; }
+        #header-bar {
+            position: fixed;
+            top: 0;
+            left: 0; right: 0;
+            padding: 10px 16px;
+            background: rgba(13, 17, 23, 0.88);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            z-index: 10;
+        }
+        #header-bar h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--clr-text);
+        }
+        /* Popup overlay */
+        #checkin-popup {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            background: rgba(0,0,0,.6);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .25s;
+        }
+        #checkin-popup.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #checkin-popup-card {
+            background: var(--clr-surface);
+            border-radius: 16px;
+            padding: 28px 32px;
+            text-align: center;
+            min-width: 240px;
+            max-width: 320px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.5);
+            transform: scale(.9);
+            transition: transform .25s;
+        }
+        #checkin-popup.show #checkin-popup-card {
+            transform: scale(1);
+        }
+        #popup-icon {
+            font-size: 3rem;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+        #popup-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--clr-text);
+            margin-bottom: 6px;
+        }
+        #popup-msg {
+            font-size: .85rem;
+            color: var(--clr-text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div id="camera-container">
+    <video id="qr-video" autoplay playsinline muted></video>
+    <canvas id="qr-canvas" style="display:none;"></canvas>
+</div>
+
+<div id="qr-overlay-frame"><span></span></div>
+
+<div id="header-bar">
+    <h1><i class="bi bi-qr-code-scan me-2" style="color:var(--clr-brand);"></i>Festival Check-In</h1>
+    <span id="fps-badge" style="font-size:.65rem;color:var(--clr-text-muted);font-family:monospace;"></span>
+</div>
+
+<div id="status-bar">
+    <i class="bi bi-camera" id="status-icon"></i>
+    <span id="status-text">Starter kamera…</span>
+</div>
+
+<div id="checkin-popup">
+    <div id="checkin-popup-card">
+        <div id="popup-icon">✅</div>
+        <div id="popup-name"></div>
+        <div id="popup-msg"></div>
+    </div>
+</div>
+
+@antiForgeryToken
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@@1.4.0/dist/jsQR.min.js"></script>
+<script>
+(function () {
+    const video      = document.getElementById('qr-video');
+    const canvas     = document.getElementById('qr-canvas');
+    const statusIcon = document.getElementById('status-icon');
+    const statusText = document.getElementById('status-text');
+    const fpsBadge   = document.getElementById('fps-badge');
+    const popup      = document.getElementById('checkin-popup');
+    const popupIcon  = document.getElementById('popup-icon');
+    const popupName  = document.getElementById('popup-name');
+    const popupMsg   = document.getElementById('popup-msg');
+    const ctx        = canvas.getContext('2d', { willReadFrequently: true });
+
+    const registerUrl = '@Url.Action("RegisterCheckIn", "CheckIn")';
+    const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    // Lyd
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(type) {
+        const sequences = {
+            ok:        [{ freq: 880, dur: 0.12 }, { freq: 1320, dur: 0.18 }],
+            duplicate: [{ freq: 600, dur: 0.15 }, { freq: 600, dur: 0.15 }],
+            error:     [{ freq: 440, dur: 0.08 }, { freq: 280, dur: 0.30 }],
+        };
+        let offset = audioCtx.currentTime + 0.05;
+        for (const note of (sequences[type] || sequences.error)) {
+            const osc  = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(note.freq, offset);
+            gain.gain.setValueAtTime(0.35, offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, offset + note.dur);
+            osc.start(offset);
+            osc.stop(offset + note.dur);
+            offset += note.dur + 0.04;
+        }
+    }
+
+    // Status
+    function setStatus(icon, text, color) {
+        statusIcon.className = 'bi ' + icon;
+        statusIcon.style.color = color || 'var(--clr-text-muted)';
+        statusText.textContent = text;
+        statusText.style.color = color || 'var(--clr-text-muted)';
+    }
+
+    // Popup
+    let popupTimer = null;
+    function showPopup(icon, name, msg, beepType) {
+        playBeep(beepType);
+        popupIcon.textContent = icon;
+        popupName.textContent = name;
+        popupMsg.textContent  = msg;
+        popup.classList.add('show');
+        if (popupTimer) clearTimeout(popupTimer);
+        popupTimer = setTimeout(() => {
+            popup.classList.remove('show');
+            cooldown = false;
+            lastToken = null;
+            setStatus('bi-qr-code-scan', 'Scanner efter QR kode…');
+        }, 2500);
+    }
+
+    // Kamera + scan-loop
+    let stream    = null;
+    let lastToken = null;
+    let cooldown  = false;
+    let rafId     = null;
+    let frameCount = 0, lastFpsTime = performance.now();
+
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+        } catch {
+            try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
+            catch { setStatus('bi-camera-video-off', 'Kamera ikke tilgængeligt', 'var(--clr-alarm)'); return; }
+        }
+        video.srcObject = stream;
+        await video.play();
+        setStatus('bi-qr-code-scan', 'Scanner efter QR kode…');
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function tick() {
+        frameCount++;
+        const now = performance.now();
+        if (now - lastFpsTime >= 1000) {
+            fpsBadge.textContent = frameCount + ' fps';
+            frameCount = 0;
+            lastFpsTime = now;
+        }
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code    = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
+            if (code && !cooldown) {
+                const token = code.data.trim();
+                if (token !== lastToken) {
+                    lastToken = token;
+                    cooldown  = true;
+                    handleScan(token);
+                }
+            }
+        }
+        rafId = requestAnimationFrame(tick);
+    }
+
+    async function handleScan(token) {
+        setStatus('bi-arrow-repeat', 'QR aflæst – registrerer…', 'var(--clr-brand)');
+        try {
+            const res = await fetch(registerUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiForgery
+                },
+                body: JSON.stringify({ key: token })
+            });
+            const data = await res.json();
+
+            if (data.result === 'ok') {
+                setStatus('bi-check-circle-fill', 'Checket ind: ' + data.name, 'var(--clr-ok)');
+                showPopup('✅', data.name, 'Checket ind!', 'ok');
+            } else if (data.result === 'duplicate') {
+                setStatus('bi-info-circle', data.name + ' er allerede checket ind', 'var(--clr-info)');
+                showPopup('ℹ️', data.name, 'Allerede checket ind i dag', 'duplicate');
+            } else if (data.result === 'notfound') {
+                setStatus('bi-exclamation-triangle', 'Ingen frivillig fundet', 'var(--clr-alarm)');
+                showPopup('❌', 'Ukendt QR kode', token, 'error');
+            } else {
+                setStatus('bi-wifi-off', 'Fejl ved registrering', 'var(--clr-alarm)');
+                showPopup('⚠️', 'Fejl', data.message || 'Ukendt fejl', 'error');
+            }
+        } catch {
+            setStatus('bi-wifi-off', 'Netværksfejl', 'var(--clr-alarm)');
+            showPopup('⚠️', 'Netværksfejl', 'Kunne ikke kontakte server', 'error');
+        }
+    }
+
+    // Luk popup ved klik
+    popup.addEventListener('click', () => {
+        if (popupTimer) clearTimeout(popupTimer);
+        popup.classList.remove('show');
+        cooldown = false;
+        lastToken = null;
+        setStatus('bi-qr-code-scan', 'Scanner efter QR kode…');
+    });
+
+    startCamera();
+})();
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+</script>
+</body>
+</html>

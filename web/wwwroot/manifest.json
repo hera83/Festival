@@ -1,0 +1,25 @@
+{
+  "name": "Festival Check-In",
+  "short_name": "Check-In",
+  "description": "Festival Vagtstyring – Frivillig Check-In",
+  "start_url": "/CheckIn",
+  "scope": "/CheckIn",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1117",
+  "theme_color": "#e85d2e",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
