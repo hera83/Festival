@@ -68,9 +68,9 @@
 
         /* ── Bottom navigation ── */
         .bottom-nav {
-            --nav-height: 94px;
-            --active-icon: 52px;
-            --inactive-icon: 46px;
+            --nav-height: 90px;
+            --active-icon: 46px;
+            --inactive-icon: 40px;
             flex-shrink: 0;
             position: relative;
             z-index: 50;
@@ -96,9 +96,9 @@
             bottom: 0;
             height: calc(78px + env(safe-area-inset-bottom, 0px));
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             align-items: center;
-            padding: 0 14px;
+            padding: 0 6px;
             padding-bottom: env(safe-area-inset-bottom, 0px);
             z-index: 2;
         }
@@ -125,7 +125,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: var(--clr-text-muted);
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.06);
@@ -142,7 +142,7 @@
         }
 
         .nav-item .nav-label {
-            font-size: 0.72rem;
+            font-size: 0.66rem;
             font-weight: 600;
             letter-spacing: 0.02em;
             color: var(--clr-brand);
@@ -232,19 +232,23 @@
             <div class="nav-surface" aria-hidden="true"></div>
             <!-- Ikoner -->
             <div class="nav-items" id="nav-items">
-                <button class="nav-item active" data-tab="overblik" data-url="@Url.Action("Overblik", "FrivilligApp")" aria-label="Overblik">
+                <button class="nav-item active" data-tab="overblik" data-url="@Url.Action("Overblik", "AppFrivillig")" aria-label="Overblik">
                     <div class="nav-icon-wrap"><i class="bi bi-grid-1x2-fill"></i></div>
                     <span class="nav-label">Overblik</span>
                 </button>
-                <button class="nav-item" data-tab="vagter" data-url="@Url.Action("Vagter", "FrivilligApp")" aria-label="Vagter">
+                <button class="nav-item" data-tab="vagter" data-url="@Url.Action("Vagter", "AppFrivillig")" aria-label="Vagter">
                     <div class="nav-icon-wrap"><i class="bi bi-calendar-week"></i></div>
                     <span class="nav-label">Vagter</span>
                 </button>
-                <button class="nav-item" data-tab="observationer" data-url="@Url.Action("Observationer", "FrivilligApp")" aria-label="Observationer">
-                    <div class="nav-icon-wrap"><i class="bi bi-journal-text"></i></div>
+                <button class="nav-item" data-tab="observationer" data-url="@Url.Action("Observationer", "AppFrivillig")" aria-label="Observationer">
+                    <div class="nav-icon-wrap"><i class="bi bi-camera"></i></div>
                     <span class="nav-label">Observationer</span>
                 </button>
-                <button class="nav-item" data-tab="profil" data-url="@Url.Action("Profil", "FrivilligApp")" aria-label="Profil">
+                <button class="nav-item" data-tab="beskeder" data-url="@Url.Action("Beskeder", "AppFrivillig")" aria-label="Beskeder">
+                    <div class="nav-icon-wrap"><i class="bi bi-chat-dots"></i></div>
+                    <span class="nav-label">Beskeder</span>
+                </button>
+                <button class="nav-item" data-tab="profil" data-url="@Url.Action("Profil", "AppFrivillig")" aria-label="Profil">
                     <div class="nav-icon-wrap"><i class="bi bi-person"></i></div>
                     <span class="nav-label">Profil</span>
                 </button>

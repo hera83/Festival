@@ -1,6 +1,6 @@
 const CACHE_NAME = 'festival-frivillig-v1';
 const URLS_TO_CACHE = [
-    '/FrivilligApp',
+    '/AppFrivillig',
     '/css/site.css',
     '/lib/bootstrap/dist/css/bootstrap.min.css',
     '/icons/icon-192.svg',

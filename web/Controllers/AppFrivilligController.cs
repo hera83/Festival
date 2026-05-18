@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace web.Controllers;
 
 [AllowAnonymous]
-public class FrivilligAppController : Controller
+public class AppFrivilligController : Controller
 {
     [HttpGet]
     public IActionResult Index()
@@ -28,6 +28,12 @@ public class FrivilligAppController : Controller
     public IActionResult Observationer()
     {
         return PartialView("_Observationer");
+    }
+
+    [HttpGet]
+    public IActionResult Beskeder()
+    {
+        return PartialView("_Beskeder");
     }
 
     [HttpGet]

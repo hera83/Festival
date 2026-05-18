@@ -8,11 +8,11 @@ using web.Utils;
 namespace web.Controllers;
 
 [Authorize]
-public class CheckInController : Controller
+public class AppCheckInController : Controller
 {
     private readonly ApplicationDbContext _db;
 
-    public CheckInController(ApplicationDbContext db)
+    public AppCheckInController(ApplicationDbContext db)
     {
         _db = db;
     }
@@ -52,7 +52,7 @@ public class CheckInController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RegisterCheckIn([FromBody] CheckInRequest request)
+    public async Task<IActionResult> RegisterCheckIn([FromBody] AppCheckInRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Key))
             return BadRequest(new { result = "error", message = "Ugyldig QR kode." });
@@ -100,7 +100,7 @@ public class CheckInController : Controller
     }
 }
 
-public class CheckInRequest
+public class AppCheckInRequest
 {
     public string Key { get; set; } = "";
 }

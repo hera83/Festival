@@ -23,6 +23,7 @@
     <Folder Include="App_dbs\" />
     <Folder Include="App_files\" />
     <Folder Include="Migrations\" />
+    <Folder Include="Views\CheckIn\" />
   </ItemGroup>
 
 </Project>

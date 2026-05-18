@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/manifest-checkin.json" />
     <meta name="theme-color" content="#e85d2e" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -124,6 +124,26 @@
         #checkin-popup.show #checkin-popup-card {
             transform: scale(1);
         }
+        #btn-switch-camera {
+            background: none;
+            border: none;
+            color: var(--clr-text-muted);
+            font-size: 1.4rem;
+            padding: 4px 8px;
+            line-height: 1;
+            border-radius: 8px;
+            transition: color .2s, background .2s;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        #btn-switch-camera:not(:disabled):hover {
+            color: var(--clr-brand);
+            background: rgba(232,93,46,.12);
+        }
+        #btn-switch-camera:disabled {
+            opacity: .3;
+            cursor: default;
+        }
         #popup-icon {
             font-size: 3rem;
             line-height: 1;
@@ -158,6 +178,9 @@
 <div id="status-bar">
     <i class="bi bi-camera" id="status-icon"></i>
     <span id="status-text">Starter kamera…</span>
+    <button id="btn-switch-camera" title="Skift kamera" disabled>
+        <i class="bi bi-arrow-repeat"></i>
+    </button>
 </div>
 
 <div id="checkin-popup">
@@ -174,18 +197,22 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@@1.4.0/dist/jsQR.min.js"></script>
 <script>
 (function () {
-    const video      = document.getElementById('qr-video');
-    const canvas     = document.getElementById('qr-canvas');
-    const statusIcon = document.getElementById('status-icon');
-    const statusText = document.getElementById('status-text');
-    const fpsBadge   = document.getElementById('fps-badge');
+    const video        = document.getElementById('qr-video');
+    const canvas       = document.getElementById('qr-canvas');
+    const statusIcon   = document.getElementById('status-icon');
+    const statusText   = document.getElementById('status-text');
+    const fpsBadge     = document.getElementById('fps-badge');
+    const btnSwitch    = document.getElementById('btn-switch-camera');
+
+    let cameras       = [];   // { deviceId, label }
+    let cameraIndex   = 0;
     const popup      = document.getElementById('checkin-popup');
     const popupIcon  = document.getElementById('popup-icon');
     const popupName  = document.getElementById('popup-name');
     const popupMsg   = document.getElementById('popup-msg');
     const ctx        = canvas.getContext('2d', { willReadFrequently: true });
 
-    const registerUrl = '@Url.Action("RegisterCheckIn", "CheckIn")';
+    const registerUrl = '@Url.Action("RegisterCheckIn", "AppCheckIn")';
     const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
     // Lyd
@@ -238,17 +265,39 @@
     }
 
     // Kamera + scan-loop
-    let stream    = null;
-    let lastToken = null;
-    let cooldown  = false;
-    let rafId     = null;
+    let stream     = null;
+    let lastToken  = null;
+    let cooldown   = false;
+    let rafId      = null;
     let frameCount = 0, lastFpsTime = performance.now();
 
-    async function startCamera() {
+    async function enumerateCameras() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            cameras = devices.filter(d => d.kind === 'videoinput').map(d => ({ deviceId: d.deviceId, label: d.label }));
+        } catch {
+            cameras = [];
+        }
+    }
+
+    function pickDefaultCameraIndex() {
+        // Prefer environment-facing (rear) camera — same logic as the original getUserMedia constraint
+        const envIdx = cameras.findIndex(c => /back|rear|environment/i.test(c.label));
+        return envIdx >= 0 ? envIdx : 0;
+    }
+
+    async function startCameraByIndex(idx) {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+
+        const constraints = cameras.length > 0
+            ? { video: { deviceId: { exact: cameras[idx].deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
+            : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+        try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch {
             try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
             catch { setStatus('bi-camera-video-off', 'Kamera ikke tilgængeligt', 'var(--clr-alarm)'); return; }
@@ -258,6 +307,33 @@
         setStatus('bi-qr-code-scan', 'Scanner efter QR kode…');
         rafId = requestAnimationFrame(tick);
     }
+
+    async function startCamera() {
+        // Request permission first so enumerateDevices returns labels
+        try {
+            const tmp = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' } }
+            });
+            tmp.getTracks().forEach(t => t.stop());
+        } catch { /* ignore — fallback handles it */ }
+
+        await enumerateCameras();
+
+        cameraIndex = pickDefaultCameraIndex();
+
+        // Enable switch button only when more than one camera available
+        btnSwitch.disabled = cameras.length <= 1;
+
+        await startCameraByIndex(cameraIndex);
+    }
+
+    async function switchCamera() {
+        if (cameras.length <= 1) return;
+        cameraIndex = (cameraIndex + 1) % cameras.length;
+        await startCameraByIndex(cameraIndex);
+    }
+
+    btnSwitch.addEventListener('click', switchCamera);
 
     function tick() {
         frameCount++;

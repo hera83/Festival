@@ -1,0 +1,112 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>document.documentElement.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');</script>
+    <title>Installer Frivillig App</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="manifest" href="/manifest-frivillig.json" />
+    <meta name="theme-color" content="#e85d2e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Frivillig" />
+    <link rel="apple-touch-icon" href="/icons/icon-192-frivillig.svg" />
+    <style>
+        body { background: var(--clr-bg); color: var(--clr-text); min-height: 100dvh; display: flex; flex-direction: column; }
+        .install-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center; }
+        .app-icon { width: 96px; height: 96px; border-radius: 22px; background: var(--clr-brand); display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 1.5rem; box-shadow: 0 4px 24px rgba(232,93,46,.35); }
+        .step-card { background: var(--clr-surface); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: .75rem; display: flex; align-items: flex-start; gap: .75rem; text-align: left; }
+        .step-num { background: var(--clr-brand); color: #fff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+        #btn-install { display: none; }
+    </style>
+</head>
+<body>
+    <a href="/Account/Login" style="position:fixed;top:1rem;left:1.25rem;color:var(--clr-text-muted);opacity:0.65;font-size:0.9rem;text-decoration:none;display:flex;align-items:center;gap:0.35rem;z-index:10;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">
+        <i class="bi bi-arrow-left"></i> Log ind
+    </a>
+    <div class="install-hero">
+        <div class="app-icon"><i class="bi bi-person-badge" style="color:#fff"></i></div>
+        <h1 class="h3 fw-bold mb-1">Festival Frivillig</h1>
+        <p class="text-muted mb-4">Installer appen på din enhed for hurtig adgang uden browser</p>
+
+        <!-- Android / Chrome install knap -->
+        <button id="btn-install" class="btn btn-lg mb-4 w-100" style="max-width:340px; background:var(--clr-brand); color:#fff; border:none; border-radius:10px; font-weight:600;">
+            <i class="bi bi-download me-2"></i>Installer Frivillig App
+        </button>
+
+        <!-- iOS guide -->
+        <div id="ios-guide" style="display:none;" class="w-100" style="max-width:380px;">
+            <div class="alert" style="background:var(--clr-surface); border:1px solid var(--clr-brand); border-radius:10px; color:var(--clr-text);">
+                <i class="bi bi-apple me-2" style="color:var(--clr-brand)"></i>
+                <strong>Installer på iPhone / iPad</strong>
+            </div>
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div>Tryk på <strong>Del-ikonet</strong> <i class="bi bi-box-arrow-up"></i> nederst i Safari</div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div>Vælg <strong>"Føj til hjemmeskærm"</strong> i menuen</div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div>Tryk <strong>"Tilføj"</strong> øverst til højre – appen er klar!</div>
+            </div>
+        </div>
+
+        <!-- Desktop / allerede installeret -->
+        <div id="already-installed" style="display:none;" class="w-100" style="max-width:380px;">
+            <div class="alert" style="background:var(--clr-surface); border:1px solid var(--clr-ok); border-radius:10px; color:var(--clr-ok);">
+                <i class="bi bi-check-circle-fill me-2"></i>Appen er allerede installeret på denne enhed
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a href="/AppFrivillig" class="btn btn-sm" style="background:var(--clr-surface); color:var(--clr-text-muted); border:1px solid rgba(255,255,255,.1);">
+                <i class="bi bi-arrow-right me-1"></i>Åbn i browser i stedet
+            </a>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const isInStandalone = ('standalone' in navigator && navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+
+            if (isInStandalone) {
+                document.getElementById('already-installed').style.display = 'block';
+                return;
+            }
+
+            if (isIos) {
+                document.getElementById('ios-guide').style.display = 'block';
+                return;
+            }
+
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                deferredPrompt = e;
+                document.getElementById('btn-install').style.display = 'block';
+            });
+
+            document.getElementById('btn-install').addEventListener('click', async function () {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('btn-install').style.display = 'none';
+                if (result.outcome === 'accepted') {
+                    document.getElementById('already-installed').style.display = 'block';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

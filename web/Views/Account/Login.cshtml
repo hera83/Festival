@@ -23,6 +23,21 @@
 </head>
 <body>
 
+<div class="install-hints" style="position:fixed;top:1rem;right:1.25rem;display:flex;gap:0.6rem;z-index:10;">
+    <a href="/install/frivillig" title="Frivillig appen kan installeres på din telefon og gøre det lettere at være frivillig" data-bs-toggle="tooltip" data-bs-placement="bottom"
+       style="color:var(--clr-text-muted);opacity:0.55;font-size:1.1rem;text-decoration:none;transition:opacity .2s;"
+       onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">
+        <i class="bi bi-person-heart"></i>
+        <i class="bi bi-download" style="font-size:0.65rem;vertical-align:super;margin-left:-2px;"></i>
+    </a>
+    <a href="/install/checkin" title="Hvis du er Koordinator eller Administrator kan du installere Check-in appen på din telefon for at du hurtigere kan komme igennem peak perioder" data-bs-toggle="tooltip" data-bs-placement="bottom"
+       style="color:var(--clr-text-muted);opacity:0.55;font-size:1.1rem;text-decoration:none;transition:opacity .2s;"
+       onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">
+        <i class="bi bi-qr-code-scan"></i>
+        <i class="bi bi-download" style="font-size:0.65rem;vertical-align:super;margin-left:-2px;"></i>
+    </a>
+</div>
+
 <div class="auth-wrapper">
     <div class="auth-card">
 
@@ -63,7 +78,13 @@
 </div>
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+<script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+<script>
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
+</script>
 </body>
 </html>
