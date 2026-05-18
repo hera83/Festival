@@ -206,6 +206,7 @@
 
     let cameras       = [];   // { deviceId, label }
     let cameraIndex   = 0;
+    let currentFacingMode = 'environment';
     const popup      = document.getElementById('checkin-popup');
     const popupIcon  = document.getElementById('popup-icon');
     const popupName  = document.getElementById('popup-name');
@@ -280,28 +281,36 @@
         }
     }
 
-    function pickDefaultCameraIndex() {
-        // Prefer environment-facing (rear) camera — same logic as the original getUserMedia constraint
-        const envIdx = cameras.findIndex(c => /back|rear|environment/i.test(c.label));
-        return envIdx >= 0 ? envIdx : 0;
+    function hasBothFacingModes() {
+        if (cameras.length < 2) return false;
+        const hasEnv  = cameras.some(c => /back|rear|environment/i.test(c.label));
+        const hasUser = cameras.some(c => /front|user|face/i.test(c.label));
+        // Fallback: labels may be empty — if 2+ cameras exist, assume front+rear
+        return (hasEnv && hasUser) || (!hasEnv && !hasUser && cameras.length >= 2);
     }
 
-    async function startCameraByIndex(idx) {
+    async function startCameraWithFacing(facingMode) {
         if (stream) {
             stream.getTracks().forEach(t => t.stop());
             stream = null;
         }
         if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
-        const constraints = cameras.length > 0
-            ? { video: { deviceId: { exact: cameras[idx].deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
-            : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
         try {
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
         } catch {
-            try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
-            catch { setStatus('bi-camera-video-off', 'Kamera ikke tilgængeligt', 'var(--clr-alarm)'); return; }
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+            } catch {
+                try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
+                catch { setStatus('bi-camera-video-off', 'Kamera ikke tilgængeligt', 'var(--clr-alarm)'); return; }
+            }
         }
+        currentFacingMode = facingMode;
         video.srcObject = stream;
         await video.play();
         setStatus('bi-qr-code-scan', 'Scanner efter QR kode…');
@@ -319,18 +328,15 @@
 
         await enumerateCameras();
 
-        cameraIndex = pickDefaultCameraIndex();
+        // Enable switch button only when device has both front and rear cameras
+        btnSwitch.disabled = !hasBothFacingModes();
 
-        // Enable switch button only when more than one camera available
-        btnSwitch.disabled = cameras.length <= 1;
-
-        await startCameraByIndex(cameraIndex);
+        await startCameraWithFacing('environment');
     }
 
     async function switchCamera() {
-        if (cameras.length <= 1) return;
-        cameraIndex = (cameraIndex + 1) % cameras.length;
-        await startCameraByIndex(cameraIndex);
+        const next = currentFacingMode === 'environment' ? 'user' : 'environment';
+        await startCameraWithFacing(next);
     }
 
     btnSwitch.addEventListener('click', switchCamera);
