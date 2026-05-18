@@ -2,4 +2,352 @@
     <i class="bi bi-person-circle fv-page-icon"></i>
     <h2 class="fv-page-title">Profil</h2>
 </div>
-<!-- Indhold bygges videre herfra -->
+
+<!-- ── STATE 1: Mail-login ── -->
+<div id="profil-login">
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="mb-3" style="color:var(--clr-text-muted);font-size:0.9rem;">
+                Indtast din mail for at finde din profil.
+            </p>
+            <div class="input-group mb-3">
+                <span class="input-group-text" style="background:var(--clr-surface);border-color:var(--clr-border);color:var(--clr-brand);">
+                    <i class="bi bi-envelope"></i>
+                </span>
+                <input type="email" id="profil-email" class="form-control"
+                       placeholder="din@mail.dk"
+                       style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" />
+            </div>
+            <button id="profil-lookup-btn" class="btn btn-sm w-100"
+                    style="background:var(--clr-brand);color:#fff;border:none;">
+                <i class="bi bi-search me-1"></i>Søg
+            </button>
+        </div>
+    </div>
+
+    <!-- Frivillig-liste vises her -->
+    <div id="profil-volunteer-list" style="display:none;">
+        <p class="mb-2" style="color:var(--clr-text-muted);font-size:0.85rem;">Vælg din profil:</p>
+        <div id="profil-volunteers"></div>
+    </div>
+</div>
+
+<!-- ── STATE 2: Bekræftelseskode ── -->
+<div id="profil-code-state" style="display:none;">
+    <div id="profil-code-spinner" class="text-center py-4">
+        <div class="spinner-border" style="color:var(--clr-brand);width:2.5rem;height:2.5rem;" role="status"></div>
+        <p class="mt-3" style="color:var(--clr-text-muted);font-size:0.9rem;">Sender kode til din mail…</p>
+    </div>
+    <div id="profil-code-input" style="display:none;">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="mb-3" style="color:var(--clr-text-muted);font-size:0.9rem;">
+                    En 6-cifret kode er sendt til din mail. Indtast den herunder.
+                </p>
+                <div class="input-group mb-3">
+                    <span class="input-group-text" style="background:var(--clr-surface);border-color:var(--clr-border);color:var(--clr-brand);">
+                        <i class="bi bi-key"></i>
+                    </span>
+                    <input type="text" id="profil-code" class="form-control text-center"
+                           maxlength="6" placeholder="000000" inputmode="numeric"
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);font-size:1.4rem;letter-spacing:0.35em;font-weight:700;" />
+                </div>
+                <button id="profil-verify-btn" class="btn btn-sm w-100"
+                        style="background:var(--clr-brand);color:#fff;border:none;">
+                    <i class="bi bi-check-lg me-1"></i>Bekræft
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── STATE 3: Profilside ── -->
+<div id="profil-profile" style="display:none;">
+
+    <!-- Navn -->
+    <div class="card mb-3">
+        <div class="card-body pb-2">
+            <p class="mb-0" style="color:var(--clr-text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;">Navn</p>
+            <p id="pp-name" class="mb-0 fw-semibold" style="font-size:1.1rem;color:var(--clr-text);"></p>
+        </div>
+    </div>
+
+    <!-- Nøgle + QR -->
+    <div class="card mb-3">
+        <div class="card-body pb-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="mb-0" style="color:var(--clr-text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;">Nøgle</p>
+                    <p id="pp-key" class="mb-0 fw-semibold font-monospace" style="font-size:1rem;color:var(--clr-text);"></p>
+                </div>
+                <button id="pp-qr-btn" class="btn btn-sm"
+                        style="background:rgba(232,93,46,0.12);border:1px solid rgba(232,93,46,0.3);color:var(--clr-brand);"
+                        title="Vis QR-kode">
+                    <i class="bi bi-qr-code" style="font-size:1.4rem;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mail -->
+    <div class="card mb-3">
+        <div class="card-body pb-2">
+            <p class="mb-1" style="color:var(--clr-text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;">Mail</p>
+            <input type="email" id="pp-email" class="form-control form-control-sm"
+                   style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" />
+        </div>
+    </div>
+
+    <!-- Telefon -->
+    <div class="card mb-3">
+        <div class="card-body pb-2">
+            <p class="mb-1" style="color:var(--clr-text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;">Telefon</p>
+            <input type="tel" id="pp-phone" class="form-control form-control-sm"
+                   style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" />
+        </div>
+    </div>
+
+    <!-- Gem / Annuller -->
+    <div class="d-flex gap-2 mt-3">
+        <button id="pp-save-btn" class="btn btn-sm flex-fill" disabled
+                style="background:var(--clr-brand);color:#fff;border:none;opacity:0.45;transition:opacity 0.2s;">
+            <i class="bi bi-floppy me-1"></i>Gem
+        </button>
+        <button id="pp-cancel-btn" class="btn btn-sm flex-fill"
+                style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:var(--clr-text-muted);">
+            <i class="bi bi-x-lg me-1"></i>Annuller
+        </button>
+    </div>
+
+    <!-- ── QR-kode modal ── -->
+<div class="modal fade" id="ppQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:300px;margin:auto;">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid rgba(255,255,255,0.1);color:var(--clr-text);">
+            <div class="modal-body text-center py-4 px-4" style="background:var(--clr-surface);">
+                <div id="ppQrContainer" style="display:inline-block;background:#fff;padding:12px;border-radius:8px;"></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,0.08);background:var(--clr-bg);justify-content:center;">
+                <button type="button" class="btn btn-sm" data-bs-dismiss="modal"
+                        style="background:var(--clr-surface);border:1px solid rgba(255,255,255,0.15);color:var(--clr-text);">
+                    <i class="bi bi-x-lg me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const LS_KEY = 'fv_volunteer';
+    let _selectedVolunteerId = null;
+    let _profileData = null;
+    let _originalData = null;
+
+    function showState(state) {
+        document.getElementById('profil-login').style.display      = state === 'login'   ? '' : 'none';
+        document.getElementById('profil-code-state').style.display = state === 'code'    ? '' : 'none';
+        document.getElementById('profil-profile').style.display    = state === 'profile' ? '' : 'none';
+    }
+
+    function loadSaved() {
+        try {
+            const raw = localStorage.getItem(LS_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch {}
+        return null;
+    }
+
+    function saveLocal(data) {
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+    }
+
+    function checkDirty() {
+        if (!_originalData) return;
+        const changed =
+            document.getElementById('pp-email').value.trim() !== _originalData.email ||
+            document.getElementById('pp-phone').value.trim() !== _originalData.phone;
+        const btn = document.getElementById('pp-save-btn');
+        btn.disabled = !changed;
+        btn.style.opacity = changed ? '1' : '0.45';
+    }
+
+    function renderProfile(data) {
+        _profileData = data;
+        _originalData = { email: data.email ?? '', phone: data.phone ?? '' };
+        document.getElementById('pp-name').textContent  = data.name  ?? '';
+        document.getElementById('pp-key').textContent   = data.key   ?? '';
+        document.getElementById('pp-email').value       = data.email ?? '';
+        document.getElementById('pp-phone').value       = data.phone ?? '';
+        document.getElementById('pp-email').addEventListener('input', checkDirty);
+        document.getElementById('pp-phone').addEventListener('input', checkDirty);
+        checkDirty();
+        showState('profile');
+    }
+
+    // Check saved identity
+    const saved = loadSaved();
+    if (saved) {
+        fetch(`/AppFrivillig/GetProfile?volunteerId=${saved.id}&seasonId=${saved.seasonId}`)
+            .then(r => r.json())
+            .then(d => {
+                if (d.id) renderProfile({ id: d.id, seasonId: d.seasonId, name: d.name, key: d.key, email: d.email, phone: d.phone, qrToken: d.qrToken });
+                else showState('login');
+            })
+            .catch(() => showState('login'));
+    } else {
+        showState('login');
+    }
+
+    // ── Mail-opslag ──
+    document.getElementById('profil-lookup-btn').addEventListener('click', async () => {
+        const email = document.getElementById('profil-email').value.trim();
+        if (!email) { fvToast('Indtast en mail.', 'warning'); return; }
+
+        const btn = document.getElementById('profil-lookup-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Søger…';
+        try {
+            const res = await fetch('/AppFrivillig/LookupEmail', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (!res.ok) {
+                        fvToast('Serverfejl. Prøv igen.', 'error');
+                        return;
+                    }
+                    const data = await res.json();
+                    if (!data.found) {
+                        fvToast('Denne mail er ikke registreret i systemet.', 'warning');
+                        document.getElementById('profil-volunteer-list').style.display = 'none';
+                } else {
+                const listEl = document.getElementById('profil-volunteers');
+                listEl.innerHTML = '';
+                data.volunteers.forEach(v => {
+                    const div = document.createElement('div');
+                    div.className = 'card mb-2';
+                    div.innerHTML = `
+                        <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold" style="color:var(--clr-text);">${v.name}</span>
+                            <button class="btn btn-sm"
+                                    style="background:var(--clr-brand);color:#fff;border:none;"
+                                    data-id="${v.id}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Vælg
+                            </button>
+                        </div>`;
+                    div.querySelector('button').addEventListener('click', () => selectVolunteer(v.id));
+                    listEl.appendChild(div);
+                });
+                document.getElementById('profil-volunteer-list').style.display = '';
+            }
+        } catch {
+            errEl.textContent = 'Der opstod en fejl. Prøv igen.';
+            errEl.style.display = '';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-search me-1"></i>Søg';
+        }
+    });
+
+    async function selectVolunteer(id) {
+        _selectedVolunteerId = id;
+        showState('code');
+        document.getElementById('profil-code-spinner').style.display = '';
+        document.getElementById('profil-code-input').style.display   = 'none';
+
+        try {
+            await fetch('/AppFrivillig/SendCode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ volunteerId: id })
+            });
+        } finally {
+            document.getElementById('profil-code-spinner').style.display = 'none';
+            document.getElementById('profil-code-input').style.display   = '';
+            document.getElementById('profil-code').value = '';
+            document.getElementById('profil-code').focus();
+        }
+    }
+
+    // ── Bekræft kode ──
+    document.getElementById('profil-verify-btn').addEventListener('click', async () => {
+        const code = document.getElementById('profil-code').value.trim();
+        if (code.length !== 6) { fvToast('Koden skal være 6 cifre.', 'warning'); return; }
+
+        const btn = document.getElementById('profil-verify-btn');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/AppFrivillig/VerifyCode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ volunteerId: _selectedVolunteerId, code })
+            });
+            const data = await res.json();
+            if (!data.valid) {
+                fvToast(data.error ?? 'Forkert kode.', 'error');
+            } else {
+                saveLocal({ id: data.volunteerId, seasonId: data.seasonId });
+                renderProfile(data);
+            }
+        } catch {
+            fvToast('Der opstod en fejl. Prøv igen.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // ── Gem profil ──
+    document.getElementById('pp-save-btn').addEventListener('click', async () => {
+        const saved2 = loadSaved();
+        if (!saved2) return;
+        const email = document.getElementById('pp-email').value.trim();
+        const phone = document.getElementById('pp-phone').value.trim();
+
+        try {
+            const res = await fetch('/AppFrivillig/SaveProfile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ volunteerId: saved2.id, seasonId: saved2.seasonId, email, phone })
+            });
+            const data = await res.json();
+            if (data.saved) {
+                _originalData = { email, phone };
+                checkDirty();
+                fvToast('Profil gemt.', 'success');
+            }
+        } catch {
+            fvToast('Fejl ved gem.', 'error');
+        }
+    });
+
+    // ── Annuller ──
+    document.getElementById('pp-cancel-btn').addEventListener('click', () => {
+        if (_originalData) {
+            document.getElementById('pp-email').value = _originalData.email;
+            document.getElementById('pp-phone').value = _originalData.phone;
+        }
+        checkDirty();
+    });
+
+    // ── QR-kode ──
+    document.getElementById('pp-qr-btn').addEventListener('click', () => {
+        if (!_profileData || !_profileData.key) return;
+
+        const container = document.getElementById('ppQrContainer');
+        container.innerHTML = '';
+
+        new QRCode(container, {
+            text: _profileData.key,
+            width: 220,
+            height: 220,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+
+        const modal = new bootstrap.Modal(document.getElementById('ppQrModal'));
+        modal.show();
+    });
+})();
+</script>
+

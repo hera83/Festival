@@ -209,6 +209,18 @@
 <body>
     <div class="fv-shell">
 
+        <!-- Toast container -->
+        <div id="fv-toast-container" style="
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 12px);
+            right: 12px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        "></div>
+
         <!-- Top bar -->
         <div class="app-topbar">
             <i class="bi bi-person-badge fs-5" style="color:var(--clr-brand);"></i>
@@ -253,13 +265,63 @@
     </div>
 
     <script>
-        const contentEl  = document.getElementById('page-content');
+        const contentEl = document.getElementById('page-content');
+
+        function fvToast(message, type) {
+            const colors = {
+                success: { bg: 'rgba(40,167,69,0.92)', icon: 'bi-check-circle-fill' },
+                error:   { bg: 'rgba(220,53,69,0.92)',  icon: 'bi-exclamation-circle-fill' },
+                warning: { bg: 'rgba(232,93,46,0.92)',  icon: 'bi-exclamation-triangle-fill' },
+                info:    { bg: 'rgba(13,110,253,0.92)', icon: 'bi-info-circle-fill' },
+            };
+            const c = colors[type] || colors.info;
+            const el = document.createElement('div');
+            el.style.cssText = `
+                background: ${c.bg};
+                color: #fff;
+                padding: 9px 14px;
+                border-radius: 8px;
+                font-size: 0.83rem;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                backdrop-filter: blur(8px);
+                box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+                max-width: 260px;
+                opacity: 0;
+                transform: translateX(20px);
+                transition: opacity 0.25s ease, transform 0.25s ease;
+                pointer-events: none;
+            `;
+            el.innerHTML = `<i class="bi ${c.icon}" style="flex-shrink:0;"></i><span>${message}</span>`;
+            document.getElementById('fv-toast-container').appendChild(el);
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateX(0)';
+            });
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                setTimeout(() => el.remove(), 280);
+            }, 3000);
+        }
 
         async function loadTab(url) {
             contentEl.innerHTML = '<div class="d-flex justify-content-center pt-5"><div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div></div>';
             try {
                 const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 contentEl.innerHTML = await res.text();
+                // Scripts injected via innerHTML are not executed by the browser — re-run them manually
+                contentEl.querySelectorAll('script').forEach(orig => {
+                    const s = document.createElement('script');
+                    if (orig.src) {
+                        s.src = orig.src;
+                    } else {
+                        s.textContent = orig.textContent;
+                    }
+                    orig.replaceWith(s);
+                });
             } catch {
                 contentEl.innerHTML = '<p class="text-muted text-center pt-4">Kunne ikke indlæse siden.</p>';
             }
@@ -289,5 +351,7 @@
             navigator.serviceWorker.register('/sw-frivillig.js').catch(() => {});
         }
     </script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>

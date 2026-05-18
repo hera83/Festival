@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<DashboardSetting> DashboardSettings => Set<DashboardSetting>();
     public DbSet<UserCameraPreference> UserCameraPreferences => Set<UserCameraPreference>();
+    public DbSet<VolunteerMeta> VolunteerMetas => Set<VolunteerMeta>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -105,6 +106,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
             entity.Property(x => x.DeviceId).HasMaxLength(256).IsRequired();
             entity.Property(x => x.DeviceFingerprint).HasMaxLength(2048).IsRequired();
+        });
+
+        builder.Entity<VolunteerMeta>(entity =>
+        {
+            entity.HasIndex(x => x.VolunteerId).IsUnique();
+            entity.HasOne(x => x.Volunteer)
+                .WithMany()
+                .HasForeignKey(x => x.VolunteerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.AppConfirmCode).HasMaxLength(6);
         });
     }
 }
