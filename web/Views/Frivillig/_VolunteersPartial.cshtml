@@ -78,21 +78,26 @@
 
 @* QR-kode modal *@
 <div class="modal fade" id="qrVolModal" tabindex="-1" aria-labelledby="qrVolModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
         <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
             <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
                 <h6 class="modal-title mb-0" id="qrVolModalLabel">
-                    <i class="bi bi-qr-code me-2" style="color: var(--clr-brand);"></i>QR-kode – <span id="qrVolName"></span>
+                    <i class="bi bi-qr-code me-2" style="color: var(--clr-brand);"></i>QR-kode
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
             <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
-                <p class="mb-1 small" style="color: var(--clr-text-muted);">Nøgle: <span id="qrVolKey" class="fw-semibold" style="color: var(--clr-text);"></span></p>
-                <div class="mt-3 p-2 rounded d-inline-block" style="background: #fff;">
-                    <img id="qrVolImage" src="" alt="QR-kode" style="width: 180px; height: 180px;" />
+                <p class="fw-semibold mb-0" id="qrVolName" style="font-size:1.05rem;"></p>
+                <p class="mb-3 small" style="color: var(--clr-text-muted);">Nøgle: <span id="qrVolKey" class="fw-semibold" style="color: var(--clr-text);"></span></p>
+                <div class="d-inline-block p-3 rounded-3" style="background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.35);">
+                    <img id="qrVolImage" src="" alt="QR-kode" style="width:280px;height:280px;display:block;" />
                 </div>
+                <p class="mt-3 mb-0 small" style="color:var(--clr-text-muted);">Hold kamera i passende afstand og vent på autofokus</p>
             </div>
             <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm" id="qrDownloadBtn" style="background: var(--clr-info); color: #fff; border: none;">
+                    <i class="bi bi-download me-1"></i>Gem
+                </button>
                 <button type="button" class="btn btn-sm" id="qrPrintBtn" style="background: var(--clr-brand); color: #fff; border: none;">
                     <i class="bi bi-printer me-1"></i>Print
                 </button>
@@ -346,9 +351,20 @@
         document.getElementById('qrVolName').textContent = name;
         document.getElementById('qrVolKey').textContent  = key;
         var encoded = encodeURIComponent(key);
-        document.getElementById('qrVolImage').src = 'https://quickchart.io/qr?text=' + encoded + '&size=180&margin=1';
+        document.getElementById('qrVolImage').src = 'https://quickchart.io/qr?text=' + encoded + '&size=300&margin=2&ecLevel=H';
         bsQrModal.show();
     }
+
+    document.getElementById('qrDownloadBtn').addEventListener('click', function () {
+        var name = document.getElementById('qrVolName').textContent;
+        var key  = document.getElementById('qrVolKey').textContent;
+        var src  = document.getElementById('qrVolImage').src;
+        var a    = document.createElement('a');
+        a.href     = src;
+        a.download = 'QR-' + key + '.png';
+        a.target   = '_blank';
+        a.click();
+    });
 
     document.getElementById('qrPrintBtn').addEventListener('click', function () {
         var name = document.getElementById('qrVolName').textContent;

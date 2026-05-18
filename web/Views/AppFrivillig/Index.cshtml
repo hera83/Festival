@@ -184,30 +184,25 @@
 
         /* ── Page header (bruges i alle partial views) ── */
         .fv-page-header {
-            background: linear-gradient(135deg, rgba(232,93,46,0.15) 0%, rgba(232,93,46,0.04) 100%);
-            border: 1px solid rgba(232,93,46,0.22);
-            border-radius: 14px;
-            padding: 1.25rem 1.1rem;
-            margin-bottom: 1.25rem;
+            background: linear-gradient(135deg, rgba(232,93,46,0.12) 0%, rgba(232,93,46,0.03) 100%);
+            border: 1px solid rgba(232,93,46,0.18);
+            border-radius: 10px;
+            padding: 0.55rem 0.9rem;
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.65rem;
         }
         .fv-page-icon {
-            font-size: 2rem;
+            font-size: 1.25rem;
             color: var(--clr-brand);
             flex-shrink: 0;
         }
         .fv-page-title {
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 700;
-            margin: 0 0 0.15rem;
-            color: var(--clr-text);
-        }
-        .fv-page-subtitle {
-            font-size: 0.8rem;
-            color: var(--clr-text-muted);
             margin: 0;
+            color: var(--clr-text);
         }
     </style>
 </head>
@@ -241,7 +236,7 @@
                     <span class="nav-label">Vagter</span>
                 </button>
                 <button class="nav-item" data-tab="observationer" data-url="@Url.Action("Observationer", "AppFrivillig")" aria-label="Observationer">
-                    <div class="nav-icon-wrap"><i class="bi bi-camera"></i></div>
+                    <div class="nav-icon-wrap"><i class="bi bi-journal-text"></i></div>
                     <span class="nav-label">Observationer</span>
                 </button>
                 <button class="nav-item" data-tab="beskeder" data-url="@Url.Action("Beskeder", "AppFrivillig")" aria-label="Beskeder">

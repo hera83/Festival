@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using web.Data;
 using web.Models;
+using web.Services.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,15 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
 });
+
+builder.Services
+    .AddOptions<EmailSettings>()
+    .Bind(builder.Configuration.GetSection(EmailSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IImapService, ImapService>();
 
 var app = builder.Build();
 
