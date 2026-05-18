@@ -61,10 +61,17 @@
             </div>
         </div>
 
-        <!-- Desktop / allerede installeret -->
-        <div id="already-installed" style="display:none;" class="w-100" style="max-width:380px;">
+        <!-- Netop installeret -->
+        <div id="just-installed" style="display:none;" class="w-100" style="max-width:380px;">
             <div class="alert" style="background:var(--clr-surface); border:1px solid var(--clr-ok); border-radius:10px; color:var(--clr-ok);">
-                <i class="bi bi-check-circle-fill me-2"></i>Appen er allerede installeret på denne enhed
+                <i class="bi bi-check-circle-fill me-2"></i><strong>Appen er installeret!</strong> Du finder den på din hjemmeskærm.
+            </div>
+        </div>
+
+        <!-- Allerede installeret (standalone-mode) -->
+        <div id="already-installed" style="display:none;" class="w-100" style="max-width:380px;">
+            <div class="alert" style="background:var(--clr-surface); border:1px solid var(--clr-info); border-radius:10px; color:var(--clr-info);">
+                <i class="bi bi-info-circle-fill me-2"></i>Appen er allerede installeret på denne enhed.
             </div>
         </div>
 
@@ -104,7 +111,7 @@
                 deferredPrompt = null;
                 document.getElementById('btn-install').style.display = 'none';
                 if (result.outcome === 'accepted') {
-                    document.getElementById('already-installed').style.display = 'block';
+                    document.getElementById('just-installed').style.display = 'block';
                 }
             });
 
