@@ -1,0 +1,294 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="da" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Frivillig — Festival Vagtstyring</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="manifest" href="/manifest-frivillig.json" />
+    <meta name="theme-color" content="#e85d2e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Frivillig" />
+    <link rel="apple-touch-icon" href="/icons/icon-192-frivillig.svg" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: var(--clr-bg);
+            color: var(--clr-text);
+            overflow: hidden;
+        }
+
+        /* ── App shell ── */
+        .fv-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* ── Top bar ── */
+        .app-topbar {
+            background: rgba(13, 17, 23, 0.92);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 0.7rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .app-topbar .app-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--clr-text);
+            flex: 1;
+        }
+        .app-topbar .brand-dot { color: var(--clr-brand); }
+
+        /* ── Scrollable content area ── */
+        .fv-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem 1rem 1rem;
+        }
+
+        /* ── Tab panes ── */
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* ── Bottom navigation ── */
+        .bottom-nav {
+            --nav-height: 94px;
+            --active-icon: 52px;
+            --inactive-icon: 46px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 50;
+            height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+        }
+
+        .nav-surface {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: calc(78px + env(safe-area-inset-bottom, 0px));
+            background: rgba(22, 27, 34, 0.94);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 -14px 30px rgba(0,0,0,0.35);
+            backdrop-filter: blur(14px);
+        }
+
+        .nav-items {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: calc(78px + env(safe-area-inset-bottom, 0px));
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            align-items: center;
+            padding: 0 14px;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            z-index: 2;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: grid;
+            justify-items: center;
+            align-content: center;
+            padding-top: 0;
+            min-width: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            position: relative;
+        }
+
+        .nav-item .nav-icon-wrap {
+            width: var(--inactive-icon);
+            height: var(--inactive-icon);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--clr-text-muted);
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition:
+                transform 0.36s cubic-bezier(.34,1.56,.64,1),
+                background 0.25s ease,
+                color 0.25s ease,
+                box-shadow 0.3s ease,
+                width 0.24s ease,
+                height 0.24s ease;
+            transform: translateY(0);
+            position: relative;
+            z-index: 6;
+        }
+
+        .nav-item .nav-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--clr-brand);
+            white-space: nowrap;
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            transition:
+                max-height 0.25s ease,
+                opacity 0.25s ease,
+                margin-top 0.25s ease;
+            z-index: 6;
+            position: relative;
+        }
+
+        .nav-item.active {
+            padding-top: 0;
+            padding-bottom: 0;
+            transform: translateY(-10px);
+        }
+        .nav-item.active .nav-icon-wrap {
+            width: var(--active-icon);
+            height: var(--active-icon);
+            background: linear-gradient(145deg, var(--clr-brand), #ff7a4d);
+            color: #ffffff;
+            transform: translateY(0);
+        }
+        .nav-item.active .nav-label {
+            max-height: 1.4em;
+            opacity: 1;
+            margin-top: 7px;
+        }
+
+        .nav-item:not(.active):active .nav-icon-wrap {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.07);
+            color: var(--clr-text);
+        }
+
+        /* ── Page header (bruges i alle partial views) ── */
+        .fv-page-header {
+            background: linear-gradient(135deg, rgba(232,93,46,0.15) 0%, rgba(232,93,46,0.04) 100%);
+            border: 1px solid rgba(232,93,46,0.22);
+            border-radius: 14px;
+            padding: 1.25rem 1.1rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .fv-page-icon {
+            font-size: 2rem;
+            color: var(--clr-brand);
+            flex-shrink: 0;
+        }
+        .fv-page-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 0.15rem;
+            color: var(--clr-text);
+        }
+        .fv-page-subtitle {
+            font-size: 0.8rem;
+            color: var(--clr-text-muted);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="fv-shell">
+
+        <!-- Top bar -->
+        <div class="app-topbar">
+            <i class="bi bi-person-badge fs-5" style="color:var(--clr-brand);"></i>
+            <span class="app-title">Frivillig</span>
+        </div>
+
+        <!-- Page content -->
+        <div class="fv-content">
+            <div id="page-content">
+                <!-- Indhold indlæses via fetch -->
+            </div>
+        </div>
+
+        <!-- Bottom navigation -->
+        <nav class="bottom-nav" id="bottom-nav">
+            <div class="nav-surface" aria-hidden="true"></div>
+            <!-- Ikoner -->
+            <div class="nav-items" id="nav-items">
+                <button class="nav-item active" data-tab="overblik" data-url="@Url.Action("Overblik", "FrivilligApp")" aria-label="Overblik">
+                    <div class="nav-icon-wrap"><i class="bi bi-grid-1x2-fill"></i></div>
+                    <span class="nav-label">Overblik</span>
+                </button>
+                <button class="nav-item" data-tab="vagter" data-url="@Url.Action("Vagter", "FrivilligApp")" aria-label="Vagter">
+                    <div class="nav-icon-wrap"><i class="bi bi-calendar-week"></i></div>
+                    <span class="nav-label">Vagter</span>
+                </button>
+                <button class="nav-item" data-tab="observationer" data-url="@Url.Action("Observationer", "FrivilligApp")" aria-label="Observationer">
+                    <div class="nav-icon-wrap"><i class="bi bi-journal-text"></i></div>
+                    <span class="nav-label">Observationer</span>
+                </button>
+                <button class="nav-item" data-tab="profil" data-url="@Url.Action("Profil", "FrivilligApp")" aria-label="Profil">
+                    <div class="nav-icon-wrap"><i class="bi bi-person"></i></div>
+                    <span class="nav-label">Profil</span>
+                </button>
+            </div>
+        </nav>
+
+    </div>
+
+    <script>
+        const contentEl  = document.getElementById('page-content');
+
+        async function loadTab(url) {
+            contentEl.innerHTML = '<div class="d-flex justify-content-center pt-5"><div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div></div>';
+            try {
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                contentEl.innerHTML = await res.text();
+            } catch {
+                contentEl.innerHTML = '<p class="text-muted text-center pt-4">Kunne ikke indlæse siden.</p>';
+            }
+        }
+
+        document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('active')) return;
+
+                const previous = document.querySelector('.nav-item.active');
+                if (previous) previous.classList.remove('active');
+                btn.classList.add('active');
+
+                // Start fetch parallelt
+                loadTab(btn.dataset.url);
+            });
+        });
+
+        // Init
+        const activeBtn = document.querySelector('.nav-item.active[data-url]');
+        if (activeBtn) {
+            loadTab(activeBtn.dataset.url);
+        }
+
+        // PWA service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw-frivillig.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

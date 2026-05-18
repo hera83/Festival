@@ -1,0 +1,25 @@
+{
+  "name": "Festival Frivillig",
+  "short_name": "Frivillig",
+  "description": "Festival Vagtstyring – Frivillig App",
+  "start_url": "/FrivilligApp",
+  "scope": "/FrivilligApp",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1117",
+  "theme_color": "#e85d2e",
+  "icons": [
+    {
+      "src": "/icons/icon-192-frivillig.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512-frivillig.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
