@@ -90,8 +90,12 @@
                     <span id="qr-status-badge"><i class="bi bi-camera me-1"></i>Starter kamera…</span>
                     <span id="qr-fps"></span>
                 </div>
-                <div class="mt-2 text-center">
-                    <select id="camera-select" class="form-select form-select-sm" style="max-width:280px;display:inline-block;background:var(--clr-surface);color:var(--clr-text);border-color:var(--clr-border);"></select>
+                <div class="mt-2 d-flex align-items-center justify-content-center gap-2">
+                    <select id="camera-select" class="form-select form-select-sm" style="max-width:220px;background:var(--clr-surface);color:var(--clr-text);border-color:var(--clr-border);"></select>
+                    <button id="btn-switch-camera" class="btn btn-sm" title="Skift kamera" disabled
+                            style="background:var(--clr-surface);border:1px solid var(--clr-border);color:var(--clr-text-muted);">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
                 </div>
 
                 @* Scan-log: viser de seneste hændelser *@
@@ -149,6 +153,7 @@
     const canvas      = document.getElementById('qr-canvas');
     const statusBadge = document.getElementById('qr-status-badge');
     const camSelect   = document.getElementById('camera-select');
+    const btnSwitch   = document.getElementById('btn-switch-camera');
     const volPanel    = document.getElementById('volunteer-panel');
     const volNotFound = document.getElementById('vol-not-found');
     const fpsDisplay  = document.getElementById('qr-fps');
@@ -157,6 +162,12 @@
     const ctx         = canvas.getContext('2d', { willReadFrequently: true });
 
     const lookupUrl   = '@Url.Action("LookupQrToken", "Admin")';
+    const prefGetUrl  = '@Url.Action("Get", "UserCameraPreference")';
+    const prefSaveUrl = '@Url.Action("Save", "UserCameraPreference")';
+    const prefClrUrl  = '@Url.Action("Clear", "UserCameraPreference")';
+    const csrfToken   = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                     || document.querySelector('meta[name="RequestVerificationToken"]')?.content
+                     || '';
 
     // ── Lyd-feedback via Web Audio API ───────────────────────────
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -217,24 +228,49 @@
         statusBadge.classList.toggle('qr-pulse', c.pulse);
     }
 
-    // ── Kamera ────────────────────────────────────────────────────
-    async function populateCameras(activeDeviceId) {
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const cams    = devices.filter(d => d.kind === 'videoinput');
-            camSelect.innerHTML = '';
-            camSelect.style.display = cams.length <= 1 ? 'none' : 'inline-block';
-            cams.forEach((cam, i) => {
-                const opt = document.createElement('option');
-                opt.value = cam.deviceId;
-                opt.textContent = cam.label || `Kamera ${i + 1}`;
-                if (cam.deviceId === activeDeviceId) opt.selected = true;
-                camSelect.appendChild(opt);
-            });
-        } catch {}
+    // ── Kamera-præference ─────────────────────────────────────────
+    function buildFingerprint(devices) {
+        return devices
+            .filter(d => d.kind === 'videoinput')
+            .map(d => d.deviceId)
+            .sort()
+            .join(',');
     }
 
-    async function startCamera(deviceId) {
+    async function savePreference(deviceId, fingerprint) {
+        try {
+            await fetch(prefSaveUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': csrfToken },
+                body: JSON.stringify({ deviceId, deviceFingerprint: fingerprint })
+            });
+        } catch { /* ignorer */ }
+    }
+
+    async function loadPreference() {
+        try {
+            const res = await fetch(prefGetUrl);
+            if (res.ok) return await res.json();
+        } catch { /* ignorer */ }
+        return { deviceId: null, deviceFingerprint: null };
+    }
+
+    // ── Kamera ────────────────────────────────────────────────────
+    async function populateCameras(devices, activeDeviceId) {
+        const cams = devices.filter(d => d.kind === 'videoinput');
+        camSelect.innerHTML = '';
+        camSelect.style.display = cams.length <= 1 ? 'none' : 'inline-block';
+        btnSwitch.disabled = cams.length <= 1;
+        cams.forEach((cam, i) => {
+            const opt = document.createElement('option');
+            opt.value = cam.deviceId;
+            opt.textContent = cam.label || `Kamera ${i + 1}`;
+            if (cam.deviceId === activeDeviceId) opt.selected = true;
+            camSelect.appendChild(opt);
+        });
+    }
+
+    async function startCamera(deviceId, saveAfterStart) {
         if (stream) stream.getTracks().forEach(t => t.stop());
         if (rafId) cancelAnimationFrame(rafId);
         lastToken = null;
@@ -259,30 +295,79 @@
 
         const track    = stream.getVideoTracks()[0];
         const activeId = track?.getSettings()?.deviceId ?? null;
-        await populateCameras(activeId);
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        await populateCameras(devices, activeId);
+
+        if (saveAfterStart && activeId) {
+            const fp = buildFingerprint(devices);
+            await savePreference(activeId, fp);
+        }
 
         setStatus('scanning');
         rafId = requestAnimationFrame(tick);
     }
 
-    // ── Scan-loop ─────────────────────────────────────────────────
-    let frameCount = 0;
-    let lastFpsTime = performance.now();
+    async function initCamera() {
+        // Tillad kamera så enumerateDevices returnerer labels
+        try {
+            const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+            tmp.getTracks().forEach(t => t.stop());
+        } catch { /* ignorer */ }
 
-    function tick() {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const currentFp = buildFingerprint(devices);
+
+        const pref = await loadPreference();
+
+        if (pref.deviceId && pref.deviceFingerprint === currentFp) {
+            // Brug gemt kamera
+            await startCamera(pref.deviceId, false);
+        } else {
+            if (pref.deviceFingerprint && pref.deviceFingerprint !== currentFp) {
+                // Anden enhed – slet gammel indstilling
+                try {
+                    await fetch(prefClrUrl, {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': csrfToken }
+                    });
+                } catch { /* ignorer */ }
+            }
+            await startCamera(null, false);
+        }
+    }
+
+    // ── Scan-loop ─────────────────────────────────────────────────
+    let frameCount  = 0;
+    let lastFpsTime = performance.now();
+    let lastScanTime = 0;
+    const SCAN_INTERVAL = 120; // ~8fps – reducerer moiré/flimmer fra skærme
+    const SCAN_W = 640;        // jsQR finder QR bedre ved lavere opløsning
+    const SCAN_H = 480;
+
+    function tick(now) {
         frameCount++;
-        const now = performance.now();
         if (now - lastFpsTime >= 1000) {
             fpsDisplay.textContent = `${frameCount} fps · ${video.videoWidth}×${video.videoHeight}`;
             frameCount = 0;
             lastFpsTime = now;
         }
 
+        // Throttle: scan kun ~8 gange i sekundet
+        if (now - lastScanTime < SCAN_INTERVAL) {
+            rafId = requestAnimationFrame(tick);
+            return;
+        }
+        lastScanTime = now;
+
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width  = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            canvas.width  = SCAN_W;
+            canvas.height = SCAN_H;
+            // Kontrast-boost hjælper mod overeksponerede skærme
+            ctx.filter = 'contrast(1.5) brightness(1.05) saturate(0)';
+            ctx.drawImage(video, 0, 0, SCAN_W, SCAN_H);
+            ctx.filter = 'none';
+            const imgData = ctx.getImageData(0, 0, SCAN_W, SCAN_H);
             const code    = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
 
             if (code && !cooldown) {
@@ -350,8 +435,17 @@
         }
     }
 
-    camSelect.addEventListener('change', () => startCamera(camSelect.value));
+    camSelect.addEventListener('change', () => startCamera(camSelect.value, true));
 
-    (async () => { await startCamera(null); })();
+    btnSwitch.addEventListener('click', () => {
+        const opts = Array.from(camSelect.options);
+        if (opts.length < 2) return;
+        const cur = camSelect.value;
+        const next = opts[(opts.findIndex(o => o.value === cur) + 1) % opts.length];
+        camSelect.value = next.value;
+        startCamera(next.value, true);
+    });
+
+    (async () => { await initCamera(); })();
 })();
 </script>

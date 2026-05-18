@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<VolunteerLocationLog> VolunteerLocationLogs => Set<VolunteerLocationLog>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<DashboardSetting> DashboardSettings => Set<DashboardSetting>();
+    public DbSet<UserCameraPreference> UserCameraPreferences => Set<UserCameraPreference>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -96,6 +97,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(x => new { x.SeasonId, x.Key }).IsUnique();
             entity.Property(x => x.Key).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Value).HasMaxLength(256);
+        });
+
+        builder.Entity<UserCameraPreference>(entity =>
+        {
+            entity.HasIndex(x => x.UserId).IsUnique();
+            entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.DeviceId).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.DeviceFingerprint).HasMaxLength(2048).IsRequired();
         });
     }
 }
