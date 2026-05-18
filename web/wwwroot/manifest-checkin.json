@@ -3,7 +3,7 @@
   "short_name": "Check-In",
   "description": "Festival Vagtstyring – Frivillig Check-In",
   "start_url": "/AppCheckIn",
-  "scope": "/",
+  "scope": "/AppCheckIn",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0d1117",

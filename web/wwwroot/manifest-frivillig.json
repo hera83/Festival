@@ -3,7 +3,7 @@
   "short_name": "Frivillig",
   "description": "Festival Vagtstyring – Frivillig App",
   "start_url": "/AppFrivillig",
-  "scope": "/",
+  "scope": "/AppFrivillig",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0d1117",
