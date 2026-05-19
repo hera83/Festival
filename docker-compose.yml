@@ -9,6 +9,13 @@ services:
       - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Email__Smtp__Host: ${EMAIL_SMTP_HOST}
+      Email__Smtp__Username: ${EMAIL_SMTP_USERNAME}
+      Email__Smtp__Password: ${EMAIL_SMTP_PASSWORD}
+      Email__Smtp__FromEmail: ${EMAIL_SMTP_FROM_EMAIL}
+      Email__Imap__Host: ${EMAIL_IMAP_HOST}
+      Email__Imap__Username: ${EMAIL_IMAP_USERNAME}
+      Email__Imap__Password: ${EMAIL_IMAP_PASSWORD}
     volumes:
       - festival_app_dbs:/app/App_dbs
       - festival_app_files:/app/App_files
