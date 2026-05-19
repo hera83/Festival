@@ -104,6 +104,14 @@ cd Festival
 
 ### 3) Start applikationen
 
+Opret først en lokal env-fil med mail credentials:
+
+```bash
+cp .env.example .env
+```
+
+Udfyld derefter `.env` med dine rigtige værdier (denne fil er git-ignoreret).
+
 Kør fra repository root:
 
 ```bash
@@ -111,6 +119,16 @@ docker compose up -d --build
 ```
 
 Applikationen eksponeres på port **8080** (kan ændres i `docker-compose.yml`).
+
+Mail credentials læses via miljøvariabler i compose:
+
+- `EMAIL_SMTP_HOST`
+- `EMAIL_SMTP_USERNAME`
+- `EMAIL_SMTP_PASSWORD`
+- `EMAIL_SMTP_FROM_EMAIL`
+- `EMAIL_IMAP_HOST`
+- `EMAIL_IMAP_USERNAME`
+- `EMAIL_IMAP_PASSWORD`
 
 - URL: `http://SERVER_IP:8080`
 
