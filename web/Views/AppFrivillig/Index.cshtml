@@ -7,6 +7,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Frivillig — Festival Vagtstyring</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('fv_theme') || 'system';
+            if (t === 'system') t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -40,6 +47,7 @@
             background: rgba(13, 17, 23, 0.92);
             backdrop-filter: blur(8px);
             border-bottom: 1px solid rgba(255,255,255,0.07);
+            transition: background 0.2s;
             padding: 0.7rem 1rem;
             display: flex;
             align-items: center;
@@ -87,6 +95,26 @@
             border-top: 1px solid rgba(255,255,255,0.08);
             box-shadow: 0 -14px 30px rgba(0,0,0,0.35);
             backdrop-filter: blur(14px);
+            transition: background 0.2s;
+        }
+
+        /* ── Light mode overrides ── */
+        [data-theme="light"] .app-topbar {
+            background: rgba(255,255,255,0.92);
+            border-bottom-color: rgba(0,0,0,0.10);
+        }
+        [data-theme="light"] .nav-surface {
+            background: rgba(255,255,255,0.94);
+            border-top-color: rgba(0,0,0,0.10);
+            box-shadow: 0 -14px 30px rgba(0,0,0,0.08);
+        }
+        [data-theme="light"] .nav-item .nav-icon-wrap {
+            background: rgba(0,0,0,0.05);
+            border-color: rgba(0,0,0,0.07);
+            color: var(--clr-text-muted);
+        }
+        [data-theme="light"] .nav-item:not(.active):active .nav-icon-wrap {
+            background: rgba(0,0,0,0.10);
         }
 
         .nav-items {
@@ -182,6 +210,27 @@
             color: var(--clr-text);
         }
 
+        /* ── Unread badge on nav icon ── */
+        .nav-badge {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            min-width: 17px;
+            height: 17px;
+            border-radius: 9px;
+            background: #e63946;
+            color: #fff;
+            font-size: 0.62rem;
+            font-weight: 700;
+            line-height: 17px;
+            text-align: center;
+            padding: 0 4px;
+            border: 2px solid var(--clr-bg);
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+        }
+
         /* ── Page header (bruges i alle partial views) ── */
         .fv-page-header {
             background: linear-gradient(135deg, rgba(232,93,46,0.12) 0%, rgba(232,93,46,0.03) 100%);
@@ -204,6 +253,9 @@
             margin: 0;
             color: var(--clr-text);
         }
+    </style>
+    <style>
+        .nav-badge { animation: badge-pop 0.25s cubic-bezier(.34,1.56,.64,1); }
     </style>
 </head>
 <body>
@@ -251,8 +303,11 @@
                     <div class="nav-icon-wrap"><i class="bi bi-journal-text"></i></div>
                     <span class="nav-label">Observationer</span>
                 </button>
-                <button class="nav-item" data-tab="beskeder" data-url="@Url.Action("Beskeder", "AppFrivillig")" aria-label="Beskeder">
-                    <div class="nav-icon-wrap"><i class="bi bi-chat-dots"></i></div>
+                <button class="nav-item" data-tab="beskeder" data-url="@Url.Action("Beskeder", "AppFrivillig")" aria-label="Beskeder" id="nav-btn-beskeder">
+                    <div class="nav-icon-wrap" style="position:relative;">
+                        <i class="bi bi-chat-dots"></i>
+                        <span class="nav-badge" id="nav-badge-beskeder"></span>
+                    </div>
                     <span class="nav-label">Beskeder</span>
                 </button>
                 <button class="nav-item" data-tab="profil" data-url="@Url.Action("Profil", "AppFrivillig")" aria-label="Profil">
@@ -307,6 +362,24 @@
             }, 3000);
         }
 
+        // Kaldes med en fetch Response. Returnerer true hvis brugeren er fjernet (HTTP 404
+        // bekræftet af serveren). Rydder localStorage og navigerer til Profil-fanen.
+        // Returnerer false ved netværksfejl eller andre statuskoder – appen fortsætter uændret.
+        function fvCheckAuth(res) {
+            if (res.status !== 404) return false;
+            localStorage.removeItem('fv_volunteer');
+            localStorage.removeItem('fv_theme');
+            fvToast('Din profil findes ikke længere i systemet. Du er blevet logget ud.', 'warning');
+            // Naviger til Profil-fanen så brugeren kan logge ind igen
+            const profileBtn = document.querySelector('.nav-item[data-tab="profil"]');
+            if (profileBtn && !profileBtn.classList.contains('active')) {
+                document.querySelectorAll('.nav-item.active').forEach(b => b.classList.remove('active'));
+                profileBtn.classList.add('active');
+                loadTab(profileBtn.dataset.url);
+            }
+            return true;
+        }
+
         async function loadTab(url) {
             contentEl.innerHTML = '<div class="d-flex justify-content-center pt-5"><div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div></div>';
             try {
@@ -350,6 +423,68 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw-frivillig.js').catch(() => {});
         }
+
+        // ── Unread badge polling ──────────────────────────────────────
+        const navBadge = document.getElementById('nav-badge-beskeder');
+        let _prevUnreadCount = null; // null = første kald (ingen lyd)
+
+        function playDing() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.35, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.45);
+                osc.onended = () => ctx.close();
+            } catch { /* Web Audio ikke tilgængeligt */ }
+        }
+
+        async function refreshUnreadBadge() {
+            const stored = localStorage.getItem('fv_volunteer');
+            if (!stored) { navBadge.style.display = 'none'; return; }
+            let vol;
+            try { vol = JSON.parse(stored); } catch { return; }
+            if (!vol?.id || !vol?.seasonId) { navBadge.style.display = 'none'; return; }
+
+            try {
+                const res = await fetch(`/AppFrivillig/BeskederData?volunteerId=${vol.id}&seasonId=${vol.seasonId}`);
+                if (!res.ok) return;
+                const msgs = await res.json();
+                const count = msgs.filter(m => m.hasUnread).length;
+
+                // Spil lyd kun hvis count stiger EFTER første kald
+                if (_prevUnreadCount !== null && count > _prevUnreadCount) {
+                    playDing();
+                }
+                _prevUnreadCount = count;
+
+                if (count > 0) {
+                    navBadge.textContent = count > 9 ? '9+' : count;
+                    navBadge.style.display = 'block';
+                } else {
+                    navBadge.style.display = 'none';
+                }
+            } catch { /* netværksfejl – ignorer */ }
+        }
+
+        // Kør straks og derefter hvert 30. sekund
+        refreshUnreadBadge();
+        setInterval(refreshUnreadBadge, 30000);
+
+        // Opdater badge når brugeren vender tilbage til siden
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') refreshUnreadBadge();
+        });
+
+        // Eksponér så _Beskeder.cshtml kan nulstille badge ved åbning
+        window.refreshUnreadBadge = refreshUnreadBadge;
     </script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

@@ -2,4 +2,139 @@
     <i class="bi bi-calendar-week fv-page-icon"></i>
     <h2 class="fv-page-title">Vagter</h2>
 </div>
-<!-- Indhold bygges videre herfra -->
+
+<div id="vagter-not-logged-in" style="display:none;">
+    <div class="text-center py-5" style="color:var(--clr-text-muted);">
+        <i class="bi bi-person-lock" style="font-size:2.8rem;color:var(--clr-brand);opacity:0.7;"></i>
+        <p class="mt-3 mb-1 fw-semibold" style="color:var(--clr-text);font-size:1rem;">Afventer login</p>
+        <p class="mb-0" style="font-size:0.85rem;">Log ind via <strong>Profil</strong>-fanen for at se dine vagter.</p>
+    </div>
+</div>
+
+<div id="vagter-content" style="display:none;">
+    <div id="vagter-loading" class="text-center py-5" style="color:var(--clr-text-muted);">
+        <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+        <p class="mt-2 mb-0" style="font-size:0.85rem;">Henter vagter&hellip;</p>
+    </div>
+    <div id="vagter-body" style="display:none;"></div>
+</div>
+
+<script>
+(function () {
+    const stored = localStorage.getItem('fv_volunteer');
+    const isLoggedIn = !!stored;
+    document.getElementById('vagter-not-logged-in').style.display = isLoggedIn ? 'none' : '';
+    document.getElementById('vagter-content').style.display = isLoggedIn ? '' : 'none';
+
+    if (!isLoggedIn) return;
+
+    const volunteer = JSON.parse(stored);
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function formatDate(dtStr) {
+        const d = new Date(dtStr);
+        const days = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+        const months = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+        return `${days[d.getDay()]} d. ${d.getDate()}. ${months[d.getMonth()]}`;
+    }
+
+    function formatTime(dtStr) {
+        const d = new Date(dtStr);
+        return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function statusBadge(status) {
+        if (status === 'kommende')
+            return `<span style="font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(13,110,253,0.18);color:#6ea8fe;border:1px solid rgba(13,110,253,0.35);white-space:nowrap;">
+                        <i class="bi bi-clock me-1"></i>Kommende
+                    </span>`;
+        if (status === 'afviklet')
+            return `<span style="font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(40,167,69,0.15);color:var(--clr-ok);border:1px solid rgba(40,167,69,0.3);white-space:nowrap;">
+                        <i class="bi bi-check-circle me-1"></i>Afviklet
+                    </span>`;
+        if (status === 'udeblivelse')
+            return `<span style="font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(220,53,69,0.15);color:var(--clr-alarm);border:1px solid rgba(220,53,69,0.3);white-space:nowrap;">
+                        <i class="bi bi-x-circle me-1"></i>Udeblivelse
+                    </span>`;
+        return '';
+    }
+
+    function borderColor(status) {
+        if (status === 'afviklet')   return 'border-left:3px solid var(--clr-ok);';
+        if (status === 'udeblivelse') return 'border-left:3px solid var(--clr-alarm);';
+        return 'border-left:3px solid rgba(13,110,253,0.5);';
+    }
+
+    async function loadVagter() {
+        try {
+            const res = await fetch(`/AppFrivillig/VagterData?volunteerId=${volunteer.id}&seasonId=${volunteer.seasonId}`);
+            if (typeof fvCheckAuth === 'function' && fvCheckAuth(res)) return;
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+
+            document.getElementById('vagter-loading').style.display = 'none';
+            const body = document.getElementById('vagter-body');
+            body.style.display = '';
+
+            const shifts = data.shifts || [];
+
+            if (shifts.length === 0) {
+                body.innerHTML = `<div class="text-center py-5" style="color:var(--clr-text-muted);">
+                    <i class="bi bi-calendar-x" style="font-size:2.8rem;color:var(--clr-brand);opacity:0.6;"></i>
+                    <p class="mt-3 mb-0 fw-semibold" style="color:var(--clr-text);">Ingen vagter registreret</p>
+                    <p class="mb-0" style="font-size:0.85rem;">Du har endnu ikke fået tildelt nogen vagter denne sæson.</p>
+                </div>`;
+                return;
+            }
+
+            const cards = shifts.map(s => `
+                <div class="card mb-2" style="${borderColor(s.status)}">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div style="flex:1;min-width:0;">
+                                <div class="fw-semibold" style="color:var(--clr-text);font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</div>
+                                <div style="color:var(--clr-text-muted);font-size:0.82rem;margin-top:2px;">
+                                    <i class="bi bi-calendar3 me-1"></i>${formatDate(s.startLocal)}
+                                </div>
+                                <div style="color:var(--clr-text-muted);font-size:0.82rem;">
+                                    <i class="bi bi-clock me-1"></i>${formatTime(s.startLocal)} – ${formatTime(s.endLocal)}
+                                </div>
+                            </div>
+                            <div class="pt-1">${statusBadge(s.status)}</div>
+                        </div>
+                    </div>
+                </div>`).join('');
+
+            // Tæl statuser
+            const nKommende   = shifts.filter(s => s.status === 'kommende').length;
+            const nAfviklet   = shifts.filter(s => s.status === 'afviklet').length;
+            const nUdeblivelse = shifts.filter(s => s.status === 'udeblivelse').length;
+
+            body.innerHTML = `
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                    <span style="font-size:0.78rem;padding:3px 10px;border-radius:20px;background:rgba(13,110,253,0.12);color:#6ea8fe;border:1px solid rgba(13,110,253,0.25);">
+                        <i class="bi bi-clock me-1"></i>${nKommende} kommende
+                    </span>
+                    <span style="font-size:0.78rem;padding:3px 10px;border-radius:20px;background:rgba(40,167,69,0.1);color:var(--clr-ok);border:1px solid rgba(40,167,69,0.25);">
+                        <i class="bi bi-check-circle me-1"></i>${nAfviklet} afviklet
+                    </span>
+                    ${nUdeblivelse > 0 ? `<span style="font-size:0.78rem;padding:3px 10px;border-radius:20px;background:rgba(220,53,69,0.1);color:var(--clr-alarm);border:1px solid rgba(220,53,69,0.25);">
+                        <i class="bi bi-x-circle me-1"></i>${nUdeblivelse} udeblivelse${nUdeblivelse !== 1 ? 'r' : ''}
+                    </span>` : ''}
+                </div>
+                ${cards}`;
+
+        } catch {
+            document.getElementById('vagter-loading').style.display = 'none';
+            document.getElementById('vagter-body').style.display = '';
+            document.getElementById('vagter-body').innerHTML = `<div class="text-center py-4" style="color:var(--clr-text-muted);">
+                <i class="bi bi-wifi-off" style="font-size:2rem;"></i>
+                <p class="mt-2 mb-0" style="font-size:0.85rem;">Kunne ikke hente vagter. Prøv igen om lidt.</p>
+            </div>`;
+        }
+    }
+
+    loadVagter();
+})();
+</script>

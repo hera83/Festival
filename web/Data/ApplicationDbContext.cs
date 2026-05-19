@@ -15,6 +15,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<DashboardSetting> DashboardSettings => Set<DashboardSetting>();
     public DbSet<UserCameraPreference> UserCameraPreferences => Set<UserCameraPreference>();
     public DbSet<VolunteerMeta> VolunteerMetas => Set<VolunteerMeta>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
+    public DbSet<MessageTask> MessageTasks => Set<MessageTask>();
+    public DbSet<MessageReply> MessageReplies => Set<MessageReply>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -116,6 +120,52 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .HasForeignKey(x => x.VolunteerId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Property(x => x.AppConfirmCode).HasMaxLength(6);
+        });
+
+        builder.Entity<Message>(entity =>
+        {
+            entity.HasIndex(x => new { x.SeasonId, x.VolunteerId });
+            entity.HasIndex(x => new { x.SeasonId, x.IsRead });
+            entity.Property(x => x.SentByUserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.Subject).HasMaxLength(512).IsRequired();
+            entity.Property(x => x.Body).IsRequired();
+            entity.HasOne(x => x.Volunteer)
+                .WithMany()
+                .HasForeignKey(x => x.VolunteerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<MessageAttachment>(entity =>
+        {
+            entity.Property(x => x.OriginalFileName).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.StoredFileName).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.UploadedByUserId).HasMaxLength(450).IsRequired();
+            entity.HasOne(x => x.Message)
+                .WithMany(x => x.Attachments)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<MessageTask>(entity =>
+        {
+            entity.Property(x => x.Title).HasMaxLength(512).IsRequired();
+            entity.Property(x => x.CreatedByUserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.CompletedByUserId).HasMaxLength(450);
+            entity.HasOne(x => x.Message)
+                .WithMany(x => x.Tasks)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<MessageReply>(entity =>
+        {
+            entity.Property(x => x.Body).IsRequired();
+            entity.Property(x => x.SentByUserId).HasMaxLength(450);
+            entity.HasOne(x => x.Message)
+                .WithMany(x => x.Replies)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

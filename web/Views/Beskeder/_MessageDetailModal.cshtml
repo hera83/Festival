@@ -1,0 +1,213 @@
+@model web.Models.MessageDetailViewModel
+@{
+    var msg = Model.Message;
+    var downloadUrl = Url.Action("DownloadAttachment", "Beskeder");
+    var replyUrl    = Url.Action("ReplyMessage", "Beskeder");
+    var token       = Html.AntiForgeryToken();
+}
+
+<div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+    <div>
+        <h6 class="modal-title mb-0">
+            <i class="bi bi-envelope-open me-2" style="color: var(--clr-brand);"></i>@msg.Subject
+        </h6>
+        <small style="color: var(--clr-text-muted);">
+            @msg.Volunteer.Name
+            <span class="badge badge-info ms-1" style="font-size:0.7rem;">@msg.Volunteer.Key</span>
+        </small>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+</div>
+<div class="modal-body" style="background: var(--clr-surface);">
+
+    @* ── Originale besked ── *@
+    <div class="mb-3">
+        <div class="d-flex flex-wrap gap-2 mb-1" style="font-size:0.8rem; color: var(--clr-text-muted);">
+            <span><i class="bi bi-person me-1"></i>
+                @if (msg.Direction == web.Models.MessageDirection.Inbound)
+                {
+                    @msg.Volunteer.Name
+                    <span class="badge badge-info ms-1">Frivillig</span>
+                }
+                else
+                {
+                    @Model.SentByName
+                    <span class="badge badge-ok ms-1">Koordinator</span>
+                }
+            </span>
+            <span><i class="bi bi-clock me-1"></i>@msg.SentAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+        </div>
+        <div class="p-3 rounded-3"
+             style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; line-height:1.6; font-size:0.9rem;">@msg.Body</div>
+
+        @* Vedhæftninger på original besked *@
+        @if (msg.Attachments.Any())
+        {
+            <div class="mt-2 d-flex flex-wrap gap-2">
+                @foreach (var att in msg.Attachments)
+                {
+                    var isImage = att.ContentType.StartsWith("image/");
+                    var isVideo = att.ContentType.StartsWith("video/");
+                    var attUrl  = $"{downloadUrl}?id={att.Id}";
+                    <div class="rounded-2 overflow-hidden"
+                         style="border: 1px solid var(--clr-border); background: var(--clr-bg); max-width:180px;">
+                        @if (isImage)
+                        {
+                            <a href="@attUrl" target="_blank">
+                                <img src="@attUrl" alt="@att.OriginalFileName"
+                                     style="width:180px; height:120px; object-fit:cover; display:block;" />
+                            </a>
+                        }
+                        else if (isVideo)
+                        {
+                            <video controls style="width:180px; height:120px; display:block; object-fit:cover;">
+                                <source src="@attUrl" type="@att.ContentType" />
+                            </video>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-items-center justify-content-center"
+                                 style="width:180px; height:80px;">
+                                <i class="bi bi-file-earmark fs-3" style="color: var(--clr-text-muted);"></i>
+                            </div>
+                        }
+                        <div class="px-2 py-1" style="font-size:0.7rem; color: var(--clr-text-muted);">
+                            <a href="@attUrl" download="@att.OriginalFileName"
+                               style="color: var(--clr-info); text-decoration:none;">
+                                <i class="bi bi-download me-1"></i>@att.OriginalFileName
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* ── Svar-tråd ── *@
+    <div id="thread-messages-@msg.Id" class="d-flex flex-column gap-2 mb-3">
+        @foreach (var r in Model.Replies)
+        {
+            var isOutbound = r.Direction == web.Models.MessageDirection.Outbound;
+            <div class="d-flex @(isOutbound ? "justify-content-end" : "justify-content-start")">
+                <div style="max-width: 85%;">
+                    <div class="px-3 py-2 rounded-3"
+                         style="background: @(isOutbound ? "var(--clr-brand)" : "var(--clr-bg)");
+                                border: 1px solid var(--clr-border);
+                                white-space: pre-wrap; font-size:0.9rem; line-height:1.5;
+                                color: @(isOutbound ? "#fff" : "var(--clr-text)");">
+                        @r.Body
+                    </div>
+                    <div class="mt-1 px-1" style="font-size: 0.72rem; color: var(--clr-text-muted);
+                         text-align: @(isOutbound ? "right" : "left");">
+                        <i class="bi bi-person me-1"></i>@r.SenderName
+                        &nbsp;·&nbsp;
+                        <i class="bi bi-clock me-1"></i>@r.SentAt.ToLocalTime().ToString("dd/MM HH:mm")
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Opgaver ── *@
+    @if (msg.Tasks.Any())
+    {
+        <div class="mb-3">
+            <p class="mb-2 fw-semibold" style="font-size:0.85rem; color: var(--clr-text-muted);">
+                <i class="bi bi-check2-square me-1"></i>Tilknyttede opgaver (@msg.Tasks.Count)
+            </p>
+            <div class="d-flex flex-column gap-1">
+                @foreach (var t in msg.Tasks)
+                {
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 rounded-2"
+                         style="background: var(--clr-bg); border: 1px solid var(--clr-border); font-size:0.85rem;">
+                        <span class="fw-semibold">@t.Title</span>
+                        @if (t.Status == web.Models.MessageTaskStatus.Åben)
+                        {
+                            <span class="badge badge-info">Åben</span>
+                        }
+                        else if (t.Status == web.Models.MessageTaskStatus.IGang)
+                        {
+                            <span class="badge badge-warn">I gang</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-ok">Udført</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ── Besvar-formular ── *@
+    <div class="mt-3 pt-3" style="border-top: 1px solid var(--clr-border);">
+        <p class="mb-2 fw-semibold" style="font-size:0.85rem; color: var(--clr-text-muted);">
+            <i class="bi bi-reply me-1"></i>Svar
+        </p>
+        <form id="replyForm-@msg.Id">
+            @token
+            <input type="hidden" name="messageId" value="@msg.Id" />
+            <textarea name="body" class="form-control mb-2" rows="3" placeholder="Skriv svar her…"
+                      style="background: var(--clr-bg); border: 1px solid var(--clr-border);
+                             color: var(--clr-text); resize: vertical; font-size:0.9rem;"></textarea>
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-sm"
+                        style="background: var(--clr-brand); color:#fff; border:none;">
+                    <i class="bi bi-send me-1"></i>Send svar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x me-1"></i>Luk
+    </button>
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById('replyForm-@msg.Id');
+    if (!form) return;
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const textarea = form.querySelector('textarea[name="body"]');
+        const body = textarea.value.trim();
+        if (!body) { showToast('Svar kan ikke være tomt.', 'warning'); return; }
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        try {
+            const fd = new FormData(form);
+            const res = await fetch('@replyUrl', { method: 'POST', body: fd });
+            const json = await res.json();
+            if (json.success) {
+                showToast(json.message, 'success');
+                textarea.value = '';
+                // Tilføj svar-boble direkte til tråden
+                const container = document.getElementById('thread-messages-@msg.Id');
+                if (container) {
+                    const now = new Date();
+                    const timeStr = now.getDate().toString().padStart(2,'0') + '/' + (now.getMonth()+1).toString().padStart(2,'0') + ' ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+                    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    const div = document.createElement('div');
+                    div.className = 'd-flex justify-content-end';
+                    div.innerHTML = `<div style="max-width:85%;">
+                        <div class="px-3 py-2 rounded-3" style="background:var(--clr-brand);border:1px solid transparent;white-space:pre-wrap;font-size:.9rem;line-height:1.5;color:#fff;border-bottom-right-radius:4px;">${esc(body)}</div>
+                        <div class="mt-1 px-1" style="font-size:.72rem;color:var(--clr-text-muted);text-align:right;"><i class="bi bi-person me-1"></i>Dig &nbsp;·&nbsp; <i class="bi bi-clock me-1"></i>${timeStr}</div>
+                    </div>`;
+                    container.appendChild(div);
+                    container.scrollTop = container.scrollHeight;
+                }
+                document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
+            } else {
+                showToast(json.message, 'danger');
+            }
+        } catch {
+            showToast('Netværksfejl.', 'danger');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+})();
+</script>
+

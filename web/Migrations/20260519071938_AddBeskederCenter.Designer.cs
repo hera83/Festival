@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using web.Data;
 
@@ -10,9 +11,11 @@ using web.Data;
 namespace web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260519071938_AddBeskederCenter")]
+    partial class AddBeskederCenter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -271,13 +274,7 @@ namespace web.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("Direction")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsRead")
@@ -304,9 +301,6 @@ namespace web.Migrations
 
                     b.Property<int>("VolunteerId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("VolunteerOpenedAt")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -359,36 +353,6 @@ namespace web.Migrations
                     b.HasIndex("MessageId");
 
                     b.ToTable("MessageAttachments");
-                });
-
-            modelBuilder.Entity("web.Models.MessageReply", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Direction")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MessageId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SentByUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MessageId");
-
-                    b.ToTable("MessageReplies");
                 });
 
             modelBuilder.Entity("web.Models.MessageTask", b =>
@@ -801,17 +765,6 @@ namespace web.Migrations
                     b.Navigation("Message");
                 });
 
-            modelBuilder.Entity("web.Models.MessageReply", b =>
-                {
-                    b.HasOne("web.Models.Message", "Message")
-                        .WithMany("Replies")
-                        .HasForeignKey("MessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Message");
-                });
-
             modelBuilder.Entity("web.Models.MessageTask", b =>
                 {
                     b.HasOne("web.Models.Message", "Message")
@@ -886,8 +839,6 @@ namespace web.Migrations
             modelBuilder.Entity("web.Models.Message", b =>
                 {
                     b.Navigation("Attachments");
-
-                    b.Navigation("Replies");
 
                     b.Navigation("Tasks");
                 });

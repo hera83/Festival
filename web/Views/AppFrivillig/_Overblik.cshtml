@@ -2,4 +2,298 @@
     <i class="bi bi-grid-1x2-fill fv-page-icon"></i>
     <h2 class="fv-page-title">Overblik</h2>
 </div>
-<!-- Indhold bygges videre herfra -->
+
+<div id="overblik-not-logged-in" style="display:none;">
+    <div class="text-center py-5" style="color:var(--clr-text-muted);">
+        <i class="bi bi-person-lock" style="font-size:2.8rem;color:var(--clr-brand);opacity:0.7;"></i>
+        <p class="mt-3 mb-1 fw-semibold" style="color:var(--clr-text);font-size:1rem;">Afventer login</p>
+        <p class="mb-0" style="font-size:0.85rem;">Log ind via <strong>Profil</strong>-fanen for at se dit overblik.</p>
+    </div>
+</div>
+
+<div id="overblik-content" style="display:none;">
+    <div id="overblik-loading" class="text-center py-5" style="color:var(--clr-text-muted);">
+        <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+        <p class="mt-2 mb-0" style="font-size:0.85rem;">Henter data&hellip;</p>
+    </div>
+    <div id="overblik-body" style="display:none;"></div>
+</div>
+
+<script>
+(function () {
+    const stored = localStorage.getItem('fv_volunteer');
+    const isLoggedIn = !!stored;
+    document.getElementById('overblik-not-logged-in').style.display = isLoggedIn ? 'none' : '';
+    document.getElementById('overblik-content').style.display = isLoggedIn ? '' : 'none';
+
+    if (!isLoggedIn) return;
+
+    const volunteer = JSON.parse(stored);
+
+    let countdownTimer = null;
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function formatDate(dt) {
+        const d = new Date(dt);
+        const days = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+        const months = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+        return `${days[d.getDay()]} d. ${d.getDate()}. ${months[d.getMonth()]}`;
+    }
+
+    function formatTime(dt) {
+        const d = new Date(dt);
+        return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function formatDateTime(dt) {
+        return `${formatDate(dt)} kl. ${formatTime(dt)}`;
+    }
+
+    function diffMs(from, to) {
+        return new Date(to) - new Date(from);
+    }
+
+    function renderCountdown(targetDt) {
+        const target = new Date(targetDt);
+        function tick() {
+            const diff = target - new Date();
+            if (diff <= 0) {
+                const el = document.getElementById('overblik-countdown');
+                if (el) el.textContent = 'Nu!';
+                clearInterval(countdownTimer);
+                return;
+            }
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            const el = document.getElementById('overblik-countdown');
+            if (el) {
+                if (h > 0)
+                    el.textContent = `${h}t ${pad2(m)}m ${pad2(s)}s`;
+                else if (m > 0)
+                    el.textContent = `${pad2(m)}m ${pad2(s)}s`;
+                else
+                    el.textContent = `${pad2(s)}s`;
+            }
+        }
+        tick();
+        countdownTimer = setInterval(tick, 1000);
+    }
+
+    function renderNoShifts() {
+        return `<div class="text-center py-5" style="color:var(--clr-text-muted);">
+            <i class="bi bi-calendar-x" style="font-size:2.8rem;color:var(--clr-brand);opacity:0.6;"></i>
+            <p class="mt-3 mb-0 fw-semibold" style="color:var(--clr-text);">Ingen vagter tildelt</p>
+            <p class="mb-0" style="font-size:0.85rem;">Du har endnu ikke fået tildelt nogen vagter.</p>
+        </div>`;
+    }
+
+    function renderNoPastFuture() {
+        return `<div class="text-center py-5" style="color:var(--clr-text-muted);">
+            <i class="bi bi-calendar-check" style="font-size:2.8rem;color:var(--clr-brand);opacity:0.6;"></i>
+            <p class="mt-3 mb-0 fw-semibold" style="color:var(--clr-text);">Ingen fremtidige vagter</p>
+            <p class="mb-0" style="font-size:0.85rem;">Alle dine vagter er afviklet. Tak for indsatsen!</p>
+        </div>`;
+    }
+
+    function renderUpcoming(shift) {
+        return `<div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-clock-history" style="color:var(--clr-brand);"></i>
+                <span class="fw-semibold">Næste vagt</span>
+            </div>
+            <div class="card-body">
+                <div class="fw-bold" style="font-size:1.1rem;color:var(--clr-text);">${shift.name}</div>
+                <div style="color:var(--clr-text-muted);font-size:0.9rem;margin-top:4px;">
+                    <i class="bi bi-calendar3 me-1"></i>${formatDate(shift.startLocal)}
+                </div>
+                <div style="color:var(--clr-text-muted);font-size:0.9rem;">
+                    <i class="bi bi-clock me-1"></i>${formatTime(shift.startLocal)} – ${formatTime(shift.endLocal)}
+                </div>
+                <div class="mt-3 p-3 rounded" style="background:var(--clr-surface);border:1px solid rgba(232,93,46,0.25);">
+                    <div style="font-size:0.8rem;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.05em;">Starter om</div>
+                    <div id="overblik-countdown" style="font-size:2rem;font-weight:700;color:var(--clr-brand);letter-spacing:0.03em;">…</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function renderCheckInReminder(shift) {
+        return `<div class="card mb-3" style="border-color:var(--clr-warn);">
+            <div class="card-header d-flex align-items-center gap-2" style="border-color:var(--clr-warn);">
+                <i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-warn);"></i>
+                <span class="fw-semibold">Husk at checke ind!</span>
+            </div>
+            <div class="card-body">
+                <div class="fw-bold" style="font-size:1.1rem;color:var(--clr-text);">${shift.name}</div>
+                <div style="color:var(--clr-text-muted);font-size:0.9rem;margin-top:4px;">
+                    <i class="bi bi-clock me-1"></i>${formatTime(shift.startLocal)} – ${formatTime(shift.endLocal)}
+                </div>
+                <p class="mb-0 mt-2" style="font-size:0.88rem;color:var(--clr-text-muted);">
+                    Din vagt er i dag. Find en vagt-leder eller brug check-in stationen for at komme i gang.
+                </p>
+            </div>
+        </div>`;
+    }
+
+    function renderActiveShift(data, shift) {
+        const ci = data.activeCheckIn;
+        const logs = ci.locationLogs || [];
+
+        // Aktiv post er nuværende lokation
+        const activeLocation = ci.currentLocation;
+
+        // Byg timeline: nyeste øverst
+        const timelineItems = [...logs].reverse().map((log, idx) => {
+            const isLatest = idx === 0;
+            let icon = 'bi-arrow-right-circle';
+            let label = log.location || '—';
+            let colorStyle = 'color:var(--clr-text-muted)';
+            if (log.eventType === 'CheckIn') { icon = 'bi-box-arrow-in-right'; label = 'Checket ind → Pit'; colorStyle = 'color:var(--clr-ok)'; }
+            else if (log.eventType === 'CheckOut') { icon = 'bi-box-arrow-right'; label = 'Checket ud'; colorStyle = 'color:var(--clr-alarm)'; }
+            else if (log.eventType === 'Move') { icon = 'bi-arrow-right-circle'; label = log.location || '—'; }
+
+            const badgeStyle = isLatest && log.eventType !== 'CheckOut'
+                ? 'background:rgba(232,93,46,0.15);border:1px solid var(--clr-brand);border-radius:6px;padding:8px 10px;'
+                : 'background:var(--clr-surface);border:1px solid rgba(255,255,255,0.07);border-radius:6px;padding:8px 10px;';
+
+            return `<div class="d-flex align-items-start gap-2 mb-2" style="${badgeStyle}">
+                <i class="bi ${icon} mt-1" style="${colorStyle};font-size:1rem;"></i>
+                <div style="flex:1;">
+                    <div style="font-size:0.9rem;color:var(--clr-text);font-weight:${isLatest ? '600' : '400'};">${label}</div>
+                    <div style="font-size:0.78rem;color:var(--clr-text-muted);">${formatTime(log.occurredAt)}</div>
+                </div>
+                ${isLatest && log.eventType !== 'CheckOut' ? '<span class="badge-ok" style="font-size:0.7rem;padding:2px 7px;border-radius:4px;">Aktiv</span>' : ''}
+            </div>`;
+        }).join('');
+
+        const shiftName = shift ? shift.name : 'Vagt';
+        const shiftTime = shift ? `${formatTime(shift.startLocal)} – ${formatTime(shift.endLocal)}` : '';
+
+        return `<div class="card mb-3" style="border-color:var(--clr-ok);">
+            <div class="card-header d-flex align-items-center gap-2" style="border-color:var(--clr-ok);">
+                <i class="bi bi-broadcast-pin" style="color:var(--clr-ok);"></i>
+                <span class="fw-semibold">${shiftName}</span>
+                ${shiftTime ? `<span class="ms-auto" style="font-size:0.8rem;color:var(--clr-text-muted);">${shiftTime}</span>` : ''}
+            </div>
+            <div class="card-body">
+                <div class="mb-1" style="font-size:0.8rem;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.05em;">Aktuel post</div>
+                <div class="fw-bold mb-3" style="font-size:1.1rem;color:var(--clr-brand);">
+                    <i class="bi bi-geo-alt-fill me-1"></i>${activeLocation}
+                </div>
+                <div style="font-size:0.8rem;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Tidslinje</div>
+                ${timelineItems || '<p style="color:var(--clr-text-muted);font-size:0.85rem;">Ingen bevægelser registreret endnu.</p>'}
+            </div>
+        </div>`;
+    }
+
+    function renderCheckedOutSummary(data, shift) {
+        // Vis opsummering af dagnen – vis ikke check-in nag
+        const shiftName = shift ? shift.name : 'Vagt';
+        return `<div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-check2-circle" style="color:var(--clr-ok);"></i>
+                <span class="fw-semibold">${shiftName} – afsluttet</span>
+            </div>
+            <div class="card-body">
+                <p class="mb-0" style="font-size:0.88rem;color:var(--clr-text-muted);">
+                    Du er nu checket ud. Godt arbejde i dag! Tjek <strong>Vagter</strong>-fanen for kommende vagter.
+                </p>
+            </div>
+        </div>`;
+    }
+
+    async function loadOverblik() {
+        if (countdownTimer) clearInterval(countdownTimer);
+
+        try {
+            const res = await fetch(`/AppFrivillig/OverblikData?volunteerId=${volunteer.id}&seasonId=${volunteer.seasonId}`);
+            if (typeof fvCheckAuth === 'function' && fvCheckAuth(res)) return;
+            if (!res.ok) throw new Error('Fejl');
+            const data = await res.json();
+
+            document.getElementById('overblik-loading').style.display = 'none';
+            const body = document.getElementById('overblik-body');
+            body.style.display = '';
+
+            const now = new Date();
+            const todayStr = now.toISOString().slice(0, 10);
+            const shifts = data.shifts || [];
+
+            // Klassificer vagter
+            const futureShifts = shifts.filter(s => new Date(s.endLocal) > now);
+            const pastShifts = shifts.filter(s => new Date(s.endLocal) <= now);
+            const todayShifts = shifts.filter(s => {
+                const start = new Date(s.startLocal);
+                const end = new Date(s.endLocal);
+                const sDate = start.toISOString().slice(0, 10);
+                const eDate = end.toISOString().slice(0, 10);
+                return sDate === todayStr || eDate === todayStr;
+            });
+            const todayShift = todayShifts[0] || null;
+
+            // STATE 1: Ingen vagter overhovedet
+            if (shifts.length === 0) {
+                body.innerHTML = renderNoShifts();
+                return;
+            }
+
+            // STATE 2: Alle vagter er fortidige, ingen fremtidige
+            if (futureShifts.length === 0) {
+                body.innerHTML = renderNoPastFuture();
+                return;
+            }
+
+            // Aktiv session i dag?
+            const activeCheckIn = data.activeCheckIn;
+            const hasHadCheckInToday = data.hasHadCheckInToday;
+
+            // STATE 4a: Har aktiv check-in i dag → vis aktiv vagt med tidslinje
+            if (activeCheckIn) {
+                body.innerHTML = renderActiveShift(data, todayShift);
+                return;
+            }
+
+            // STATE 4b: Har haft check-in i dag men er nu checket ud → vis afsluttet (ingen nag)
+            if (hasHadCheckInToday) {
+                body.innerHTML = renderCheckedOutSummary(data, todayShift);
+                return;
+            }
+
+            // STATE 3+4c: Har fremtidige vagter – find næste eller dagens vagt
+            // Find næste fremtidige vagt (startLocal > nu ELLER startLocal <= nu og er i dag og ikke startet endnu)
+            const nextShift = futureShifts[0];
+            const nextStart = new Date(nextShift.startLocal);
+            const nextEnd = new Date(nextShift.endLocal);
+            const nextDate = nextStart.toISOString().slice(0, 10);
+
+            if (nextDate === todayStr) {
+                // Vagt er i dag
+                if (nextStart > now) {
+                    // Ikke startet endnu – vis nedtælling
+                    body.innerHTML = renderUpcoming(nextShift);
+                    renderCountdown(nextShift.startLocal);
+                } else {
+                    // Startet men ikke checket ind – vis påmindelse
+                    body.innerHTML = renderCheckInReminder(nextShift);
+                }
+            } else {
+                // Vagt er en fremtidig dag
+                body.innerHTML = renderUpcoming(nextShift);
+                renderCountdown(nextShift.startLocal);
+            }
+
+        } catch {
+            document.getElementById('overblik-loading').style.display = 'none';
+            document.getElementById('overblik-body').style.display = '';
+            document.getElementById('overblik-body').innerHTML = `<div class="text-center py-4" style="color:var(--clr-text-muted);">
+                <i class="bi bi-wifi-off" style="font-size:2rem;"></i>
+                <p class="mt-2 mb-0" style="font-size:0.85rem;">Kunne ikke hente overblik. Prøv igen om lidt.</p>
+            </div>`;
+        }
+    }
+
+    loadOverblik();
+})();
+</script>

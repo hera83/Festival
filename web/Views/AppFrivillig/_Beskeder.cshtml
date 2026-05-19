@@ -2,4 +2,383 @@
     <i class="bi bi-chat-dots fv-page-icon"></i>
     <h2 class="fv-page-title">Beskeder</h2>
 </div>
-<!-- Indhold bygges videre herfra -->
+
+<div id="beskeder-not-logged-in" style="display:none;">
+    <div class="text-center py-5" style="color:var(--clr-text-muted);">
+        <i class="bi bi-person-lock" style="font-size:2.8rem;color:var(--clr-brand);opacity:0.7;"></i>
+        <p class="mt-3 mb-1 fw-semibold" style="color:var(--clr-text);font-size:1rem;">Afventer login</p>
+        <p class="mb-0" style="font-size:0.85rem;">Log ind via <strong>Profil</strong>-fanen for at se beskeder.</p>
+    </div>
+</div>
+
+<div id="beskeder-content" style="display:none;">
+
+    <!-- Tabs -->
+    <div class="d-flex gap-2 mb-3">
+        <button id="tab-ulaest" onclick="switchTab('ulaest')"
+                class="btn btn-sm"
+                style="border-radius:20px; font-size:0.82rem; font-weight:600;
+                       background: var(--clr-brand); color:#fff; border:none; padding:5px 16px;">
+            <i class="bi bi-envelope me-1"></i>Ulæste
+            <span id="tab-ulaest-badge" class="ms-1"
+                  style="display:none; background:rgba(255,255,255,0.25);
+                         border-radius:10px; padding:0 6px; font-size:0.75rem;"></span>
+        </button>
+        <button id="tab-laest" onclick="switchTab('laest')"
+                class="btn btn-sm"
+                style="border-radius:20px; font-size:0.82rem; font-weight:600;
+                       background:rgba(255,255,255,0.07); color:var(--clr-text-muted);
+                       border:1px solid var(--clr-border); padding:5px 16px;">
+            <i class="bi bi-envelope-open me-1"></i>Læste
+        </button>
+        <button onclick="openCompose()"
+                class="btn btn-sm ms-auto"
+                title="Ny besked"
+                style="border-radius:20px; font-size:0.82rem; font-weight:600;
+                       background:rgba(232,93,46,0.15); color:var(--clr-brand);
+                       border:1px solid rgba(232,93,46,0.35); padding:5px 13px;">
+            <i class="bi bi-pencil-square"></i>
+        </button>
+    </div>
+
+    <!-- Beskeder-liste -->
+    <div id="beskeder-loading" class="text-center py-5" style="color:var(--clr-text-muted);">
+        <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+        <p class="mt-2 mb-0" style="font-size:0.85rem;">Henter beskeder&hellip;</p>
+    </div>
+
+    <div id="beskeder-list" style="display:none;"></div>
+
+    <div id="beskeder-empty" style="display:none;" class="text-center py-5">
+        <i class="bi bi-chat-square" style="font-size:2.2rem;color:var(--clr-brand);opacity:0.5;"></i>
+        <p class="mt-2 mb-0" style="color:var(--clr-text-muted);font-size:0.88rem;">Ingen beskeder her endnu.</p>
+    </div>
+
+    <!-- Chat-tråd -->
+    <div id="beskeder-thread" style="display:none;">
+        <div id="thread-subject"
+             class="fw-semibold mb-3"
+             style="font-size:1rem; color:var(--clr-text);"></div>
+        <div id="thread-messages" class="d-flex flex-column gap-2 mb-3"></div>
+
+        <!-- Svar-formular -->
+        <div style="border-top:1px solid var(--clr-border); padding-top:12px;">
+            <textarea id="reply-body" rows="3" placeholder="Skriv svar her…"
+                      style="width:100%; background:var(--clr-bg); border:1px solid var(--clr-border);
+                             color:var(--clr-text); border-radius:8px; padding:10px;
+                             font-size:0.88rem; resize:vertical;"></textarea>
+            <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+                <button onclick="closeThread()"
+                        class="btn btn-sm d-flex align-items-center"
+                        title="Tilbage"
+                        style="background:rgba(255,255,255,0.07); color:var(--clr-text-muted);
+                               border:1px solid var(--clr-border); border-radius:20px; font-size:0.82rem; padding:6px 10px;">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <button onclick="sendReply()"
+                        class="btn btn-sm"
+                        style="background:var(--clr-brand); color:#fff; border:none;
+                               border-radius:20px; font-size:0.82rem; padding:6px 18px;">
+                    <i class="bi bi-send me-1"></i>Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose modal (inline) -->
+    <div id="beskeder-compose" style="display:none;">
+        <button onclick="closeCompose()"
+                class="btn btn-sm mb-3 d-flex align-items-center"
+                title="Tilbage"
+                style="background:rgba(255,255,255,0.07); color:var(--clr-text-muted);
+                       border:1px solid var(--clr-border); border-radius:20px; font-size:0.82rem; padding:6px 10px;">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <p class="fw-semibold mb-3" style="font-size:1rem; color:var(--clr-text);">
+            <i class="bi bi-pencil-square me-2" style="color:var(--clr-brand);"></i>Ny besked til koordinator
+        </p>
+        <input id="compose-subject" type="text" placeholder="Emne"
+               style="width:100%; background:var(--clr-bg); border:1px solid var(--clr-border);
+                      color:var(--clr-text); border-radius:8px; padding:10px;
+                      font-size:0.88rem; margin-bottom:10px;" />
+        <textarea id="compose-body" rows="5" placeholder="Din besked…"
+                  style="width:100%; background:var(--clr-bg); border:1px solid var(--clr-border);
+                         color:var(--clr-text); border-radius:8px; padding:10px;
+                         font-size:0.88rem; resize:vertical;"></textarea>
+        <div class="d-flex justify-content-end mt-2">
+            <button onclick="sendBesked()"
+                    class="btn btn-sm"
+                    style="background:var(--clr-brand); color:#fff; border:none;
+                           border-radius:20px; font-size:0.82rem; padding:6px 18px;">
+                <i class="bi bi-send me-1"></i>Send besked
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const stored = localStorage.getItem('fv_volunteer');
+    const isLoggedIn = !!stored;
+    document.getElementById('beskeder-not-logged-in').style.display = isLoggedIn ? 'none' : '';
+    document.getElementById('beskeder-content').style.display = isLoggedIn ? '' : 'none';
+    if (!isLoggedIn) return;
+
+    const volunteer = JSON.parse(stored);
+    let allMessages = [];
+    let currentTab = 'ulaest';
+    let currentMessageId = null;
+
+    window.switchTab = function (tab) {
+        currentTab = tab;
+        const uBtn = document.getElementById('tab-ulaest');
+        const lBtn = document.getElementById('tab-laest');
+        uBtn.style.background  = tab === 'ulaest' ? 'var(--clr-brand)' : 'rgba(255,255,255,0.07)';
+        uBtn.style.color       = tab === 'ulaest' ? '#fff' : 'var(--clr-text-muted)';
+        uBtn.style.border      = tab === 'ulaest' ? 'none' : '1px solid var(--clr-border)';
+        lBtn.style.background  = tab === 'laest'  ? 'var(--clr-brand)' : 'rgba(255,255,255,0.07)';
+        lBtn.style.color       = tab === 'laest'  ? '#fff' : 'var(--clr-text-muted)';
+        lBtn.style.border      = tab === 'laest'  ? 'none' : '1px solid var(--clr-border)';
+        closeThread();
+        closeCompose();
+        renderList();
+    };
+
+    function renderList() {
+        const list = document.getElementById('beskeder-list');
+        const empty = document.getElementById('beskeder-empty');
+
+        const filtered = currentTab === 'ulaest'
+            ? allMessages.filter(m => m.hasUnread)
+            : allMessages.filter(m => !m.hasUnread);
+
+        // Badge
+        const ulaestCount = allMessages.filter(m => m.hasUnread).length;
+        const badge = document.getElementById('tab-ulaest-badge');
+        if (ulaestCount > 0) {
+            badge.style.display = '';
+            badge.textContent = ulaestCount;
+        } else {
+            badge.style.display = 'none';
+        }
+
+        if (filtered.length === 0) {
+            list.style.display = 'none';
+            empty.style.display = '';
+            return;
+        }
+        empty.style.display = 'none';
+        list.style.display = '';
+
+        list.innerHTML = filtered.map(m => {
+            const lastReply = m.replies && m.replies.length > 0
+                ? m.replies[m.replies.length - 1]
+                : null;
+            const preview = lastReply ? lastReply.body : m.body;
+            const previewShort = preview.length > 60 ? preview.substring(0, 60) + '…' : preview;
+            const unreadDot = m.hasUnread
+                ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;
+                               background:var(--clr-brand);flex-shrink:0;margin-top:4px;"></span>`
+                : '';
+            const repliesInfo = m.replyCount > 0
+                ? `<span style="font-size:0.72rem;color:var(--clr-text-muted);">
+                       <i class="bi bi-chat me-1"></i>${m.replyCount} svar
+                   </span>`
+                : '';
+            return `
+            <div onclick="openThread(${m.id})" style="
+                background:var(--clr-surface); border:1px solid var(--clr-border);
+                border-radius:10px; padding:12px 14px; cursor:pointer;
+                border-left: 3px solid ${m.hasUnread ? 'var(--clr-brand)' : 'transparent'};
+                margin-bottom:8px;">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <div class="d-flex align-items-start gap-2 flex-grow-1 min-width-0">
+                        ${unreadDot}
+                        <div style="min-width:0;">
+                            <div class="fw-semibold" style="font-size:0.9rem;color:var(--clr-text);
+                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${escHtml(m.subject)}
+                            </div>
+                            <div style="font-size:0.78rem;color:var(--clr-text-muted);margin-top:2px;
+                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${escHtml(previewShort)}
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                ${repliesInfo}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.72rem;color:var(--clr-text-muted);white-space:nowrap;flex-shrink:0;">
+                        ${m.sentAt}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window.openThread = function (id) {
+        currentMessageId = id;
+        const msg = allMessages.find(m => m.id === id);
+        if (!msg) return;
+
+        // Marker som åbnet lokalt
+        msg.hasUnread = false;
+
+        // Gem på server at frivillig har åbnet tråden
+        fetch('/AppFrivillig/MarkOpenedByVolunteer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId: id, volunteerId: volunteer.id })
+        }).finally(() => {
+            if (typeof window.refreshUnreadBadge === 'function') window.refreshUnreadBadge();
+        });
+
+        document.getElementById('beskeder-list').style.display = 'none';
+        document.getElementById('beskeder-empty').style.display = 'none';
+        document.getElementById('beskeder-compose').style.display = 'none';
+
+        document.getElementById('thread-subject').textContent = msg.subject;
+        document.getElementById('reply-body').value = '';
+
+        renderThread(msg);
+        document.getElementById('beskeder-thread').style.display = '';
+    };
+
+    function renderThread(msg) {
+        const container = document.getElementById('thread-messages');
+
+        // Original besked — retning bestemmes af Direction-feltet fra serveren
+        const msgs = [{ body: msg.body, sentAt: msg.sentAt, isCoordinator: msg.isCoordinator }];
+        (msg.replies || []).forEach(r => msgs.push(r));
+
+        container.innerHTML = msgs.map(r => {
+            const isCoord = r.isCoordinator;
+            return `
+            <div class="d-flex ${isCoord ? 'justify-content-start' : 'justify-content-end'}">
+                <div style="max-width:82%;">
+                    <div style="
+                        padding:10px 14px; border-radius:14px;
+                        background: ${isCoord ? 'var(--clr-surface)' : 'var(--clr-brand)'};
+                        border: 1px solid ${isCoord ? 'var(--clr-border)' : 'transparent'};
+                        color: ${isCoord ? 'var(--clr-text)' : '#fff'};
+                        font-size:0.88rem; line-height:1.5;
+                        white-space: pre-line; word-break: break-word;
+                        text-align:left;
+                        border-bottom-${isCoord ? 'left' : 'right'}-radius: 4px;">${escHtml(r.body.trim())}</div>
+                    <div style="font-size:0.7rem; color:var(--clr-text-muted); margin-top:3px;
+                         text-align:${isCoord ? 'left' : 'right'}; padding:0 4px;">
+                        ${isCoord ? '<i class="bi bi-person-badge me-1"></i>Koordinator' : '<i class="bi bi-person me-1"></i>Dig'}
+                        &nbsp;·&nbsp;${r.sentAt}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Scroll til bund
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+            const threadEl = document.getElementById('beskeder-thread');
+            if (threadEl) threadEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }, 50);
+    }
+
+    window.closeThread = function () {
+        currentMessageId = null;
+        document.getElementById('beskeder-thread').style.display = 'none';
+        renderList();
+    };
+
+    window.sendReply = async function () {
+        const body = document.getElementById('reply-body').value.trim();
+        if (!body) return;
+        try {
+            const res = await fetch('/AppFrivillig/BeskedReply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messageId: currentMessageId, volunteerId: volunteer.id, body })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                if (typeof showToast === 'function') showToast(err.error || 'Fejl ved afsendelse', 'danger');
+                return;
+            }
+            document.getElementById('reply-body').value = '';
+            // Opdater lokalt og genrender
+            const msg = allMessages.find(m => m.id === currentMessageId);
+            if (msg) {
+                msg.replies = msg.replies || [];
+                const now = new Date();
+                msg.replies.push({ body, sentAt: now.toLocaleDateString('da-DK', {day:'2-digit',month:'2-digit'}) + ' ' + now.toLocaleTimeString('da-DK', {hour:'2-digit',minute:'2-digit'}), isCoordinator: false });
+                renderThread(msg);
+            }
+            if (typeof showToast === 'function') showToast('Svar sendt.', 'success');
+        } catch {
+            if (typeof showToast === 'function') showToast('Netværksfejl.', 'danger');
+        }
+    };
+
+    window.openCompose = function () {
+        document.getElementById('beskeder-list').style.display = 'none';
+        document.getElementById('beskeder-empty').style.display = 'none';
+        document.getElementById('beskeder-thread').style.display = 'none';
+        document.getElementById('compose-subject').value = '';
+        document.getElementById('compose-body').value = '';
+        document.getElementById('beskeder-compose').style.display = '';
+    };
+
+    window.closeCompose = function () {
+        document.getElementById('beskeder-compose').style.display = 'none';
+        renderList();
+    };
+
+    window.sendBesked = async function () {
+        const subject = document.getElementById('compose-subject').value.trim();
+        const body = document.getElementById('compose-body').value.trim();
+        if (!subject || !body) {
+            if (typeof showToast === 'function') showToast('Udfyld emne og besked.', 'warning');
+            return;
+        }
+        try {
+            const res = await fetch('/AppFrivillig/SendBesked', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ volunteerId: volunteer.id, seasonId: volunteer.seasonId, subject, body })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                if (typeof showToast === 'function') showToast(err.error || 'Fejl ved afsendelse', 'danger');
+                return;
+            }
+            if (typeof showToast === 'function') showToast('Besked sendt til koordinator.', 'success');
+            closeCompose();
+            await loadBeskeder();
+        } catch {
+            if (typeof showToast === 'function') showToast('Netværksfejl.', 'danger');
+        }
+    };
+
+    function escHtml(str) {
+        return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function loadBeskeder() {
+        document.getElementById('beskeder-loading').style.display = '';
+        document.getElementById('beskeder-list').style.display = 'none';
+        document.getElementById('beskeder-empty').style.display = 'none';
+        try {
+            const res = await fetch(`/AppFrivillig/BeskederData?volunteerId=${volunteer.id}&seasonId=${volunteer.seasonId}`);
+            if (!res.ok) throw new Error();
+            allMessages = await res.json();
+        } catch {
+            allMessages = [];
+        }
+        document.getElementById('beskeder-loading').style.display = 'none';
+        renderList();
+        if (typeof window.refreshUnreadBadge === 'function') window.refreshUnreadBadge();
+    }
+
+    loadBeskeder();
+})();
+</script>
+

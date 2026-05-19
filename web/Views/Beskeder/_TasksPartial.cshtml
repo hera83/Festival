@@ -1,0 +1,322 @@
+@model web.Models.TasksViewModel
+
+@* Opdater status modal *@
+<div class="modal fade" id="updateTaskStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0"><i class="bi bi-check2-square me-2" style="color: var(--clr-brand);"></i>Opdater status</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" style="background: var(--clr-surface);">
+                <p class="mb-2 fw-semibold" id="taskStatusTitle" style="font-size:0.9rem;"></p>
+                <div class="d-flex flex-column gap-2">
+                    <button type="button" class="btn btn-sm task-status-set" data-status="0"
+                            style="background: var(--clr-info-bg); color: var(--clr-info); border: 1px solid var(--clr-info); text-align:left;">
+                        <i class="bi bi-circle me-2"></i>Åben
+                    </button>
+                    <button type="button" class="btn btn-sm task-status-set" data-status="1"
+                            style="background: var(--clr-warn-bg); color: var(--clr-warn); border: 1px solid var(--clr-warn); text-align:left;">
+                        <i class="bi bi-arrow-repeat me-2"></i>I gang
+                    </button>
+                    <button type="button" class="btn btn-sm task-status-set" data-status="2"
+                            style="background: var(--clr-ok-bg); color: var(--clr-ok); border: 1px solid var(--clr-ok); text-align:left;">
+                        <i class="bi bi-check-circle me-2"></i>Udført
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Slet opgave modal *@
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet opgave</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                <p class="mb-0">Er du sikker på du vil slette denne opgave?</p>
+            </div>
+            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Annuller
+                </button>
+                <button type="button" id="deleteTaskConfirm" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                    <i class="bi bi-trash me-1"></i>Slet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Søgefelt *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="tasksSearchInput" class="form-control form-control-sm"
+               placeholder="Søg titel, frivillig eller besked…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               autocomplete="off" />
+        <button type="button" id="tasksSearchClear" class="btn btn-sm d-none"
+                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted); border-left: none;"
+                tabindex="-1" aria-label="Ryd søgning">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div></div>
+</div>
+
+@* Resultat-zone *@
+<div id="tasks-result-zone">
+    <div class="card">
+        <div class="card-header">
+            <span><i class="bi bi-check2-square me-2"></i>Opgaver (<span>@Model.TotalCount</span>)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <th class="ps-3">Titel</th>
+                            <th>Frivillig</th>
+                            <th>Fra besked</th>
+                            <th>Status</th>
+                            <th>Forfald</th>
+                            <th>Oprettet</th>
+                            <th class="pe-3" style="width:90px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Tasks.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                    <i class="bi bi-check2-square fs-4 d-block mb-1"></i>
+                                    Ingen opgaver fundet
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var t in Model.Tasks)
+                        {
+                            <tr style="border-bottom: 1px solid var(--clr-border);">
+                                <td class="ps-3 align-middle fw-semibold">@t.Title</td>
+                                <td class="align-middle">
+                                    <span>@t.VolunteerName</span><br />
+                                    <span class="badge badge-info" style="font-size:0.7rem;">@t.VolunteerKey</span>
+                                </td>
+                                <td class="align-middle" style="color: var(--clr-text-muted); font-size:0.85rem;">@t.MessageSubject</td>
+                                <td class="align-middle">
+                                    @if (t.Status == web.Models.MessageTaskStatus.Åben)
+                                    {
+                                        <span class="badge badge-info"><i class="bi bi-circle me-1"></i>Åben</span>
+                                    }
+                                    else if (t.Status == web.Models.MessageTaskStatus.IGang)
+                                    {
+                                        <span class="badge badge-warn"><i class="bi bi-arrow-repeat me-1"></i>I gang</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-ok"><i class="bi bi-check-circle me-1"></i>Udført</span>
+                                    }
+                                </td>
+                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">
+                                    @if (t.DueDate.HasValue)
+                                    {
+                                        var overdue = t.DueDate.Value < DateTime.UtcNow && t.Status != web.Models.MessageTaskStatus.Udført;
+                                        <span style="color: @(overdue ? "var(--clr-alarm)" : "var(--clr-text)")">@t.DueDate.Value.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                                    }
+                                    else { <span style="color: var(--clr-text-muted);">—</span> }
+                                </td>
+                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@t.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                                <td class="pe-3 align-middle text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button type="button" class="btn btn-sm task-status-btn"
+                                                style="background: var(--clr-info); color: #fff; border: none;"
+                                                title="Skift status"
+                                                data-id="@t.Id" data-title="@t.Title">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm task-delete-btn"
+                                                style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                title="Slet opgave" data-id="@t.Id">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+        <span style="color: var(--clr-text-muted); font-size: 0.85rem;">
+            @if (Model.TotalCount == 0) { <span>Ingen resultater</span> }
+            else { <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span> }
+        </span>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+                <span>Pr. side</span>
+                <select id="tasksPageSizeSelect" class="form-select form-select-sm"
+                        style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                    @foreach (var size in new[] { 10, 25, 50 })
+                    {
+                        if (Model.PageSize == size) { <option value="@size" selected>@size</option> }
+                        else { <option value="@size">@size</option> }
+                    }
+                </select>
+            </div>
+            <nav aria-label="Sidenavigation">
+                <ul class="pagination pagination-sm mb-0">
+                    @{
+                        var cp = Model.Page; var tp = Model.TotalPages;
+                        var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+                        for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+                    }
+                    <li class="page-item @(cp == 1 ? "disabled" : "")">
+                        <button class="page-link tasks-page-btn" data-page="@(cp - 1)" @(cp == 1 ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                    </li>
+                    @{ int? lastShown = null; }
+                    @foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link tasks-page-btn" data-page="@p"
+                                    style="@(p == cp ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;" : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);")">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                    <li class="page-item @(cp >= tp ? "disabled" : "")">
+                        <button class="page-link tasks-page-btn" data-page="@(cp + 1)" @(cp >= tp ? "disabled" : "")
+                                style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var searchUrl       = '@Url.Action("TasksSearch",         "Beskeder")';
+    var statusPostUrl   = '@Url.Action("UpdateTaskStatus",    "Beskeder")';
+    var deletePostUrl   = '@Url.Action("DeleteTask",          "Beskeder")';
+
+    var debounce;
+    var currentSize = @Model.PageSize;
+    var currentPage = @Model.Page;
+    var pendingStatusId = null;
+    var pendingDeleteId = null;
+
+    async function loadPage(page, size) {
+        currentPage = page; currentSize = size;
+        var q   = document.getElementById('tasksSearchInput').value.trim();
+        var url = searchUrl + '?q=' + encodeURIComponent(q) + '&page=' + page + '&pageSize=' + size;
+        try {
+            var res = await fetch(url);
+            if (!res.ok) { showToast('Kunne ikke hente opgaver.', 'error'); return; }
+            var doc  = new DOMParser().parseFromString(await res.text(), 'text/html');
+            var zone = doc.getElementById('tasks-result-zone');
+            if (!zone) return;
+            document.getElementById('tasks-result-zone').innerHTML = zone.innerHTML;
+            bindZoneEvents();
+        } catch (e) { showToast('Netværksfejl – prøv igen.', 'error'); }
+    }
+
+    var input = document.getElementById('tasksSearchInput');
+    var clear = document.getElementById('tasksSearchClear');
+    input.addEventListener('input', function () { clear.classList.toggle('d-none', this.value === ''); });
+    clear.addEventListener('click', function () { input.value = ''; clear.classList.add('d-none'); loadPage(1, currentSize); input.focus(); });
+    input.addEventListener('keyup', function () { clearTimeout(debounce); debounce = setTimeout(function () { loadPage(1, currentSize); }, 250); });
+
+    function bindZoneEvents() {
+        var sel = document.getElementById('tasksPageSizeSelect');
+        if (sel) sel.addEventListener('change', function () { loadPage(1, parseInt(this.value)); });
+        document.querySelectorAll('.tasks-page-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () { var p = parseInt(this.dataset.page); if (!isNaN(p) && p >= 1) loadPage(p, currentSize); });
+        });
+        bindRowActions();
+    }
+
+    // ── Status modal ──────────────────────────────────────────────
+    var statusModalEl = document.getElementById('updateTaskStatusModal');
+    var bsStatusModal = new bootstrap.Modal(statusModalEl);
+
+    document.querySelectorAll('.task-status-set').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            if (!pendingStatusId) return;
+            var status = parseInt(this.dataset.status);
+            var fd = new FormData();
+            fd.append('id', pendingStatusId);
+            fd.append('status', status);
+            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+            try {
+                var res  = await fetch(statusPostUrl, { method: 'POST', body: fd });
+                var json = await res.json();
+                bsStatusModal.hide();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
+                    await loadPage(currentPage, currentSize);
+                } else { showToast(json.message, 'error'); }
+            } catch (e) { bsStatusModal.hide(); showToast('Netværksfejl.', 'error'); }
+            finally { pendingStatusId = null; }
+        });
+    });
+
+    // ── Slet modal ────────────────────────────────────────────────
+    var deleteModalEl = document.getElementById('deleteTaskModal');
+    var bsDeleteModal = new bootstrap.Modal(deleteModalEl);
+
+    document.getElementById('deleteTaskConfirm').addEventListener('click', async function () {
+        if (!pendingDeleteId) return;
+        var btn = this; btn.disabled = true;
+        try {
+            var fd = new FormData();
+            fd.append('id', pendingDeleteId);
+            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+            var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
+            var json = await res.json();
+            bsDeleteModal.hide();
+            if (json.success) {
+                showToast(json.message, 'success');
+                document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
+                await loadPage(currentPage, currentSize);
+            } else { showToast(json.message, 'error'); }
+        } catch (e) { bsDeleteModal.hide(); showToast('Netværksfejl.', 'error'); }
+        finally { btn.disabled = false; pendingDeleteId = null; }
+    });
+
+    function bindRowActions() {
+        document.querySelectorAll('.task-status-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                pendingStatusId = parseInt(this.dataset.id);
+                document.getElementById('taskStatusTitle').textContent = this.dataset.title;
+                bsStatusModal.show();
+            });
+        });
+        document.querySelectorAll('.task-delete-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () { pendingDeleteId = parseInt(this.dataset.id); bsDeleteModal.show(); });
+        });
+    }
+
+    bindZoneEvents();
+})();
+</script>

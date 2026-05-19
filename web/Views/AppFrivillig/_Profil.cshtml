@@ -89,6 +89,30 @@
         </div>
     </div>
 
+    <!-- Udseende -->
+    <div class="card mb-3">
+        <div class="card-body pb-2">
+            <p class="mb-2" style="color:var(--clr-text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;">Udseende</p>
+            <div class="d-flex gap-2">
+                <button type="button" id="pp-mode-system" class="btn btn-sm flex-fill"
+                        onclick="setAppTheme('system')"
+                        style="border:1px solid rgba(255,255,255,0.12);">
+                    <i class="bi bi-circle-half me-1"></i>System
+                </button>
+                <button type="button" id="pp-mode-dark" class="btn btn-sm flex-fill"
+                        onclick="setAppTheme('dark')"
+                        style="border:1px solid rgba(255,255,255,0.12);">
+                    <i class="bi bi-moon-stars-fill me-1"></i>Mørkt
+                </button>
+                <button type="button" id="pp-mode-light" class="btn btn-sm flex-fill"
+                        onclick="setAppTheme('light')"
+                        style="border:1px solid rgba(255,255,255,0.12);">
+                    <i class="bi bi-sun-fill me-1"></i>Lyst
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mail -->
     <div class="card mb-3">
         <div class="card-body pb-2">
@@ -119,6 +143,41 @@
         </button>
     </div>
 
+    <!-- Log ud -->
+    <div class="mt-5 pt-2" style="border-top:1px solid rgba(255,255,255,0.07);">
+        <button id="pp-logout-btn" class="btn btn-sm w-100"
+                style="background:rgba(220,53,69,0.10);border:1px solid rgba(220,53,69,0.25);color:#e06c75;">
+            <i class="bi bi-box-arrow-left me-1"></i>Log ud af profil
+        </button>
+    </div>
+
+    <!-- ── Log ud bekræftelsesmodal ── -->
+    <div class="modal fade" id="ppLogudModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:320px;margin:auto;">
+            <div class="modal-content" style="background:var(--clr-surface);border:1px solid rgba(255,255,255,0.1);color:var(--clr-text);">
+                <div class="modal-body py-4 px-4 text-center">
+                    <div style="font-size:2rem;color:#e06c75;margin-bottom:0.75rem;">
+                        <i class="bi bi-box-arrow-left"></i>
+                    </div>
+                    <p class="fw-semibold mb-1" style="font-size:1rem;color:var(--clr-text);">Log ud af profil?</p>
+                    <p class="mb-0" style="font-size:0.85rem;color:var(--clr-text-muted);">
+                        Dine gemte oplysninger slettes fra denne enhed. Du kan altid logge ind igen med din mail.
+                    </p>
+                </div>
+                <div class="modal-footer d-flex gap-2" style="border-top:1px solid rgba(255,255,255,0.08);background:var(--clr-bg);justify-content:center;">
+                    <button type="button" class="btn btn-sm flex-fill" data-bs-dismiss="modal"
+                            style="background:var(--clr-surface);border:1px solid rgba(255,255,255,0.15);color:var(--clr-text-muted);">
+                        <i class="bi bi-x-lg me-1"></i>Annuller
+                    </button>
+                    <button type="button" id="pp-logout-confirm-btn" class="btn btn-sm flex-fill"
+                            style="background:rgba(220,53,69,0.15);border:1px solid rgba(220,53,69,0.35);color:#e06c75;">
+                        <i class="bi bi-box-arrow-left me-1"></i>Log ud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── QR-kode modal ── -->
 <div class="modal fade" id="ppQrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:300px;margin:auto;">
@@ -142,6 +201,7 @@
     let _selectedVolunteerId = null;
     let _profileData = null;
     let _originalData = null;
+    let _pendingTheme = null;
 
     function showState(state) {
         document.getElementById('profil-login').style.display      = state === 'login'   ? '' : 'none';
@@ -165,7 +225,8 @@
         if (!_originalData) return;
         const changed =
             document.getElementById('pp-email').value.trim() !== _originalData.email ||
-            document.getElementById('pp-phone').value.trim() !== _originalData.phone;
+            document.getElementById('pp-phone').value.trim() !== _originalData.phone ||
+            (_pendingTheme !== null && _pendingTheme !== _originalData.theme);
         const btn = document.getElementById('pp-save-btn');
         btn.disabled = !changed;
         btn.style.opacity = changed ? '1' : '0.45';
@@ -173,13 +234,15 @@
 
     function renderProfile(data) {
         _profileData = data;
-        _originalData = { email: data.email ?? '', phone: data.phone ?? '' };
+        _originalData = { email: data.email ?? '', phone: data.phone ?? '', theme: localStorage.getItem('fv_theme') || 'system' };
+        _pendingTheme = null;
         document.getElementById('pp-name').textContent  = data.name  ?? '';
         document.getElementById('pp-key').textContent   = data.key   ?? '';
         document.getElementById('pp-email').value       = data.email ?? '';
         document.getElementById('pp-phone').value       = data.phone ?? '';
         document.getElementById('pp-email').addEventListener('input', checkDirty);
         document.getElementById('pp-phone').addEventListener('input', checkDirty);
+        updateThemeButtons(_originalData.theme);
         checkDirty();
         showState('profile');
     }
@@ -188,8 +251,12 @@
     const saved = loadSaved();
     if (saved) {
         fetch(`/AppFrivillig/GetProfile?volunteerId=${saved.id}&seasonId=${saved.seasonId}`)
-            .then(r => r.json())
+            .then(r => {
+                if (typeof fvCheckAuth === 'function' && fvCheckAuth(r)) return null;
+                return r.json();
+            })
             .then(d => {
+                if (!d) return;
                 if (d.id) renderProfile({ id: d.id, seasonId: d.seasonId, name: d.name, key: d.key, email: d.email, phone: d.phone, qrToken: d.qrToken });
                 else showState('login');
             })
@@ -311,7 +378,16 @@
             });
             const data = await res.json();
             if (data.saved) {
-                _originalData = { email, phone };
+                const themeToSave = _pendingTheme ?? _originalData.theme;
+                if (_pendingTheme !== null) {
+                    const resolved = _pendingTheme === 'system'
+                        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+                        : _pendingTheme;
+                    localStorage.setItem('fv_theme', _pendingTheme);
+                    document.documentElement.setAttribute('data-theme', resolved);
+                }
+                _originalData = { email, phone, theme: themeToSave };
+                _pendingTheme = null;
                 checkDirty();
                 fvToast('Profil gemt.', 'success');
             }
@@ -325,8 +401,45 @@
         if (_originalData) {
             document.getElementById('pp-email').value = _originalData.email;
             document.getElementById('pp-phone').value = _originalData.phone;
+            _pendingTheme = null;
+            updateThemeButtons(_originalData.theme);
         }
         checkDirty();
+    });
+
+    // ── Tema-vælger ──
+    function updateThemeButtons(mode) {
+        const active = 'background:var(--clr-brand);color:#fff;border:1px solid transparent;';
+        const inactive = 'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:var(--clr-text-muted);';
+        document.getElementById('pp-mode-system').style.cssText = (mode === 'system' ? active : inactive);
+        document.getElementById('pp-mode-dark').style.cssText   = (mode === 'dark'   ? active : inactive);
+        document.getElementById('pp-mode-light').style.cssText  = (mode === 'light'  ? active : inactive);
+    }
+
+    window.setAppTheme = function (mode) {
+        _pendingTheme = mode;
+        updateThemeButtons(mode);
+        checkDirty();
+    };
+
+    updateThemeButtons(localStorage.getItem('fv_theme') || 'system');
+
+    // ── Log ud ──
+    document.getElementById('pp-logout-btn').addEventListener('click', () => {
+        const modal = new bootstrap.Modal(document.getElementById('ppLogudModal'));
+        modal.show();
+    });
+
+    document.getElementById('pp-logout-confirm-btn').addEventListener('click', () => {
+        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem('fv_theme');
+        bootstrap.Modal.getInstance(document.getElementById('ppLogudModal')).hide();
+        _profileData = null;
+        _originalData = null;
+        _pendingTheme = null;
+        document.getElementById('profil-email').value = '';
+        document.getElementById('profil-volunteer-list').style.display = 'none';
+        showState('login');
     });
 
     // ── QR-kode ──

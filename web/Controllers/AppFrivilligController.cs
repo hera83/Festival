@@ -5,11 +5,12 @@ using web.Data;
 using web.Models;
 using web.Services.Email;
 using web.Utils;
+using System.IO;
 
 namespace web.Controllers;
 
 [AllowAnonymous]
-public class AppFrivilligController(ApplicationDbContext db, IEmailService emailService) : Controller
+public class AppFrivilligController(ApplicationDbContext db, IEmailService emailService, IWebHostEnvironment env) : Controller
 {
     [HttpGet]
     public IActionResult Index()
@@ -24,9 +25,144 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
     }
 
     [HttpGet]
+    public async Task<IActionResult> OverblikData(int volunteerId, int seasonId)
+    {
+        var volunteer = await db.Volunteers
+            .FirstOrDefaultAsync(v => v.Id == volunteerId && v.SeasonId == seasonId);
+
+        if (volunteer == null)
+            return NotFound();
+
+        // Hent alle vagter med ShiftType
+        var shifts = await db.Shifts
+            .Include(s => s.ShiftType)
+            .Where(s => s.VolunteerId == volunteerId && s.SeasonId == seasonId)
+            .ToListAsync();
+
+        var today = AppTime.CopenhagenToday;
+        var now = AppTime.CopenhagenNow;
+
+        var shiftDtos = shifts.Select(s => new
+        {
+            s.Id,
+            shiftTypeId = s.ShiftTypeId,
+            name = s.ShiftType.ShiftName,
+            startUtc = s.ShiftType.StartTime,
+            endUtc = s.ShiftType.EndTime,
+            startLocal = AppTime.ToCopenhagen(s.ShiftType.StartTime),
+            endLocal = AppTime.ToCopenhagen(s.ShiftType.EndTime),
+        }).OrderBy(s => s.startLocal).ToList();
+
+        // Dagens check-in sessioner (inkl. afsluttede – for "ingen nag" reglen)
+        var todayCheckIns = await db.VolunteerCheckIns
+            .Where(c => c.VolunteerId == volunteerId && c.SeasonId == seasonId && c.CheckInDate == today)
+            .OrderByDescending(c => c.CheckedInAt)
+            .ToListAsync();
+
+        // Aktiv session = ikke checket ud
+        var activeCheckIn = todayCheckIns.FirstOrDefault(c => c.CheckedOutAt == null);
+
+        // Lokationslog for aktiv session
+        List<object> locationLogs = [];
+        if (activeCheckIn != null)
+        {
+            var logs = await db.VolunteerLocationLogs
+                .Where(l => l.CheckInId == activeCheckIn.Id)
+                .OrderBy(l => l.OccurredAt)
+                .ToListAsync();
+
+            locationLogs = logs.Select(l => (object)new
+            {
+                l.EventType,
+                l.Location,
+                occurredAt = AppTime.ToCopenhagen(l.OccurredAt)
+            }).ToList();
+        }
+
+        // Har frivillig haft en check-in i dag (selv afsluttet)?
+        var hasHadCheckInToday = todayCheckIns.Any();
+
+        return Ok(new
+        {
+            name = volunteer.Name,
+            nowLocal = now,
+            todayDate = today.ToString("yyyy-MM-dd"),
+            shifts = shiftDtos,
+            hasHadCheckInToday,
+            activeCheckIn = activeCheckIn == null ? null : new
+            {
+                id = activeCheckIn.Id,
+                checkedInAt = AppTime.ToCopenhagen(activeCheckIn.CheckedInAt),
+                checkedOutAt = (DateTime?)null,
+                currentLocation = activeCheckIn.CurrentLocation,
+                locationLogs
+            }
+        });
+    }
+
+    [HttpGet]
     public IActionResult Vagter()
     {
         return PartialView("_Vagter");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> VagterData(int volunteerId, int seasonId)
+    {
+        var volunteer = await db.Volunteers
+            .FirstOrDefaultAsync(v => v.Id == volunteerId && v.SeasonId == seasonId);
+
+        if (volunteer == null)
+            return NotFound();
+
+        var shifts = await db.Shifts
+            .Include(s => s.ShiftType)
+            .Where(s => s.VolunteerId == volunteerId && s.SeasonId == seasonId)
+            .ToListAsync();
+
+        if (!shifts.Any())
+            return Ok(new { shifts = Array.Empty<object>() });
+
+        var now = AppTime.CopenhagenNow;
+
+        // Find alle dage hvor den frivillige har haft check-in denne sæson
+        var checkInDates = await db.VolunteerCheckIns
+            .Where(c => c.VolunteerId == volunteerId && c.SeasonId == seasonId)
+            .Select(c => c.CheckInDate)
+            .Distinct()
+            .ToListAsync();
+
+        var checkInDateSet = checkInDates.ToHashSet();
+
+        var result = shifts
+            .Select(s =>
+            {
+                var startLocal = AppTime.ToCopenhagen(s.ShiftType.StartTime);
+                var endLocal = AppTime.ToCopenhagen(s.ShiftType.EndTime);
+                var shiftDate = DateOnly.FromDateTime(startLocal);
+
+                string status;
+                if (endLocal > now)
+                    status = "kommende";
+                else if (checkInDateSet.Contains(shiftDate))
+                    status = "afviklet";
+                else
+                    status = "udeblivelse";
+
+                return new
+                {
+                    id = s.Id,
+                    name = s.ShiftType.ShiftName,
+                    startLocal,
+                    endLocal,
+                    date = shiftDate.ToString("yyyy-MM-dd"),
+                    status
+                };
+            })
+            .OrderByDescending(s => s.startLocal)
+            .ToList();
+
+        return Ok(new { shifts = result });
     }
 
     [HttpGet]
@@ -184,9 +320,190 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         return Ok(new { saved = true });
     }
+
+    // ── Beskeder ─────────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> BeskederData(int volunteerId, int seasonId)
+    {
+        var messages = await db.Messages
+            .Where(m => m.VolunteerId == volunteerId && m.SeasonId == seasonId && !m.IsDeleted)
+            .Include(m => m.Replies)
+            .OrderByDescending(m => m.SentAt)
+            .ToListAsync();
+
+        var result = messages.Select(m =>
+        {
+            // Ulæst for frivillig = der er et Outbound svar/den originale besked er Outbound
+            // som er nyere end hvornår frivillig sidst åbnede tråden
+            var lastCoordActivity = m.Replies
+                .Where(r => r.Direction == MessageDirection.Outbound)
+                .OrderByDescending(r => r.SentAt)
+                .Select(r => (DateTime?)r.SentAt)
+                .FirstOrDefault();
+
+            // Hvis beskeden selv er Outbound (sendt af koordinator) og aldrig åbnet
+            if (lastCoordActivity == null && m.Direction == MessageDirection.Outbound)
+                lastCoordActivity = m.SentAt;
+
+            bool hasUnread = lastCoordActivity.HasValue &&
+                (m.VolunteerOpenedAt == null || lastCoordActivity > m.VolunteerOpenedAt);
+
+            return new
+            {
+                m.Id,
+                m.Subject,
+                m.Body,
+                sentAt = AppTime.ToCopenhagen(m.SentAt).ToString("dd/MM/yyyy HH:mm"),
+                isCoordinator = m.Direction == MessageDirection.Outbound,
+                hasUnread,
+                replyCount = m.Replies.Count,
+                replies = m.Replies.OrderBy(r => r.SentAt).Select(r => new
+                {
+                    r.Id,
+                    r.Body,
+                    sentAt = AppTime.ToCopenhagen(r.SentAt).ToString("dd/MM HH:mm"),
+                    isCoordinator = r.Direction == MessageDirection.Outbound
+                })
+            };
+        });
+
+        return Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkOpenedByVolunteer([FromBody] MarkOpenedRequest req)
+    {
+        var msg = await db.Messages
+            .FirstOrDefaultAsync(m => m.Id == req.MessageId && m.VolunteerId == req.VolunteerId);
+        if (msg == null) return Ok(); // fail silently
+
+        msg.VolunteerOpenedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendBesked([FromBody] SendBeskedRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Subject) || string.IsNullOrWhiteSpace(req.Body))
+            return BadRequest(new { error = "Emne og besked er påkrævet." });
+
+        var volunteer = await db.Volunteers
+            .FirstOrDefaultAsync(v => v.Id == req.VolunteerId && v.SeasonId == req.SeasonId);
+
+        if (volunteer == null)
+            return BadRequest(new { error = "Frivillig ikke fundet." });
+
+        db.Messages.Add(new Message
+        {
+            SeasonId     = req.SeasonId,
+            VolunteerId  = req.VolunteerId,
+            SentByUserId = string.Empty,
+            Direction    = MessageDirection.Inbound,
+            Subject      = req.Subject.Trim(),
+            Body         = req.Body.Trim(),
+            IsRead       = false,
+            SentAt       = DateTime.UtcNow
+        });
+
+        await db.SaveChangesAsync();
+        return Ok(new { sent = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> BeskedReply([FromBody] BeskedReplyRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Body))
+            return BadRequest(new { error = "Svar kan ikke være tomt." });
+
+        var msg = await db.Messages
+            .FirstOrDefaultAsync(m => m.Id == req.MessageId && m.VolunteerId == req.VolunteerId);
+
+        if (msg == null)
+            return BadRequest(new { error = "Besked ikke fundet." });
+
+        db.MessageReplies.Add(new MessageReply
+        {
+            MessageId    = req.MessageId,
+            SentByUserId = null,
+            Direction    = MessageDirection.Inbound,
+            Body         = req.Body.Trim(),
+            SentAt       = DateTime.UtcNow
+        });
+
+        // Koordinator skal se det som ulæst igen
+        msg.IsRead = false;
+        msg.ReadAt = null;
+
+        await db.SaveChangesAsync();
+        return Ok(new { sent = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendObservation(
+        [FromForm] int volunteerId, [FromForm] int seasonId,
+        [FromForm] string message, [FromForm] string type, IFormFile? file)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return BadRequest(new { error = "Besked er påkrævet." });
+
+        if (file == null || file.Length == 0)
+            return BadRequest(new { error = "Fil er påkrævet." });
+
+        var volunteer = await db.Volunteers
+            .FirstOrDefaultAsync(v => v.Id == volunteerId && v.SeasonId == seasonId);
+
+        if (volunteer == null)
+            return BadRequest(new { error = "Frivillig ikke fundet." });
+
+        // Gem fil
+        var dir = Path.Combine(env.ContentRootPath, "App_files", "beskeder");
+        Directory.CreateDirectory(dir);
+        var ext = Path.GetExtension(file.FileName);
+        var storedName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(dir, storedName);
+        await using (var fs = System.IO.File.Create(filePath))
+            await file.CopyToAsync(fs);
+
+        var subject = $"Observation – {(type == "video" ? "Video" : "Foto")} {AppTime.CopenhagenNow:dd/MM/yyyy HH:mm}";
+
+        var msg = new Message
+        {
+            SeasonId     = seasonId,
+            VolunteerId  = volunteerId,
+            SentByUserId = string.Empty,
+            Direction    = MessageDirection.Inbound,
+            Subject      = subject,
+            Body         = message.Trim(),
+            IsRead       = false,
+            SentAt       = DateTime.UtcNow
+        };
+
+        db.Messages.Add(msg);
+        await db.SaveChangesAsync();
+
+        db.MessageAttachments.Add(new MessageAttachment
+        {
+            MessageId        = msg.Id,
+            OriginalFileName = file.FileName,
+            StoredFileName   = storedName,
+            ContentType      = file.ContentType,
+            FileSizeBytes    = file.Length,
+            UploadedAt       = DateTime.UtcNow,
+            UploadedByUserId = string.Empty
+        });
+
+        await db.SaveChangesAsync();
+        return Ok(new { sent = true });
+    }
 }
+
 
 public record LookupEmailRequest(string Email);
 public record SendCodeRequest(int VolunteerId);
 public record VerifyCodeRequest(int VolunteerId, string Code);
 public record SaveProfileRequest(int VolunteerId, int SeasonId, string? Email, string? Phone);
+public record SendBeskedRequest(int VolunteerId, int SeasonId, string Subject, string Body);
+public record BeskedReplyRequest(int MessageId, int VolunteerId, string Body);
+public record MarkOpenedRequest(int MessageId, int VolunteerId);

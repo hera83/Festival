@@ -1,0 +1,39 @@
+@model web.Models.CreateTaskViewModel
+
+<form id="createTaskForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="MessageId" value="@Model.MessageId" />
+    <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <h6 class="modal-title mb-0">
+            <i class="bi bi-check2-square me-2" style="color: var(--clr-brand);"></i>Opret opgave
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+    </div>
+    <div class="modal-body" style="background: var(--clr-surface);">
+        <div class="mb-3">
+            <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Titel <span style="color:var(--clr-alarm);">*</span></label>
+            <input type="text" name="Title" class="form-control form-control-sm"
+                   style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+                   placeholder="Opgavens titel" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Beskrivelse</label>
+            <textarea name="Description" class="form-control form-control-sm" rows="3"
+                      style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); resize:vertical;"
+                      placeholder="Valgfri beskrivelse…"></textarea>
+        </div>
+        <div class="mb-1">
+            <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Forfaldsdato</label>
+            <input type="date" name="DueDate" class="form-control form-control-sm"
+                   style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" />
+        </div>
+    </div>
+    <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x me-1"></i>Annuller
+        </button>
+        <button type="submit" id="createTaskSubmit" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+            <i class="bi bi-check2-square me-1"></i>Opret opgave
+        </button>
+    </div>
+</form>
