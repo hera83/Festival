@@ -35,6 +35,8 @@ namespace web.Migrations
                     AvatarContentType = table.Column<string>(type: "TEXT", nullable: true),
                     AvatarFileSize = table.Column<long>(type: "INTEGER", nullable: true),
                     AvatarUploadedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    ColorMode = table.Column<string>(type: "TEXT", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -106,6 +108,22 @@ namespace web.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ShiftTypes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserCameraPreferences",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    DeviceId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    DeviceFingerprint = table.Column<string>(type: "TEXT", maxLength: 2048, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserCameraPreferences", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -238,6 +256,36 @@ namespace web.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Messages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    SeasonId = table.Column<int>(type: "INTEGER", nullable: false),
+                    VolunteerId = table.Column<int>(type: "INTEGER", nullable: false),
+                    SentByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    Direction = table.Column<int>(type: "INTEGER", nullable: false),
+                    Subject = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
+                    Body = table.Column<string>(type: "TEXT", nullable: false),
+                    IsRead = table.Column<bool>(type: "INTEGER", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ReadAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    VolunteerOpenedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Messages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Messages_Volunteers_VolunteerId",
+                        column: x => x.VolunteerId,
+                        principalTable: "Volunteers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Shifts",
                 columns: table => new
                 {
@@ -284,6 +332,104 @@ namespace web.Migrations
                         name: "FK_VolunteerCheckIns_Volunteers_VolunteerId",
                         column: x => x.VolunteerId,
                         principalTable: "Volunteers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "VolunteerMetas",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    VolunteerId = table.Column<int>(type: "INTEGER", nullable: false),
+                    AppConfirmCode = table.Column<string>(type: "TEXT", maxLength: 6, nullable: true),
+                    AppConfirmCodeExpiry = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VolunteerMetas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VolunteerMetas_Volunteers_VolunteerId",
+                        column: x => x.VolunteerId,
+                        principalTable: "Volunteers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MessageAttachments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    MessageId = table.Column<int>(type: "INTEGER", nullable: false),
+                    OriginalFileName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    StoredFileName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    ContentType = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    FileSizeBytes = table.Column<long>(type: "INTEGER", nullable: false),
+                    UploadedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UploadedByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MessageAttachments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MessageAttachments_Messages_MessageId",
+                        column: x => x.MessageId,
+                        principalTable: "Messages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MessageReplies",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    MessageId = table.Column<int>(type: "INTEGER", nullable: false),
+                    SentByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: true),
+                    Direction = table.Column<int>(type: "INTEGER", nullable: false),
+                    Body = table.Column<string>(type: "TEXT", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MessageReplies", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MessageReplies_Messages_MessageId",
+                        column: x => x.MessageId,
+                        principalTable: "Messages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MessageTasks",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    MessageId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    DueDate = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    CompletedByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MessageTasks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MessageTasks_Messages_MessageId",
+                        column: x => x.MessageId,
+                        principalTable: "Messages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -361,6 +507,36 @@ namespace web.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_MessageAttachments_MessageId",
+                table: "MessageAttachments",
+                column: "MessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MessageReplies_MessageId",
+                table: "MessageReplies",
+                column: "MessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Messages_SeasonId_IsRead",
+                table: "Messages",
+                columns: new[] { "SeasonId", "IsRead" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Messages_SeasonId_VolunteerId",
+                table: "Messages",
+                columns: new[] { "SeasonId", "VolunteerId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Messages_VolunteerId",
+                table: "Messages",
+                column: "VolunteerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MessageTasks_MessageId",
+                table: "MessageTasks",
+                column: "MessageId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Posts_SeasonId_Name",
                 table: "Posts",
                 columns: new[] { "SeasonId", "Name" },
@@ -390,6 +566,12 @@ namespace web.Migrations
                 name: "IX_ShiftTypes_SeasonId_ShiftName_StartTime_EndTime",
                 table: "ShiftTypes",
                 columns: new[] { "SeasonId", "ShiftName", "StartTime", "EndTime" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserCameraPreferences_UserId",
+                table: "UserCameraPreferences",
+                column: "UserId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -423,6 +605,12 @@ namespace web.Migrations
                 column: "VolunteerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VolunteerMetas_VolunteerId",
+                table: "VolunteerMetas",
+                column: "VolunteerId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Volunteers_SeasonId_Key",
                 table: "Volunteers",
                 columns: new[] { "SeasonId", "Key" },
@@ -451,19 +639,37 @@ namespace web.Migrations
                 name: "DashboardSettings");
 
             migrationBuilder.DropTable(
+                name: "MessageAttachments");
+
+            migrationBuilder.DropTable(
+                name: "MessageReplies");
+
+            migrationBuilder.DropTable(
+                name: "MessageTasks");
+
+            migrationBuilder.DropTable(
                 name: "Posts");
 
             migrationBuilder.DropTable(
                 name: "Shifts");
 
             migrationBuilder.DropTable(
+                name: "UserCameraPreferences");
+
+            migrationBuilder.DropTable(
                 name: "VolunteerLocationLogs");
+
+            migrationBuilder.DropTable(
+                name: "VolunteerMetas");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Messages");
 
             migrationBuilder.DropTable(
                 name: "ShiftTypes");

@@ -177,7 +177,7 @@ public class ProfileController(
             user.AvatarFileName    = fileName;
             user.AvatarContentType = ext == ".png" ? "image/png" : "image/jpeg";
             user.AvatarFileSize    = bytes.Length;
-            user.AvatarUploadedAt  = AppTime.UtcNow;
+        user.AvatarUploadedAt  = AppTime.Now;
 
             return null; // ingen fejl
         }

@@ -22,7 +22,7 @@ public class Message
     public string Body { get; set; } = string.Empty;
 
     public bool IsRead { get; set; }
-    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    public DateTime SentAt { get; set; } = DateTime.Now;
     public DateTime? ReadAt { get; set; }
 
     // Soft delete – bruges når der er tilknyttede opgaver

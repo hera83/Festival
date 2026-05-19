@@ -47,10 +47,8 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             s.Id,
             shiftTypeId = s.ShiftTypeId,
             name = s.ShiftType.ShiftName,
-            startUtc = s.ShiftType.StartTime,
-            endUtc = s.ShiftType.EndTime,
-            startLocal = AppTime.ToCopenhagen(s.ShiftType.StartTime),
-            endLocal = AppTime.ToCopenhagen(s.ShiftType.EndTime),
+            startLocal = s.ShiftType.StartTime,
+            endLocal = s.ShiftType.EndTime,
         }).OrderBy(s => s.startLocal).ToList();
 
         // Dagens check-in sessioner (inkl. afsluttede – for "ingen nag" reglen)
@@ -137,8 +135,8 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
         var result = shifts
             .Select(s =>
             {
-                var startLocal = AppTime.ToCopenhagen(s.ShiftType.StartTime);
-                var endLocal = AppTime.ToCopenhagen(s.ShiftType.EndTime);
+                var startLocal = s.ShiftType.StartTime;
+                var endLocal = s.ShiftType.EndTime;
                 var shiftDate = DateOnly.FromDateTime(startLocal);
 
                 string status;
@@ -220,7 +218,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             return BadRequest(new { error = "Frivillig ikke fundet." });
 
         var code = Random.Shared.Next(100000, 999999).ToString();
-        var expiry = AppTime.UtcNow.AddMinutes(15);
+        var expiry = AppTime.Now.AddMinutes(15);
 
         var meta = await db.VolunteerMetas.FirstOrDefaultAsync(m => m.VolunteerId == volunteer.Id);
         if (meta == null)
@@ -230,7 +228,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
         }
         meta.AppConfirmCode = code;
         meta.AppConfirmCodeExpiry = expiry;
-        meta.UpdatedAt = AppTime.UtcNow;
+        meta.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
         var html = $"""
@@ -262,12 +260,12 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             return BadRequest(new { error = "Frivillig ikke fundet." });
 
         var meta = await db.VolunteerMetas.FirstOrDefaultAsync(m => m.VolunteerId == volunteer.Id);
-        if (meta == null || meta.AppConfirmCode != req.Code || meta.AppConfirmCodeExpiry < AppTime.UtcNow)
+        if (meta == null || meta.AppConfirmCode != req.Code || meta.AppConfirmCodeExpiry < AppTime.Now)
             return Ok(new { valid = false, error = "Forkert eller udløbet kode." });
 
         meta.AppConfirmCode = null;
         meta.AppConfirmCodeExpiry = null;
-        meta.UpdatedAt = AppTime.UtcNow;
+        meta.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
         return Ok(new
@@ -315,7 +313,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         volunteer.Email = req.Email?.Trim();
         volunteer.PhoneNumber = req.Phone?.Trim();
-        volunteer.UpdatedAt = AppTime.UtcNow;
+        volunteer.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
         return Ok(new { saved = true });
@@ -378,7 +376,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             .FirstOrDefaultAsync(m => m.Id == req.MessageId && m.VolunteerId == req.VolunteerId);
         if (msg == null) return Ok(); // fail silently
 
-        msg.VolunteerOpenedAt = DateTime.UtcNow;
+        msg.VolunteerOpenedAt = DateTime.Now;
         await db.SaveChangesAsync();
         return Ok();
     }
@@ -404,7 +402,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             Subject      = req.Subject.Trim(),
             Body         = req.Body.Trim(),
             IsRead       = false,
-            SentAt       = DateTime.UtcNow
+            SentAt       = DateTime.Now
         });
 
         await db.SaveChangesAsync();
@@ -429,7 +427,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             SentByUserId = null,
             Direction    = MessageDirection.Inbound,
             Body         = req.Body.Trim(),
-            SentAt       = DateTime.UtcNow
+            SentAt       = DateTime.Now
         });
 
         // Koordinator skal se det som ulæst igen
@@ -477,7 +475,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             Subject      = subject,
             Body         = message.Trim(),
             IsRead       = false,
-            SentAt       = DateTime.UtcNow
+            SentAt       = DateTime.Now
         };
 
         db.Messages.Add(msg);
@@ -490,7 +488,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             StoredFileName   = storedName,
             ContentType      = file.ContentType,
             FileSizeBytes    = file.Length,
-            UploadedAt       = DateTime.UtcNow,
+            UploadedAt       = DateTime.Now,
             UploadedByUserId = string.Empty
         });
 

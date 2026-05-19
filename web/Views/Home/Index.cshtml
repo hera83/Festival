@@ -724,7 +724,7 @@
             const phone = v.phoneNumber
                 ? `<a href="tel:${escHtml(v.phoneNumber)}" style="color:var(--clr-info);text-decoration:none;" title="Ring op"><i class="bi bi-telephone me-1"></i>${escHtml(v.phoneNumber)}</a>`
                 : '<span style="color:var(--clr-text-dim);">—</span>';
-            const start = parseUtcIso(v.earliestStart);
+            const start = parseLocalDate(v.earliestStart);
             const startStr = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
             const minsLate = Math.floor((Date.now() - start.getTime()) / 60000);
             const lateLabel = minsLate > 0
@@ -790,7 +790,7 @@
         const now = Date.now();
         const withAlarm = (v) => alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
             && !disabledAlarmVolunteers.has(v.volunteerId)
-            ? (now - parseUtcIso(v.arrivedAtPit).getTime()) >= pitAlarmMinutes * 60 * 1000
+                    ? (now - parseLocalDate(v.arrivedAtPit).getTime()) >= pitAlarmMinutes * 60 * 1000
             : false;
 
         // Opdater pit alarm count og den globale tæller
@@ -905,7 +905,7 @@
                 if (!p.alarmAfterMinutes) return;
                 (p.volunteers || []).forEach(v => {
                     if (disabledAlarmVolunteers.has(v.volunteerId)) return;
-                    const ms = now - parseUtcIso(v.arrivedAtPost).getTime();
+                            const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
                     if (ms >= p.alarmAfterMinutes * 60 * 1000) alarmCount++;
                 });
             });
@@ -929,7 +929,7 @@
                 if (!p.alarmAfterMinutes) return;
                 (p.volunteers || []).forEach(v => {
                     if (disabledAlarmVolunteers.has(v.volunteerId)) return;
-                    const ms = now - parseUtcIso(v.arrivedAtPost).getTime();
+                            const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
                     if (ms >= p.alarmAfterMinutes * 60 * 1000) postAlarmCount++;
                 });
             });
@@ -959,7 +959,7 @@
         const firingVolunteers = alarmsEnabled ? (p.volunteers || []).filter(v => {
             if (!p.alarmAfterMinutes) return false;
             if (disabledAlarmVolunteers.has(v.volunteerId)) return false;
-            const ms = now - parseUtcIso(v.arrivedAtPost).getTime();
+                            const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
             return ms >= p.alarmAfterMinutes * 60 * 1000;
         }) : [];
         const alarmFiring = firingVolunteers.length > 0;
@@ -1066,7 +1066,7 @@
     function volunteerChipHtml(v, postName, alarmAfterMinutes) {
         let alarmIcon = '';
         if (alarmsEnabled && alarmAfterMinutes && !disabledAlarmVolunteers.has(v.volunteerId)) {
-            const ms = Date.now() - parseUtcIso(v.arrivedAtPost).getTime();
+                    const ms = Date.now() - parseLocalDate(v.arrivedAtPost).getTime();
             if (ms >= alarmAfterMinutes * 60 * 1000) {
                 alarmIcon = `<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.7rem;" title="Over alarmtid"></i>`;
             }
@@ -1453,9 +1453,9 @@
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function parseUtcIso(value) {
+    function parseLocalDate(value) {
         if (!value) return null;
-        return new Date(value.endsWith('Z') ? value : value + 'Z');
+        return new Date(value);
     }
 
     // ── Alarm toggle ──────────────────────────────────────────────────────────

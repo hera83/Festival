@@ -35,7 +35,7 @@
                     <span class="badge badge-ok ms-1">Koordinator</span>
                 }
             </span>
-            <span><i class="bi bi-clock me-1"></i>@msg.SentAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+            <span><i class="bi bi-clock me-1"></i>@msg.SentAt.ToString("dd/MM/yyyy HH:mm")</span>
         </div>
         <div class="p-3 rounded-3"
              style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; line-height:1.6; font-size:0.9rem;">@msg.Body</div>
@@ -101,7 +101,7 @@
                          text-align: @(isOutbound ? "right" : "left");">
                         <i class="bi bi-person me-1"></i>@r.SenderName
                         &nbsp;·&nbsp;
-                        <i class="bi bi-clock me-1"></i>@r.SentAt.ToLocalTime().ToString("dd/MM HH:mm")
+                        <i class="bi bi-clock me-1"></i>@r.SentAt.ToString("dd/MM HH:mm")
                     </div>
                 </div>
             </div>

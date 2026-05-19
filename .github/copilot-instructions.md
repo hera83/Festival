@@ -6,6 +6,10 @@
 - Brug altid pæne Bootstrap modals til bekræftelse og formularer – aldrig browser confirm(). Alle knapper i modals skal have Bootstrap Icons og være små (btn-sm stil). Design skal følge dark-mode design systemet.
 - Alle alerts/notifikationer skal bruge den globale `showToast()` funktion i stedet for inline Bootstrap alerts. Brug `TempData["Success"]`, `TempData["Error"]`, `TempData["Warning"]` eller `TempData["Info"]` fra controllere. Brug `showToast(message, type)` direkte fra JavaScript. Aldrig brug inline alert-divs på sider.
 - Brug ikke ViewData["Title"] i dette projekt; undgå ViewData til sidetitler.
+- Dato-/tidshåndtering:
+  - Brug altid lokal tid (DateTime.Now) i alle dele af applikationen.
+  - Brug aldrig UTC (fx DateTime.UtcNow, DateTimeOffset.UtcDateTime) i import, database-persistens, views, helpers eller extensions.
+  - Gælder for nye og fremtidige ændringer — sørg for at PR'er og kodegennemgange håndhæver denne standard.
 
 ## Table Standards
 - Alle tabeller skal følge dette standardmønster medmindre andet er specificeret:

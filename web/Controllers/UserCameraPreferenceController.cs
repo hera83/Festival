@@ -49,7 +49,7 @@ public class UserCameraPreferenceController(ApplicationDbContext db) : Controlle
 
         pref.DeviceId = req.DeviceId;
         pref.DeviceFingerprint = req.DeviceFingerprint;
-        pref.UpdatedAt = AppTime.UtcNow;
+        pref.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
         return Json(new { success = true });

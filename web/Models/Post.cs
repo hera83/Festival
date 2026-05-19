@@ -26,5 +26,5 @@ public class Post
     /// </summary>
     public int? AlarmAfterMinutes { get; set; }
 
-    public DateTime CreatedAt { get; set; } = AppTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = AppTime.Now;
 }

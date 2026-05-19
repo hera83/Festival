@@ -192,7 +192,7 @@ public class PostController : Controller
             .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null && c.CurrentLocation == post.Name)
             .ToListAsync();
 
-        var now = AppTime.UtcNow;
+        var now = AppTime.Now;
         foreach (var ci in checkIns)
         {
             ci.CurrentLocation = "Pit";

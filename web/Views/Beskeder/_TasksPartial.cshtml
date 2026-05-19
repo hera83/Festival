@@ -128,12 +128,12 @@
                                 <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">
                                     @if (t.DueDate.HasValue)
                                     {
-                                        var overdue = t.DueDate.Value < DateTime.UtcNow && t.Status != web.Models.MessageTaskStatus.Udført;
-                                        <span style="color: @(overdue ? "var(--clr-alarm)" : "var(--clr-text)")">@t.DueDate.Value.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                                        var overdue = t.DueDate.Value < DateTime.Now && t.Status != web.Models.MessageTaskStatus.Udført;
+                                        <span style="color: @(overdue ? "var(--clr-alarm)" : "var(--clr-text)")">@t.DueDate.Value.ToString("dd/MM/yyyy")</span>
                                     }
                                     else { <span style="color: var(--clr-text-muted);">—</span> }
                                 </td>
-                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@t.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@t.CreatedAt.ToString("dd/MM HH:mm")</td>
                                 <td class="pe-3 align-middle text-end">
                                     <div class="d-flex gap-1 justify-content-end">
                                         <button type="button" class="btn btn-sm task-status-btn"

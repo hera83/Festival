@@ -73,7 +73,7 @@ public class AppCheckInController : Controller
         if (existing != null)
             return Json(new { result = "duplicate", name = volunteer.Name, message = $"{volunteer.Name} er allerede checket ind." });
 
-        var now = AppTime.UtcNow;
+        var now = AppTime.Now;
         var checkIn = new VolunteerCheckIn
         {
             SeasonId = seasonId,

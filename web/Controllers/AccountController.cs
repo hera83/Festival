@@ -47,7 +47,7 @@ public class AccountController(SignInManager<AppUser> signInManager, UserManager
             var user = await userManager.FindByNameAsync(model.Username);
             if (user != null)
             {
-                user.LastLogin = DateTime.UtcNow;
+            user.LastLogin = DateTime.Now;
                 await userManager.UpdateAsync(user);
             }
 

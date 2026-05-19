@@ -39,7 +39,7 @@ public class DashboardSettingController(ApplicationDbContext db) : Controller
         }
 
         setting.Value = string.IsNullOrWhiteSpace(req.Value) ? null : req.Value;
-        setting.UpdatedAt = AppTime.UtcNow;
+        setting.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
         return Json(new { success = true });

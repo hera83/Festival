@@ -14,7 +14,7 @@ public class MessageTask
 
     public MessageTaskStatus Status { get; set; } = MessageTaskStatus.Åben;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
     public string CreatedByUserId { get; set; } = string.Empty;
 
     public DateTime? DueDate { get; set; }

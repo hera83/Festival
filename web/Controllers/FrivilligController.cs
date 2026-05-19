@@ -52,10 +52,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
 
         var windowStartLocal = dateOnly.ToDateTime(new TimeOnly(startHour, 0));
         var windowEndLocal   = windowStartLocal.AddHours(24);
-        var windowStartUtc   = AppTime.CopenhagenLocalToUtc(windowStartLocal);
-        var windowEndUtc     = AppTime.CopenhagenLocalToUtc(windowEndLocal);
         var nowLocal         = AppTime.CopenhagenNow;
-        var nowUtc           = AppTime.UtcNow;
 
         // ── Vagttyper + tilmeldte ────────────────────────────────
         var shiftTypes = await db.ShiftTypes
@@ -66,8 +63,8 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         // ── Check-ins der overlapper vinduet ────────────────────
         var checkIns = await db.VolunteerCheckIns
             .Where(ci => ci.SeasonId == CurrentSeason
-                      && ci.CheckedInAt < windowEndUtc
-                      && (ci.CheckedOutAt == null || ci.CheckedOutAt > windowStartUtc))
+                      && ci.CheckedInAt < windowEndLocal
+                      && (ci.CheckedOutAt == null || ci.CheckedOutAt > windowStartLocal))
             .ToListAsync();
 
         var staffed  = new int[24];
@@ -79,8 +76,6 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         {
             var slotStartLocal = windowStartLocal.AddHours(i);
             var slotEndLocal   = slotStartLocal.AddHours(1);
-            var slotStartUtc   = AppTime.CopenhagenLocalToUtc(slotStartLocal);
-            var slotEndUtc     = AppTime.CopenhagenLocalToUtc(slotEndLocal);
 
             isPast[i] = slotEndLocal <= nowLocal;
 
@@ -96,8 +91,8 @@ public class FrivilligController(ApplicationDbContext db) : Controller
             // Tæl frivillige der var tjekket ind i dette slot
             foreach (var ci in checkIns)
             {
-                var ciOut = ci.CheckedOutAt ?? nowUtc; // åben session tæller til nu
-                if (ci.CheckedInAt < slotEndUtc && ciOut > slotStartUtc)
+                var ciOut = ci.CheckedOutAt ?? nowLocal; // åben session tæller til nu
+                if (ci.CheckedInAt < slotEndLocal && ciOut > slotStartLocal)
                     checkedIn[i]++;
             }
         }
@@ -333,7 +328,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         volunteer.Name        = vm.Name.Trim();
         volunteer.Email       = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
         volunteer.PhoneNumber = string.IsNullOrWhiteSpace(vm.PhoneNumber) ? null : vm.PhoneNumber.Trim();
-        volunteer.UpdatedAt   = AppTime.UtcNow;
+        volunteer.UpdatedAt   = AppTime.Now;
 
         // Synkroniser vagter
         var existingIds = volunteer.Shifts.Select(s => s.ShiftTypeId).ToHashSet();
@@ -470,7 +465,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         if (requiredCount < 0) return Json(new { success = false, message = "Behov kan ikke være negativt." });
 
         shiftType.RequiredCount = requiredCount;
-        shiftType.UpdatedAt     = AppTime.UtcNow;
+        shiftType.UpdatedAt     = AppTime.Now;
         await db.SaveChangesAsync();
 
         return Json(new { success = true, message = $"Behov for '{shiftType.ShiftName}' sat til {requiredCount}." });

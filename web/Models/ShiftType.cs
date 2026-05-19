@@ -10,8 +10,8 @@ public class ShiftType
     public int RequiredCount { get; set; } = 0;
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-    public DateTime CreatedAt { get; set; } = AppTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = AppTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = AppTime.Now;
+    public DateTime UpdatedAt { get; set; } = AppTime.Now;
 
     public ICollection<Shift> Shifts { get; set; } = [];
 }

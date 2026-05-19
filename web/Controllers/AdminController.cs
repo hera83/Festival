@@ -163,7 +163,7 @@ public class AdminController : Controller
             .ToListAsync();
         var logsByCheckIn = locationLogs.ToLookup(l => l.CheckInId);
 
-        var now = AppTime.UtcNow;
+        var now = AppTime.Now;
 
         var sessions = checkIns.Select(c =>
         {
@@ -507,7 +507,7 @@ public class AdminController : Controller
         if (validRows.Count == 0)
             return BadRequest(new { success = false, message = "Der er ingen gyldige rækker at importere." });
 
-        var now = AppTime.UtcNow;
+        var now = AppTime.Now;
         var currentSeasonId = AppTime.CurrentSeason;
         var seasonIds = new List<int> { currentSeasonId };
         var keys = validRows.Select(r => r.Key).Distinct().ToList();

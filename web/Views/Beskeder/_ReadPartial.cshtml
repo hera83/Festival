@@ -129,11 +129,11 @@
                                     }
                                 </td>
                                 <td class="align-middle" style="color: var(--clr-text-muted); font-size:0.85rem;">@m.BodyPreview</td>
-                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@m.SentAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@m.SentAt.ToString("dd/MM HH:mm")</td>
                                 <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">
                                     @if (m.ReadAt.HasValue)
                                     {
-                                        <span style="color: var(--clr-ok);">@m.ReadAt.Value.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                                        <span style="color: var(--clr-ok);">@m.ReadAt.Value.ToString("dd/MM HH:mm")</span>
                                     }
                                 </td>
                                 <td class="pe-3 align-middle text-end">

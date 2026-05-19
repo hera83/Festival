@@ -19,5 +19,5 @@ public class UserCameraPreference
     /// </summary>
     public string DeviceFingerprint { get; set; } = "";
 
-    public DateTime UpdatedAt { get; set; } = AppTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = AppTime.Now;
 }

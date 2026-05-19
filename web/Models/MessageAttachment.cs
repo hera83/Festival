@@ -18,6 +18,6 @@ public class MessageAttachment
     public string ContentType { get; set; } = string.Empty;   // f.eks. image/jpeg, video/mp4
     public long FileSizeBytes { get; set; }
 
-    public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UploadedAt { get; set; } = DateTime.Now;
     public string UploadedByUserId { get; set; } = string.Empty;
 }

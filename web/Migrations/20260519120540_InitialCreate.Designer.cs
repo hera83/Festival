@@ -11,8 +11,8 @@ using web.Data;
 namespace web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260518182501_AddUserCameraPreference")]
-    partial class AddUserCameraPreference
+    [Migration("20260519120540_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -262,6 +262,181 @@ namespace web.Migrations
                         .IsUnique();
 
                     b.ToTable("DashboardSettings");
+                });
+
+            modelBuilder.Entity("web.Models.Message", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SeasonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SentByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VolunteerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("VolunteerOpenedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VolunteerId");
+
+                    b.HasIndex("SeasonId", "IsRead");
+
+                    b.HasIndex("SeasonId", "VolunteerId");
+
+                    b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("web.Models.MessageAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("MessageAttachments");
+                });
+
+            modelBuilder.Entity("web.Models.MessageReply", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SentByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("MessageReplies");
+                });
+
+            modelBuilder.Entity("web.Models.MessageTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CompletedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("MessageTasks");
                 });
 
             modelBuilder.Entity("web.Models.Post", b =>
@@ -526,6 +701,36 @@ namespace web.Migrations
                     b.ToTable("VolunteerLocationLogs");
                 });
 
+            modelBuilder.Entity("web.Models.VolunteerMeta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AppConfirmCode")
+                        .HasMaxLength(6)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("AppConfirmCodeExpiry")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VolunteerId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VolunteerId")
+                        .IsUnique();
+
+                    b.ToTable("VolunteerMetas");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -577,6 +782,50 @@ namespace web.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("web.Models.Message", b =>
+                {
+                    b.HasOne("web.Models.Volunteer", "Volunteer")
+                        .WithMany()
+                        .HasForeignKey("VolunteerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Volunteer");
+                });
+
+            modelBuilder.Entity("web.Models.MessageAttachment", b =>
+                {
+                    b.HasOne("web.Models.Message", "Message")
+                        .WithMany("Attachments")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("web.Models.MessageReply", b =>
+                {
+                    b.HasOne("web.Models.Message", "Message")
+                        .WithMany("Replies")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("web.Models.MessageTask", b =>
+                {
+                    b.HasOne("web.Models.Message", "Message")
+                        .WithMany("Tasks")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
             modelBuilder.Entity("web.Models.Shift", b =>
                 {
                     b.HasOne("web.Models.ShiftType", "ShiftType")
@@ -624,6 +873,26 @@ namespace web.Migrations
                     b.Navigation("CheckIn");
 
                     b.Navigation("Volunteer");
+                });
+
+            modelBuilder.Entity("web.Models.VolunteerMeta", b =>
+                {
+                    b.HasOne("web.Models.Volunteer", "Volunteer")
+                        .WithMany()
+                        .HasForeignKey("VolunteerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Volunteer");
+                });
+
+            modelBuilder.Entity("web.Models.Message", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Replies");
+
+                    b.Navigation("Tasks");
                 });
 
             modelBuilder.Entity("web.Models.ShiftType", b =>
