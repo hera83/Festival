@@ -20,4 +20,10 @@ public class MessageAttachment
 
     public DateTime UploadedAt { get; set; } = DateTime.Now;
     public string UploadedByUserId { get; set; } = string.Empty;
+
+    /// <summary>GPS-breddegrad (latitude) på det tidspunkt filen blev optaget. Null hvis GPS ikke var tilgængeligt.</summary>
+    public double? Latitude { get; set; }
+
+    /// <summary>GPS-længdegrad (longitude) på det tidspunkt filen blev optaget. Null hvis GPS ikke var tilgængeligt.</summary>
+    public double? Longitude { get; set; }
 }

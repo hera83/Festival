@@ -29,6 +29,10 @@ public class Message
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
 
+    /// <summary>GPS-koordinat for den frivillige da beskeden blev sendt. Null hvis GPS ikke var tilgængeligt.</summary>
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
     // Hvornår den frivillige sidst åbnede tråden (bruges til ulæst-logik i appen)
     public DateTime? VolunteerOpenedAt { get; set; }
 

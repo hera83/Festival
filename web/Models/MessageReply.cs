@@ -18,4 +18,8 @@ public class MessageReply
     public string Body { get; set; } = string.Empty;
 
     public DateTime SentAt { get; set; } = DateTime.Now;
+
+    /// <summary>GPS-koordinat for den frivillige da svaret blev sendt. Null hvis GPS ikke var tilgængeligt.</summary>
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 }

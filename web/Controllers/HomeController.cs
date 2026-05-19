@@ -474,6 +474,12 @@ namespace web.Controllers
             });
 
             existing.CheckedOutAt = now;
+
+            // Slet al GPS-data for den frivillige ved checkout
+            await _db.VolunteerGpsLogs
+                .Where(l => l.VolunteerId == request.VolunteerId && l.SeasonId == seasonId)
+                .ExecuteDeleteAsync();
+
             await _db.SaveChangesAsync();
 
             return Json(new { success = true, message = $"{volunteer.Name} er nu checket ud." });

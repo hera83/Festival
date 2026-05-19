@@ -140,7 +140,10 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
                 var shiftDate = DateOnly.FromDateTime(startLocal);
 
                 string status;
-                if (endLocal > now)
+                var today = DateOnly.FromDateTime(now);
+                if (endLocal > now && shiftDate == today)
+                    status = "i dag";
+                else if (endLocal > now)
                     status = "kommende";
                 else if (checkInDateSet.Contains(shiftDate))
                     status = "afviklet";
@@ -402,7 +405,9 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             Subject      = req.Subject.Trim(),
             Body         = req.Body.Trim(),
             IsRead       = false,
-            SentAt       = DateTime.Now
+            SentAt       = DateTime.Now,
+            Latitude     = req.Latitude,
+            Longitude    = req.Longitude
         });
 
         await db.SaveChangesAsync();
@@ -427,7 +432,9 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             SentByUserId = null,
             Direction    = MessageDirection.Inbound,
             Body         = req.Body.Trim(),
-            SentAt       = DateTime.Now
+            SentAt       = DateTime.Now,
+            Latitude     = req.Latitude,
+            Longitude    = req.Longitude
         });
 
         // Koordinator skal se det som ulæst igen
@@ -441,7 +448,8 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
     [HttpPost]
     public async Task<IActionResult> SendObservation(
         [FromForm] int volunteerId, [FromForm] int seasonId,
-        [FromForm] string message, [FromForm] string type, IFormFile? file)
+        [FromForm] string message, [FromForm] string type, IFormFile? file,
+        [FromForm] double? latitude, [FromForm] double? longitude)
     {
         if (string.IsNullOrWhiteSpace(message))
             return BadRequest(new { error = "Besked er påkrævet." });
@@ -489,19 +497,62 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             ContentType      = file.ContentType,
             FileSizeBytes    = file.Length,
             UploadedAt       = DateTime.Now,
-            UploadedByUserId = string.Empty
+            UploadedByUserId = string.Empty,
+            Latitude         = latitude,
+            Longitude        = longitude
         });
 
         await db.SaveChangesAsync();
         return Ok(new { sent = true });
     }
-}
 
+    [HttpPost]
+    public async Task<IActionResult> LogGpsLocation([FromBody] GpsLocationRequest req)
+    {
+        var volunteer = await db.Volunteers
+            .FirstOrDefaultAsync(v => v.Id == req.VolunteerId && v.SeasonId == req.SeasonId);
+
+        if (volunteer == null)
+            return Ok(); // fail silently – vi vil ikke forstyrre app-flowet
+
+        // Kun gem GPS-data hvis den frivillige er aktiv checket ind
+        var today = AppTime.CopenhagenToday;
+        var isCheckedIn = await db.VolunteerCheckIns
+            .AnyAsync(c => c.VolunteerId == volunteer.Id && c.SeasonId == volunteer.SeasonId
+                        && c.CheckInDate == today && c.CheckedOutAt == null);
+
+        if (!isCheckedIn)
+            return Ok(new { logged = false, reason = "not_checked_in" });
+
+        db.VolunteerGpsLogs.Add(new VolunteerGpsLog
+        {
+            VolunteerId   = volunteer.Id,
+            SeasonId      = volunteer.SeasonId,
+            VolunteerKey  = volunteer.Key,
+            VolunteerName = volunteer.Name,
+            Latitude      = req.Latitude,
+            Longitude     = req.Longitude,
+            Accuracy      = req.Accuracy,
+            Trigger       = req.Trigger ?? "Unknown",
+            LoggedAt      = AppTime.Now
+        });
+
+        // Slet GPS-logs der er ældre end 24 timer (løbende oprydning)
+        var cutoff = AppTime.Now.AddHours(-24);
+        await db.VolunteerGpsLogs
+            .Where(l => l.LoggedAt < cutoff)
+            .ExecuteDeleteAsync();
+
+        await db.SaveChangesAsync();
+        return Ok(new { logged = true });
+    }
+}
 
 public record LookupEmailRequest(string Email);
 public record SendCodeRequest(int VolunteerId);
 public record VerifyCodeRequest(int VolunteerId, string Code);
 public record SaveProfileRequest(int VolunteerId, int SeasonId, string? Email, string? Phone);
-public record SendBeskedRequest(int VolunteerId, int SeasonId, string Subject, string Body);
-public record BeskedReplyRequest(int MessageId, int VolunteerId, string Body);
+public record SendBeskedRequest(int VolunteerId, int SeasonId, string Subject, string Body, double? Latitude, double? Longitude);
+public record BeskedReplyRequest(int MessageId, int VolunteerId, string Body, double? Latitude, double? Longitude);
 public record MarkOpenedRequest(int MessageId, int VolunteerId);
+public record GpsLocationRequest(int VolunteerId, int SeasonId, double Latitude, double Longitude, double? Accuracy, string? Trigger);

@@ -4,9 +4,7 @@
     var downloadUrl = Url.Action("DownloadAttachment", "Beskeder");
     var replyUrl    = Url.Action("ReplyMessage", "Beskeder");
     var token       = Html.AntiForgeryToken();
-}
-
-<div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+}<div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
     <div>
         <h6 class="modal-title mb-0">
             <i class="bi bi-envelope-open me-2" style="color: var(--clr-brand);"></i>@msg.Subject
@@ -36,6 +34,15 @@
                 }
             </span>
             <span><i class="bi bi-clock me-1"></i>@msg.SentAt.ToString("dd/MM/yyyy HH:mm")</span>
+            @if (msg.Direction == web.Models.MessageDirection.Inbound && msg.Latitude.HasValue && msg.Longitude.HasValue)
+            {
+                <button type="button"
+                        onclick="obsShowGpsMap(@msg.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), @msg.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), 'Besked – @System.Web.HttpUtility.JavaScriptStringEncode(msg.Volunteer.Name)')"
+                        title="Vis GPS-lokation for denne besked"
+                        style="background:none;border:none;padding:0 2px;cursor:pointer;color:var(--clr-brand);font-size:1rem;line-height:1;vertical-align:middle;">
+                    <i class="bi bi-geo-alt-fill"></i>
+                </button>
+            }
         </div>
         <div class="p-3 rounded-3"
              style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; line-height:1.6; font-size:0.9rem;">@msg.Body</div>
@@ -49,6 +56,7 @@
                     var isImage = att.ContentType.StartsWith("image/");
                     var isVideo = att.ContentType.StartsWith("video/");
                     var attUrl  = $"{downloadUrl}?id={att.Id}";
+                    var hasGps  = att.Latitude.HasValue && att.Longitude.HasValue;
                     <div class="rounded-2 overflow-hidden"
                          style="border: 1px solid var(--clr-border); background: var(--clr-bg); max-width:180px;">
                         @if (isImage)
@@ -71,11 +79,21 @@
                                 <i class="bi bi-file-earmark fs-3" style="color: var(--clr-text-muted);"></i>
                             </div>
                         }
-                        <div class="px-2 py-1" style="font-size:0.7rem; color: var(--clr-text-muted);">
+                        <div class="px-2 py-1 d-flex align-items-center justify-content-between gap-1"
+                             style="font-size:0.7rem; color: var(--clr-text-muted);">
                             <a href="@attUrl" download="@att.OriginalFileName"
-                               style="color: var(--clr-info); text-decoration:none;">
+                               style="color: var(--clr-info); text-decoration:none; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                                 <i class="bi bi-download me-1"></i>@att.OriginalFileName
                             </a>
+                            @if (hasGps)
+                            {
+                                <button type="button"
+                                        onclick="obsShowGpsMap(@att.Latitude!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), @att.Longitude!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), '@System.Web.HttpUtility.JavaScriptStringEncode(att.OriginalFileName)')"
+                                        title="Vis GPS-lokation"
+                                        style="flex-shrink:0;background:none;border:none;padding:0;cursor:pointer;color:var(--clr-brand);font-size:0.95rem;line-height:1;">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                </button>
+                            }
                         </div>
                     </div>
                 }
@@ -86,26 +104,37 @@
     @* ── Svar-tråd ── *@
     <div id="thread-messages-@msg.Id" class="d-flex flex-column gap-2 mb-3">
         @foreach (var r in Model.Replies)
-        {
-            var isOutbound = r.Direction == web.Models.MessageDirection.Outbound;
-            <div class="d-flex @(isOutbound ? "justify-content-end" : "justify-content-start")">
-                <div style="max-width: 85%;">
-                    <div class="px-3 py-2 rounded-3"
-                         style="background: @(isOutbound ? "var(--clr-brand)" : "var(--clr-bg)");
-                                border: 1px solid var(--clr-border);
-                                white-space: pre-wrap; font-size:0.9rem; line-height:1.5;
-                                color: @(isOutbound ? "#fff" : "var(--clr-text)");">
-                        @r.Body
-                    </div>
-                    <div class="mt-1 px-1" style="font-size: 0.72rem; color: var(--clr-text-muted);
-                         text-align: @(isOutbound ? "right" : "left");">
-                        <i class="bi bi-person me-1"></i>@r.SenderName
-                        &nbsp;·&nbsp;
-                        <i class="bi bi-clock me-1"></i>@r.SentAt.ToString("dd/MM HH:mm")
+            {
+                var isOutbound = r.Direction == web.Models.MessageDirection.Outbound;
+                var hasReplyGps = !isOutbound && r.Latitude.HasValue && r.Longitude.HasValue;
+                <div class="d-flex @(isOutbound ? "justify-content-end" : "justify-content-start")">
+                    <div style="max-width: 85%;">
+                        <div class="px-3 py-2 rounded-3"
+                             style="background: @(isOutbound ? "var(--clr-brand)" : "var(--clr-bg)");
+                                    border: 1px solid var(--clr-border);
+                                    white-space: pre-wrap; font-size:0.9rem; line-height:1.5;
+                                    color: @(isOutbound ? "#fff" : "var(--clr-text)");">
+                            @r.Body
+                        </div>
+                        <div class="mt-1 px-1 d-flex align-items-center gap-1"
+                             style="font-size: 0.72rem; color: var(--clr-text-muted);
+                             justify-content: @(isOutbound ? "flex-end" : "flex-start");">
+                            <span><i class="bi bi-person me-1"></i>@r.SenderName</span>
+                            <span>&nbsp;·&nbsp;</span>
+                            <span><i class="bi bi-clock me-1"></i>@r.SentAt.ToString("dd/MM HH:mm")</span>
+                            @if (hasReplyGps)
+                            {
+                                <button type="button"
+                                        onclick="obsShowGpsMap(@r.Latitude!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), @r.Longitude!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), 'Svar – @System.Web.HttpUtility.JavaScriptStringEncode(r.SenderName)')"
+                                        title="Vis GPS-lokation for dette svar"
+                                        style="background:none;border:none;padding:0 2px;cursor:pointer;color:var(--clr-brand);font-size:1rem;line-height:1;">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                </button>
+                            }
+                        </div>
                     </div>
                 </div>
-            </div>
-        }
+            }
     </div>
 
     @* ── Opgaver ── *@
@@ -153,7 +182,7 @@
             <div class="d-flex justify-content-end">
                 <button type="submit" class="btn btn-sm"
                         style="background: var(--clr-brand); color:#fff; border:none;">
-                    <i class="bi bi-send me-1"></i>Send svar
+                    <i class="bi bi-send me-1"></i>Send
                 </button>
             </div>
         </form>
@@ -211,3 +240,65 @@
 })();
 </script>
 
+<!-- GPS kort popup -->
+<div id="obs-gps-modal-overlay" onclick="obsCloseGpsMap()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9050;align-items:center;justify-content:center;">
+    <div onclick="event.stopPropagation()"
+         style="background:var(--clr-surface);border-radius:14px;width:min(96vw,700px);
+                box-shadow:0 8px 40px rgba(0,0,0,0.55);overflow:hidden;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
+                    border-bottom:1px solid var(--clr-border);flex-shrink:0;">
+            <span style="font-weight:700;font-size:0.95rem;color:var(--clr-text);">
+                <i class="bi bi-geo-alt-fill me-2" style="color:var(--clr-brand);"></i>
+                <span id="obs-gps-modal-title">GPS-lokation</span>
+            </span>
+            <button onclick="obsCloseGpsMap()" type="button"
+                    style="background:none;border:none;color:var(--clr-text-muted);font-size:1.2rem;cursor:pointer;padding:0 4px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div style="width:100%;height:480px;flex-shrink:0;background:#e0e0e0;">
+            <iframe id="obs-gps-iframe"
+                    src="about:blank"
+                    style="width:100%;height:100%;border:none;display:block;"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                    allowfullscreen></iframe>
+        </div>
+        <div id="obs-gps-coords"
+             style="padding:8px 16px;font-size:0.78rem;color:var(--clr-text-muted);
+                    border-top:1px solid var(--clr-border);display:flex;align-items:center;
+                    justify-content:space-between;gap:8px;flex-shrink:0;">
+        </div>
+    </div>
+</div>
+
+<script>
+    window.obsShowGpsMap = function (lat, lng, filename) {
+        const overlay = document.getElementById('obs-gps-modal-overlay');
+        overlay.style.display = 'flex';
+
+        document.getElementById('obs-gps-modal-title').textContent = filename || 'GPS-lokation';
+        document.getElementById('obs-gps-coords').innerHTML =
+            `<span><i class="bi bi-crosshair me-1"></i>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>` +
+            `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener noreferrer" ` +
+            `style="color:var(--clr-brand);text-decoration:none;font-size:0.78rem;">` +
+            `<i class="bi bi-box-arrow-up-right me-1"></i>Åbn i Google Maps</a>`;
+
+        // OpenStreetMap embed via iframe — virker altid uden CDN eller scripts
+        const zoom = 16;
+        const delta = 0.003; // omtrent 300m bounding box
+        const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
+        const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+        document.getElementById('obs-gps-iframe').src = src;
+    };
+
+    window.obsCloseGpsMap = function () {
+        document.getElementById('obs-gps-modal-overlay').style.display = 'none';
+        document.getElementById('obs-gps-iframe').src = 'about:blank';
+    };
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') obsCloseGpsMap();
+    });
+</script>

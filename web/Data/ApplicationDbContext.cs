@@ -19,6 +19,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<MessageTask> MessageTasks => Set<MessageTask>();
     public DbSet<MessageReply> MessageReplies => Set<MessageReply>();
+    public DbSet<VolunteerGpsLog> VolunteerGpsLogs => Set<VolunteerGpsLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -165,6 +166,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.Message)
                 .WithMany(x => x.Replies)
                 .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<VolunteerGpsLog>(entity =>
+        {
+            entity.HasIndex(x => new { x.SeasonId, x.VolunteerId });
+            entity.HasIndex(x => x.LoggedAt);
+            entity.Property(x => x.VolunteerKey).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.VolunteerName).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Trigger).HasMaxLength(64).IsRequired();
+            entity.HasOne(x => x.Volunteer)
+                .WithMany()
+                .HasForeignKey(x => x.VolunteerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

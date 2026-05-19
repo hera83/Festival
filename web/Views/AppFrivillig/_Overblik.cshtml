@@ -145,7 +145,8 @@
         const activeLocation = ci.currentLocation;
 
         // Byg timeline: nyeste øverst
-        const timelineItems = [...logs].reverse().map((log, idx) => {
+        const reversedLogs = [...logs].reverse();
+        const timelineItems = reversedLogs.map((log, idx) => {
             const isLatest = idx === 0;
             let icon = 'bi-arrow-right-circle';
             let label = log.location || '—';
@@ -158,11 +159,16 @@
                 ? 'background:rgba(232,93,46,0.15);border:1px solid var(--clr-brand);border-radius:6px;padding:8px 10px;'
                 : 'background:var(--clr-surface);border:1px solid rgba(255,255,255,0.07);border-radius:6px;padding:8px 10px;';
 
+            // Ikke-aktive poster viser start → slut tid; aktiv post viser kun starttid
+            const timeLabel = (!isLatest && idx > 0)
+                ? `${formatTime(log.occurredAt)} – ${formatTime(reversedLogs[idx - 1].occurredAt)}`
+                : formatTime(log.occurredAt);
+
             return `<div class="d-flex align-items-start gap-2 mb-2" style="${badgeStyle}">
                 <i class="bi ${icon} mt-1" style="${colorStyle};font-size:1rem;"></i>
                 <div style="flex:1;">
                     <div style="font-size:0.9rem;color:var(--clr-text);font-weight:${isLatest ? '600' : '400'};">${label}</div>
-                    <div style="font-size:0.78rem;color:var(--clr-text-muted);">${formatTime(log.occurredAt)}</div>
+                    <div style="font-size:0.78rem;color:var(--clr-text-muted);">${timeLabel}</div>
                 </div>
                 ${isLatest && log.eventType !== 'CheckOut' ? '<span class="badge-ok" style="font-size:0.7rem;padding:2px 7px;border-radius:4px;">Aktiv</span>' : ''}
             </div>`;

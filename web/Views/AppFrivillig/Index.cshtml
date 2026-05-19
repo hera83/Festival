@@ -402,7 +402,11 @@
 
         document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (btn.classList.contains('active')) return;
+                if (btn.classList.contains('active')) {
+                    // Genindlæs den aktive fane
+                    loadTab(btn.dataset.url);
+                    return;
+                }
 
                 const previous = document.querySelector('.nav-item.active');
                 if (previous) previous.classList.remove('active');
@@ -485,6 +489,53 @@
 
         // Eksponér så _Beskeder.cshtml kan nulstille badge ved åbning
         window.refreshUnreadBadge = refreshUnreadBadge;
+
+        // ── GPS lokation logging ──────────────────────────────────────
+        function logGpsLocation(trigger) {
+            if (!navigator.geolocation) return;
+            const stored = localStorage.getItem('fv_volunteer');
+            if (!stored) return;
+            let vol;
+            try { vol = JSON.parse(stored); } catch { return; }
+            if (!vol?.id || !vol?.seasonId) return;
+
+            navigator.geolocation.getCurrentPosition(pos => {
+                fetch('/AppFrivillig/LogGpsLocation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        volunteerId: vol.id,
+                        seasonId: vol.seasonId,
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy ?? null,
+                        trigger: trigger
+                    })
+                }).catch(() => { /* ignorer netværksfejl */ });
+            }, () => { /* ignorer GPS-fejl */ }, {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 30000
+            });
+        }
+
+        // Log GPS ved åbning af appen
+        logGpsLocation('AppOpen');
+
+        // Log GPS ved nav-klik
+        document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                const triggerMap = {
+                    overblik: 'NavOverblik',
+                    vagter: 'NavVagter',
+                    observationer: 'NavObservationer',
+                    beskeder: 'NavBeskeder',
+                    profil: 'NavProfil'
+                };
+                logGpsLocation(triggerMap[tabName] || 'NavUnknown');
+            });
+        });
     </script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

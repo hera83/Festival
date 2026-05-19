@@ -1357,30 +1357,39 @@
     }
 
     // Drop-zone: pit-listen (frivillige kan droppes her → flyttes til Pit)
+    let _pitDropZoneAbort = null;
     function setupPitDropZone() {
+        if (_pitDropZoneAbort) _pitDropZoneAbort.abort();
+        _pitDropZoneAbort = new AbortController();
+        const sig = { signal: _pitDropZoneAbort.signal };
         pitList.addEventListener('dragover', e => {
             if (dragPayload?.type !== 'volunteer') return;
             e.preventDefault();
             pitList.classList.add('drop-zone-active');
-        });
-        pitList.addEventListener('dragleave', () => pitList.classList.remove('drop-zone-active'));
+        }, sig);
+        pitList.addEventListener('dragleave', () => pitList.classList.remove('drop-zone-active'), sig);
         pitList.addEventListener('drop', e => {
             e.preventDefault();
             pitList.classList.remove('drop-zone-active');
             if (!dragPayload || dragPayload.type !== 'volunteer') return;
             if (dragPayload.fromLocation === 'Pit') return;
             moveVolunteer(dragPayload.id, 'Pit');
-        });
+        }, sig);
     }
 
     // Drop-zone: kolonne (poster kan droppes her)
+    const _colDropZoneAborts = {};
     function setupColumnDropZone(colEl) {
+        const key = colEl.id || colEl.dataset.column;
+        if (_colDropZoneAborts[key]) _colDropZoneAborts[key].abort();
+        _colDropZoneAborts[key] = new AbortController();
+        const sig = { signal: _colDropZoneAborts[key].signal };
         colEl.addEventListener('dragover', e => {
             if (dragPayload?.type !== 'post') return;
             e.preventDefault();
             colEl.classList.add('drop-zone-active');
-        });
-        colEl.addEventListener('dragleave', () => colEl.classList.remove('drop-zone-active'));
+        }, sig);
+        colEl.addEventListener('dragleave', () => colEl.classList.remove('drop-zone-active'), sig);
         colEl.addEventListener('drop', e => {
             e.preventDefault();
             colEl.classList.remove('drop-zone-active');
@@ -1388,7 +1397,7 @@
             const newCol = parseInt(colEl.dataset.column);
             if (dragPayload.element.dataset.column == newCol) return;
             movePost(dragPayload.id, newCol);
-        });
+        }, sig);
     }
 
     // Drop-zone: frivillig-zone på en post

@@ -86,6 +86,8 @@ public class ReplyRowViewModel
     public DateTime SentAt      { get; set; }
     public MessageDirection Direction { get; set; }
     public string SenderName    { get; set; } = string.Empty;
+    public double? Latitude     { get; set; }
+    public double? Longitude    { get; set; }
 }
 
 // ── Besvar besked ────────────────────────────────────────────────

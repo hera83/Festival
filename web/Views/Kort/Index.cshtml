@@ -1,0 +1,153 @@
+@{
+    ViewData["Title"] = "Kort";
+}
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-0">
+    <div class="page-header mb-0" style="border-bottom:none; padding-bottom:0;">
+        <h1><i class="bi bi-map me-2" style="color: var(--clr-brand);"></i>Kort</h1>
+        <p class="mb-0">Live GPS-overblik over frivillige</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge" style="background:var(--clr-ok-bg);color:var(--clr-ok);font-size:0.78rem;padding:0.35em 0.75em;">
+            <i class="bi bi-circle-fill me-1" style="font-size:0.55rem;"></i>Under 1 time siden
+        </span>
+        <span class="badge" style="background:#6c3a00;color:#ffb347;font-size:0.78rem;padding:0.35em 0.75em;">
+            <i class="bi bi-circle-fill me-1" style="font-size:0.55rem;"></i>Over 1 time siden
+        </span>
+        <span id="kortStatusText" style="font-size:0.78rem;color:var(--clr-text-muted);"></span>
+    </div>
+</div>
+<hr style="border-color:var(--clr-border);margin:0.75rem 0 0.5rem;">
+
+<div class="card" style="flex:1;">
+    <div class="card-body p-0" style="position:relative;">
+        <div id="kortMap" style="height:calc(100vh - 185px); min-height:400px; border-radius:var(--radius-md);"></div>
+        <div id="kortNoData" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+             background:var(--clr-card);border:1px solid var(--clr-border);border-radius:var(--radius-md);
+             padding:1.5rem 2rem;text-align:center;z-index:1000;">
+            <i class="bi bi-geo-alt-fill" style="font-size:2rem;color:var(--clr-text-muted);"></i>
+            <p class="mb-0 mt-2" style="color:var(--clr-text-muted);">Ingen GPS-data tilgængeligt</p>
+            <small style="color:var(--clr-text-muted);">Data vises når frivillige er checked ind og har GPS aktiveret</small>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    var map = L.map('kortMap', { zoomControl: true });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Standard-zoom til Danmark hvis ingen data
+    map.setView([56.0, 10.0], 7);
+
+    var markers = {};
+    var firstLoad = true;
+
+    function makeIcon(isRecent) {
+        var color = isRecent ? '#22c55e' : '#f97316';
+        var shadow = isRecent ? 'rgba(34,197,94,0.35)' : 'rgba(249,115,22,0.35)';
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 16 16">'
+            + '<circle cx="8" cy="8" r="8" fill="' + shadow + '"/>'
+            + '<circle cx="8" cy="8" r="6" fill="' + color + '"/>'
+            + '<path fill="white" d="M8 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm0 6.5c-2.33 0-4 1.17-4 1.75V13h8v-.75c0-.58-1.67-1.75-4-1.75z"/>'
+            + '</svg>';
+        return L.divIcon({
+            html: svg,
+            className: '',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -18]
+        });
+    }
+
+    function formatAge(minutes) {
+        if (minutes < 1) return 'Lige nu';
+        if (minutes < 60) return Math.round(minutes) + ' min siden';
+        var h = Math.floor(minutes / 60);
+        var m = Math.round(minutes % 60);
+        return h + 't ' + (m > 0 ? m + 'm ' : '') + 'siden';
+    }
+
+    function loadData() {
+        fetch('/Kort/GpsData')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var count = data.length;
+                document.getElementById('kortStatusText').textContent =
+                    count === 0 ? '' : count + ' frivillig' + (count === 1 ? '' : 'e') + ' – sidst opdateret ' + new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                document.getElementById('kortNoData').style.display = count === 0 ? 'flex' : 'none';
+
+                // Fjern markører der ikke længere er i data
+                var currentIds = data.map(function (d) { return d.volunteerId; });
+                Object.keys(markers).forEach(function (id) {
+                    if (currentIds.indexOf(parseInt(id)) === -1) {
+                        map.removeLayer(markers[id]);
+                        delete markers[id];
+                    }
+                });
+
+                var bounds = [];
+
+                data.forEach(function (d) {
+                    var latlng = [d.latitude, d.longitude];
+                    bounds.push(latlng);
+
+                    var popup = '<div style="min-width:180px;font-size:0.875rem;">'
+                        + '<strong style="font-size:0.95rem;">' + escHtml(d.name) + '</strong><br>'
+                        + '<span style="color:#888;font-size:0.78rem;">' + formatAge(d.ageMinutes) + '</span>'
+                        + '<hr style="margin:0.4rem 0;border-color:#444;">'
+                        + (d.email ? '<div><i class="bi bi-envelope" style="color:#888;margin-right:4px;"></i>' + escHtml(d.email) + '</div>' : '')
+                        + (d.phone ? '<div><i class="bi bi-telephone" style="color:#888;margin-right:4px;"></i>' + escHtml(d.phone) + '</div>' : '')
+                        + '<div style="margin-top:0.35rem;font-size:0.78rem;color:#888;"><i class="bi bi-clock" style="margin-right:4px;"></i>' + escHtml(d.loggedAt) + '</div>'
+                        + (d.accuracy ? '<div style="font-size:0.75rem;color:#666;"><i class="bi bi-crosshair" style="margin-right:4px;"></i>Nøjagtighed: ±' + Math.round(d.accuracy) + ' m</div>' : '')
+                        + '</div>';
+
+                    if (markers[d.volunteerId]) {
+                        markers[d.volunteerId].setLatLng(latlng);
+                        markers[d.volunteerId].setIcon(makeIcon(d.isRecent));
+                        markers[d.volunteerId].getPopup().setContent(popup);
+                    } else {
+                        var m = L.marker(latlng, { icon: makeIcon(d.isRecent) })
+                            .bindPopup(popup, { maxWidth: 260 })
+                            .addTo(map);
+                        markers[d.volunteerId] = m;
+                    }
+                });
+
+                // Første load: zoom til alle markører
+                if (firstLoad && bounds.length > 0) {
+                    firstLoad = false;
+                    if (bounds.length === 1) {
+                        map.setView(bounds[0], 16);
+                    } else {
+                        map.fitBounds(bounds, { padding: [40, 40] });
+                    }
+                }
+            })
+            .catch(function () {
+                document.getElementById('kortStatusText').textContent = 'Fejl ved hentning af data';
+            });
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    loadData();
+    setInterval(loadData, 30000);
+})();
+</script>
+}

@@ -257,7 +257,9 @@ public class BeskederController(
                 Body       = r.Body,
                 SentAt     = r.SentAt,
                 Direction  = r.Direction,
-                SenderName = senderName
+                SenderName = senderName,
+                Latitude   = r.Latitude,
+                Longitude  = r.Longitude
             });
         }
 

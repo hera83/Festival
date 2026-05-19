@@ -45,6 +45,10 @@
     }
 
     function statusBadge(status) {
+        if (status === 'i dag')
+            return `<span style="font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(232,93,46,0.18);color:var(--clr-brand);border:1px solid rgba(232,93,46,0.4);white-space:nowrap;">
+                        <i class="bi bi-star-fill me-1"></i>I dag
+                    </span>`;
         if (status === 'kommende')
             return `<span style="font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(13,110,253,0.18);color:#6ea8fe;border:1px solid rgba(13,110,253,0.35);white-space:nowrap;">
                         <i class="bi bi-clock me-1"></i>Kommende
@@ -61,6 +65,7 @@
     }
 
     function borderColor(status) {
+        if (status === 'i dag')      return 'border-left:3px solid var(--clr-brand);';
         if (status === 'afviklet')   return 'border-left:3px solid var(--clr-ok);';
         if (status === 'udeblivelse') return 'border-left:3px solid var(--clr-alarm);';
         return 'border-left:3px solid rgba(13,110,253,0.5);';
@@ -107,12 +112,16 @@
                 </div>`).join('');
 
             // Tæl statuser
+            const nIDag       = shifts.filter(s => s.status === 'i dag').length;
             const nKommende   = shifts.filter(s => s.status === 'kommende').length;
             const nAfviklet   = shifts.filter(s => s.status === 'afviklet').length;
             const nUdeblivelse = shifts.filter(s => s.status === 'udeblivelse').length;
 
             body.innerHTML = `
                 <div class="d-flex gap-2 mb-3 flex-wrap">
+                    ${nIDag > 0 ? `<span style="font-size:0.78rem;padding:3px 10px;border-radius:20px;background:rgba(232,93,46,0.15);color:var(--clr-brand);border:1px solid rgba(232,93,46,0.35);">
+                        <i class="bi bi-star-fill me-1"></i>${nIDag} i dag
+                    </span>` : ''}
                     <span style="font-size:0.78rem;padding:3px 10px;border-radius:20px;background:rgba(13,110,253,0.12);color:#6ea8fe;border:1px solid rgba(13,110,253,0.25);">
                         <i class="bi bi-clock me-1"></i>${nKommende} kommende
                     </span>
