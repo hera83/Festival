@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using web.Models;
 
 namespace web.Data;
@@ -24,6 +25,28 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Global fix: SQLite gemmer DateTime som tekst og konverterer Kind=Local til UTC.
+        // Denne converter sikrer at ALLE DateTime-kolonner gemmes og læses som Unspecified,
+        // så SQLite aldrig forsøger at konvertere tidszoner.
+        var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
+            v => DateTime.SpecifyKind(v, DateTimeKind.Unspecified),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Unspecified)
+        );
+        var nullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Unspecified) : v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Unspecified) : v
+        );
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                    property.SetValueConverter(dateTimeConverter);
+                else if (property.ClrType == typeof(DateTime?))
+                    property.SetValueConverter(nullableDateTimeConverter);
+            }
+        }
 
         builder.Entity<Volunteer>(entity =>
         {

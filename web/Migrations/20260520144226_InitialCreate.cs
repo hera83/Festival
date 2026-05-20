@@ -272,6 +272,8 @@ namespace web.Migrations
                     ReadAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                     IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
                     DeletedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Latitude = table.Column<double>(type: "REAL", nullable: true),
+                    Longitude = table.Column<double>(type: "REAL", nullable: true),
                     VolunteerOpenedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -337,6 +339,33 @@ namespace web.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "VolunteerGpsLogs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    VolunteerId = table.Column<int>(type: "INTEGER", nullable: false),
+                    SeasonId = table.Column<int>(type: "INTEGER", nullable: false),
+                    VolunteerKey = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    VolunteerName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Latitude = table.Column<double>(type: "REAL", nullable: false),
+                    Longitude = table.Column<double>(type: "REAL", nullable: false),
+                    Accuracy = table.Column<double>(type: "REAL", nullable: true),
+                    Trigger = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    LoggedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VolunteerGpsLogs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VolunteerGpsLogs_Volunteers_VolunteerId",
+                        column: x => x.VolunteerId,
+                        principalTable: "Volunteers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "VolunteerMetas",
                 columns: table => new
                 {
@@ -345,6 +374,8 @@ namespace web.Migrations
                     VolunteerId = table.Column<int>(type: "INTEGER", nullable: false),
                     AppConfirmCode = table.Column<string>(type: "TEXT", maxLength: 6, nullable: true),
                     AppConfirmCodeExpiry = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    AppInstalledAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    AppDeviceName = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -371,7 +402,9 @@ namespace web.Migrations
                     ContentType = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                     FileSizeBytes = table.Column<long>(type: "INTEGER", nullable: false),
                     UploadedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UploadedByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false)
+                    UploadedByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    Latitude = table.Column<double>(type: "REAL", nullable: true),
+                    Longitude = table.Column<double>(type: "REAL", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -394,7 +427,9 @@ namespace web.Migrations
                     SentByUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: true),
                     Direction = table.Column<int>(type: "INTEGER", nullable: false),
                     Body = table.Column<string>(type: "TEXT", nullable: false),
-                    SentAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    SentAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Latitude = table.Column<double>(type: "REAL", nullable: true),
+                    Longitude = table.Column<double>(type: "REAL", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -413,7 +448,7 @@ namespace web.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    MessageId = table.Column<int>(type: "INTEGER", nullable: false),
+                    MessageId = table.Column<int>(type: "INTEGER", nullable: true),
                     Title = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
                     Description = table.Column<string>(type: "TEXT", nullable: true),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
@@ -590,6 +625,21 @@ namespace web.Migrations
                 column: "VolunteerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VolunteerGpsLogs_LoggedAt",
+                table: "VolunteerGpsLogs",
+                column: "LoggedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VolunteerGpsLogs_SeasonId_VolunteerId",
+                table: "VolunteerGpsLogs",
+                columns: new[] { "SeasonId", "VolunteerId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VolunteerGpsLogs_VolunteerId",
+                table: "VolunteerGpsLogs",
+                column: "VolunteerId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VolunteerLocationLogs_CheckInId",
                 table: "VolunteerLocationLogs",
                 column: "CheckInId");
@@ -655,6 +705,9 @@ namespace web.Migrations
 
             migrationBuilder.DropTable(
                 name: "UserCameraPreferences");
+
+            migrationBuilder.DropTable(
+                name: "VolunteerGpsLogs");
 
             migrationBuilder.DropTable(
                 name: "VolunteerLocationLogs");

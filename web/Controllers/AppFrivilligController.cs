@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
@@ -268,10 +268,11 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         meta.AppConfirmCode = null;
         meta.AppConfirmCodeExpiry = null;
-        // Første gang appen aktiveres – gem installationstidspunkt og enhed
+        // Gem installationstidspunkt første gang, og opdater altid enhedsnavn
         if (meta.AppInstalledAt == null)
             meta.AppInstalledAt = AppTime.Now;
-        meta.AppDeviceName = ParseDeviceName(Request.Headers.UserAgent.ToString());
+        var parsedDevice = ParseDeviceName(Request.Headers.UserAgent.ToString());
+        meta.AppDeviceName = parsedDevice;
         meta.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
@@ -383,7 +384,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             .FirstOrDefaultAsync(m => m.Id == req.MessageId && m.VolunteerId == req.VolunteerId);
         if (msg == null) return Ok(); // fail silently
 
-        msg.VolunteerOpenedAt = DateTime.Now;
+        msg.VolunteerOpenedAt = AppTime.Now;
         await db.SaveChangesAsync();
         return Ok();
     }
@@ -409,7 +410,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             Subject      = req.Subject.Trim(),
             Body         = req.Body.Trim(),
             IsRead       = false,
-            SentAt       = DateTime.Now,
+            SentAt       = AppTime.Now,
             Latitude     = req.Latitude,
             Longitude    = req.Longitude
         });
@@ -436,7 +437,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             SentByUserId = null,
             Direction    = MessageDirection.Inbound,
             Body         = req.Body.Trim(),
-            SentAt       = DateTime.Now,
+            SentAt       = AppTime.Now,
             Latitude     = req.Latitude,
             Longitude    = req.Longitude
         });
@@ -487,7 +488,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             Subject      = subject,
             Body         = message.Trim(),
             IsRead       = false,
-            SentAt       = DateTime.Now
+            SentAt       = AppTime.Now
         };
 
         db.Messages.Add(msg);
@@ -500,7 +501,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             StoredFileName   = storedName,
             ContentType      = file.ContentType,
             FileSizeBytes    = file.Length,
-            UploadedAt       = DateTime.Now,
+            UploadedAt       = AppTime.Now,
             UploadedByUserId = string.Empty,
             Latitude         = latitude,
             Longitude        = longitude
@@ -554,12 +555,16 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
     {
         if (string.IsNullOrWhiteSpace(userAgent)) return "Ukendt enhed";
 
-        // Samsung
-        var m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Samsung[- ]([A-Z0-9\-]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (m.Success) return $"Samsung {m.Groups[1].Value}";
+        // Samsung-model fra Android UA: fx (Linux; Android 14; SM-K926B Build/...)
+        var m = System.Text.RegularExpressions.Regex.Match(userAgent, @"\bSM-[A-Z0-9]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (m.Success) return $"Samsung {m.Value.ToUpper()}";
 
-        // Generisk Android-model: (Linux; Android X.X; ModelName)
-        m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Android [^;]+;\s*([^)]+)\)");
+        // Samsung eksplicit i UA: fx "SAMSUNG SM-G991B" eller "Samsung Galaxy S21"
+        m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Samsung[- ]([^\s/;)]+(?:\s+[^\s/;)]+)*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (m.Success) return $"Samsung {m.Groups[1].Value.Trim()}";
+
+        // Generisk Android-model: (Linux; Android X.X; ModelName Build/...) – strip Build/-delen
+        m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Android [^;]+;\s*([^);]+?)(?:\s+Build/[^)]*)?[);]");
         if (m.Success)
         {
             var model = m.Groups[1].Value.Trim();

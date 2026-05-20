@@ -141,7 +141,7 @@ public class BeskederController(
                 (t.Message != null && t.Message.Subject.ToLower().Contains(ql)));
         }
 
-        var now = DateTime.Now;
+        var now = AppTime.Now;
         query = query
             .OrderBy(t =>
                 t.Status != MessageTaskStatus.Udført && t.DueDate.HasValue && t.DueDate.Value < now ? 0 :
@@ -214,9 +214,9 @@ public class BeskederController(
             Subject       = vm.Subject.Trim(),
             Body          = vm.Body.Trim(),
             IsRead        = true,   // Koordinator har selv skrevet den – allerede "læst" for koordinator
-            ReadAt        = DateTime.Now,
+            ReadAt        = AppTime.Now,
             VolunteerOpenedAt = null, // Frivillig har ikke set den endnu
-            SentAt        = DateTime.Now
+            SentAt        = AppTime.Now
         };
 
         db.Messages.Add(msg);
@@ -241,7 +241,7 @@ public class BeskederController(
         if (!msg.IsRead)
         {
             msg.IsRead = true;
-            msg.ReadAt = DateTime.Now;
+            msg.ReadAt = AppTime.Now;
             await db.SaveChangesAsync();
         }
 
@@ -301,7 +301,7 @@ public class BeskederController(
             SentByUserId = user.Id,
             Direction    = MessageDirection.Outbound,
             Body         = vm.Body.Trim(),
-            SentAt       = DateTime.Now
+            SentAt       = AppTime.Now
         });
 
         // Koordinator har svaret – beskrives allerede som læst fra koordinators side.
@@ -329,7 +329,7 @@ public class BeskederController(
             SentByUserId = null, // Frivillig har ingen AppUser
             Direction    = MessageDirection.Inbound,
             Body         = body.Trim(),
-            SentAt       = DateTime.Now
+            SentAt       = AppTime.Now
         });
 
         // Frivillig har svaret – sæt koordinator-ulæst
@@ -366,7 +366,7 @@ public class BeskederController(
         {
             // Soft delete – opgaver er tilknyttet
             msg.IsDeleted  = true;
-            msg.DeletedAt  = DateTime.Now;
+            msg.DeletedAt  = AppTime.Now;
             await db.SaveChangesAsync();
             return Json(new { success = true, message = "Besked skjult (opgaver bevaret)." });
         }
@@ -416,7 +416,7 @@ public class BeskederController(
             Title           = vm.Title.Trim(),
             Description     = string.IsNullOrWhiteSpace(vm.Description) ? null : vm.Description.Trim(),
             Status          = MessageTaskStatus.Åben,
-            CreatedAt       = DateTime.Now,
+            CreatedAt       = AppTime.Now,
             CreatedByUserId = user.Id,
             DueDate         = due
         });
@@ -445,7 +445,7 @@ public class BeskederController(
             Title           = title.Trim(),
             Description     = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
             Status          = MessageTaskStatus.Åben,
-            CreatedAt       = DateTime.Now,
+            CreatedAt       = AppTime.Now,
             CreatedByUserId = user.Id,
             DueDate         = due
         });
@@ -464,7 +464,7 @@ public class BeskederController(
         if (status == MessageTaskStatus.Udført)
         {
             var user = await userManager.GetUserAsync(User);
-            task.CompletedAt       = DateTime.Now;
+            task.CompletedAt       = AppTime.Now;
             task.CompletedByUserId = user?.Id;
         }
         else
@@ -535,7 +535,7 @@ public class BeskederController(
         if (status == MessageTaskStatus.Udført)
         {
             var user = await userManager.GetUserAsync(User);
-            task.CompletedAt = DateTime.Now;
+            task.CompletedAt = AppTime.Now;
             task.CompletedByUserId = user?.Id;
         }
         else
@@ -573,7 +573,7 @@ public class BeskederController(
         {
             Author = $"{authorName} ({role})",
             Note = note.Trim(),
-            CreatedAt = DateTime.Now
+            CreatedAt = AppTime.Now
         });
 
         task.Description = SerializeTaskMeta(meta);

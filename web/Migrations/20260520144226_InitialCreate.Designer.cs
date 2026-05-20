@@ -11,8 +11,8 @@ using web.Data;
 namespace web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260519124806_AddAttachmentGpsCoords")]
-    partial class AddAttachmentGpsCoords
+    [Migration("20260520144226_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -286,6 +286,12 @@ namespace web.Migrations
                     b.Property<bool>("IsRead")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("TEXT");
 
@@ -383,6 +389,12 @@ namespace web.Migrations
                     b.Property<int>("Direction")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
                     b.Property<int>("MessageId")
                         .HasColumnType("INTEGER");
 
@@ -427,7 +439,7 @@ namespace web.Migrations
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("MessageId")
+                    b.Property<int?>("MessageId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Status")
@@ -770,6 +782,12 @@ namespace web.Migrations
                     b.Property<DateTime?>("AppConfirmCodeExpiry")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AppDeviceName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("AppInstalledAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -876,8 +894,7 @@ namespace web.Migrations
                     b.HasOne("web.Models.Message", "Message")
                         .WithMany("Tasks")
                         .HasForeignKey("MessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Message");
                 });

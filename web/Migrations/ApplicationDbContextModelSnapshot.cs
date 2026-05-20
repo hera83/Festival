@@ -779,10 +779,10 @@ namespace web.Migrations
                     b.Property<DateTime?>("AppConfirmCodeExpiry")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("AppInstalledAt")
+                    b.Property<string>("AppDeviceName")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AppDeviceName")
+                    b.Property<DateTime?>("AppInstalledAt")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
