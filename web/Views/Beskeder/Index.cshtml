@@ -112,6 +112,16 @@
             await loadPanel('tasks', true);
         };
 
+        window.loadBeskederPanel = loadPanel;
+
+        document.addEventListener('click', async function (e) {
+            var btn = e.target.closest('#btnRefreshUnread, #btnRefreshRead, #btnRefreshTasks');
+            if (!btn || !active) return;
+            var icon = btn.querySelector('i');
+            icon.classList.add('spinning');
+            try { await loadPanel(active, true); } finally { icon.classList.remove('spinning'); }
+        });
+
         document.querySelectorAll('.stat-card').forEach(card => {
             card.addEventListener('click', function () {
                 loadPanel(this.dataset.panel, false);
@@ -138,5 +148,7 @@
         .stat-card { transition: outline 0.15s, box-shadow 0.15s; }
         .stat-card:hover { outline: 2px solid var(--clr-brand); }
         .stat-card-active { outline: 2px solid var(--clr-brand); box-shadow: 0 0 0 4px var(--clr-brand-dim); }
+        @@keyframes spin-loop { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinning { animation: spin-loop 0.6s linear infinite; }
     </style>
 }

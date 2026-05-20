@@ -157,8 +157,11 @@
 @* Resultat-zone *@
 <div id="tasks-result-zone">
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-check2-square me-2"></i>Opgaver (<span>@Model.TotalCount</span>)</span>
+            <button type="button" id="btnRefreshTasks" class="btn btn-sm" style="background:transparent;border:1px solid var(--clr-border);color:var(--clr-text-muted);" title="Opdater tabel">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -548,5 +551,7 @@
         var openBtn = document.querySelector('.task-open-btn[data-id="' + wanted + '"]');
         if (openBtn) openBtn.click();
     }
+
+    bindZoneEvents();
 })();
 </script>

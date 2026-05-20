@@ -1,6 +1,13 @@
-<div class="fv-page-header">
-    <i class="bi bi-calendar-week fv-page-icon"></i>
-    <h2 class="fv-page-title">Vagter</h2>
+<div class="fv-page-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-calendar-week fv-page-icon"></i>
+        <h2 class="fv-page-title mb-0">Vagter</h2>
+    </div>
+    <span id="vagter-timer-badge" style="display:none;font-size:0.78rem;padding:3px 10px;border-radius:20px;
+          background:rgba(255,255,255,0.05);color:var(--clr-text-muted);border:1px solid var(--clr-border);"
+          title="Antal timer på afviklede vagter">
+        <i class="bi bi-hourglass-split me-1"></i><span id="vagter-timer-label"></span> frivillig
+    </span>
 </div>
 
 <div id="vagter-not-logged-in" style="display:none;">
@@ -116,6 +123,32 @@
             const nKommende   = shifts.filter(s => s.status === 'kommende').length;
             const nAfviklet   = shifts.filter(s => s.status === 'afviklet').length;
             const nUdeblivelse = shifts.filter(s => s.status === 'udeblivelse').length;
+
+            // Beregn afviklede timer (kun gennemførte vagter)
+            const afvikledeShifts = shifts.filter(s => s.status === 'afviklet');
+            const afvikledeMin = afvikledeShifts.reduce((sum, s) => {
+                const ms = new Date(s.endLocal) - new Date(s.startLocal);
+                return sum + (ms > 0 ? ms / 60000 : 0);
+            }, 0);
+
+            // Brug check-in minutter fra serveren (faktiske stemplede minutter)
+            let totalMin = data.completedMinutes || 0;
+
+            // Læg aktiv check-in (ingen checkout) til oven i
+            if (data.activeCheckInAt) {
+                const activeMs = Date.now() - new Date(data.activeCheckInAt).getTime();
+                if (activeMs > 0) totalMin += activeMs / 60000;
+            }
+
+            const afvikledeTimer = Math.floor(totalMin / 60);
+            const afvikledeRest  = Math.round(totalMin % 60);
+            const timerLabel = afvikledeRest > 0
+                ? `${afvikledeTimer}t ${afvikledeRest}m`
+                : `${afvikledeTimer}t`;
+
+            // Vis timer-badge i headeren
+            document.getElementById('vagter-timer-label').textContent = timerLabel;
+            document.getElementById('vagter-timer-badge').style.display = '';
 
             body.innerHTML = `
                 <div class="d-flex gap-2 mb-3 flex-wrap">

@@ -123,14 +123,24 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         var now = AppTime.CopenhagenNow;
 
-        // Find alle dage hvor den frivillige har haft check-in denne sæson
-        var checkInDates = await db.VolunteerCheckIns
+        // Find alle check-ins denne sæson
+        var checkIns = await db.VolunteerCheckIns
             .Where(c => c.VolunteerId == volunteerId && c.SeasonId == seasonId)
-            .Select(c => c.CheckInDate)
-            .Distinct()
             .ToListAsync();
 
-        var checkInDateSet = checkInDates.ToHashSet();
+        var checkInDateSet = checkIns.Select(c => c.CheckInDate).Distinct().ToHashSet();
+
+        // Afviklede check-ins: har checkout → tæl faktiske minutter
+        var completedMinutes = checkIns
+            .Where(c => c.CheckedOutAt.HasValue)
+            .Sum(c => (c.CheckedOutAt!.Value - c.CheckedInAt).TotalMinutes);
+
+        // Aktiv check-in (ingen checkout)
+        var activeCheckInAt = checkIns
+            .Where(c => !c.CheckedOutAt.HasValue)
+            .OrderBy(c => c.CheckedInAt)
+            .Select(c => (DateTime?)c.CheckedInAt)
+            .FirstOrDefault();
 
         var result = shifts
             .Select(s =>
@@ -163,7 +173,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             .OrderByDescending(s => s.startLocal)
             .ToList();
 
-        return Ok(new { shifts = result });
+        return Ok(new { shifts = result, completedMinutes, activeCheckInAt });
     }
 
     [HttpGet]
