@@ -268,6 +268,10 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         meta.AppConfirmCode = null;
         meta.AppConfirmCodeExpiry = null;
+        // Første gang appen aktiveres – gem installationstidspunkt og enhed
+        if (meta.AppInstalledAt == null)
+            meta.AppInstalledAt = AppTime.Now;
+        meta.AppDeviceName = ParseDeviceName(Request.Headers.UserAgent.ToString());
         meta.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
 
@@ -545,6 +549,33 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         await db.SaveChangesAsync();
         return Ok(new { logged = true });
+    }
+    private static string ParseDeviceName(string userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent)) return "Ukendt enhed";
+
+        // Samsung
+        var m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Samsung[- ]([A-Z0-9\-]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (m.Success) return $"Samsung {m.Groups[1].Value}";
+
+        // Generisk Android-model: (Linux; Android X.X; ModelName)
+        m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Android [^;]+;\s*([^)]+)\)");
+        if (m.Success)
+        {
+            var model = m.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(model)) return model;
+        }
+
+        // iPhone
+        if (userAgent.Contains("iPhone")) return "iPhone";
+        // iPad
+        if (userAgent.Contains("iPad")) return "iPad";
+        // Windows
+        if (userAgent.Contains("Windows")) return "Windows";
+        // Mac
+        if (userAgent.Contains("Macintosh")) return "Mac";
+
+        return "Ukendt enhed";
     }
 }
 

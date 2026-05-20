@@ -142,6 +142,10 @@ public class FrivilligController(ApplicationDbContext db) : Controller
             .Select(g => new { VolunteerId = g.Key, LastAppUsedAt = g.Max(x => x.LoggedAt) })
             .ToDictionaryAsync(x => x.VolunteerId, x => (DateTime?)x.LastAppUsedAt);
 
+        var metaLookup = await db.VolunteerMetas
+            .Where(m => volunteerIds.Contains(m.VolunteerId))
+            .ToDictionaryAsync(m => m.VolunteerId, m => m);
+
         var vm = new VolunteersPagedViewModel
         {
             Volunteers = pagedVolunteers
@@ -152,7 +156,9 @@ public class FrivilligController(ApplicationDbContext db) : Controller
                     Name = v.Name,
                     Email = v.Email,
                     PhoneNumber = v.PhoneNumber,
-                    LastAppUsedAt = appUsageLookup.GetValueOrDefault(v.Id)
+                    LastAppUsedAt = appUsageLookup.GetValueOrDefault(v.Id),
+                    AppInstalledAt = metaLookup.TryGetValue(v.Id, out var meta) ? meta.AppInstalledAt : null,
+                    AppDeviceName  = metaLookup.TryGetValue(v.Id, out var meta2) ? meta2.AppDeviceName : null
                 })
                 .ToList(),
             Page       = page,

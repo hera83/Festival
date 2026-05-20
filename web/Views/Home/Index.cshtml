@@ -722,7 +722,7 @@
             const tr = document.createElement('tr');
             tr.style.borderColor = 'var(--clr-border)';
             const phone = v.phoneNumber
-                ? `<a href="tel:${escHtml(v.phoneNumber)}" style="color:var(--clr-info);text-decoration:none;" title="Ring op"><i class="bi bi-telephone me-1"></i>${escHtml(v.phoneNumber)}</a>`
+                ? `<span style="color:var(--clr-info);"><i class="bi bi-telephone me-1"></i>${escHtml(v.phoneNumber)}</span>`
                 : '<span style="color:var(--clr-text-dim);">—</span>';
             const start = parseLocalDate(v.earliestStart);
             const startStr = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });

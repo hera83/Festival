@@ -146,12 +146,25 @@
                                 <td class="align-middle">@(v.Email ?? "—")</td>
                                 <td class="align-middle">@(v.PhoneNumber ?? "—")</td>
                                 <td class="align-middle">
+                                    @{
+                                        string appBadgeTooltip = "";
+                                        if (v.AppInstalled)
+                                        {
+                                            var tooltipParts = new System.Collections.Generic.List<string>();
+                                            if (!string.IsNullOrWhiteSpace(v.AppDeviceName))
+                                                tooltipParts.Add(v.AppDeviceName);
+                                            if (v.AppInstalledAt.HasValue)
+                                                tooltipParts.Add("Installeret: " + v.AppInstalledAt.Value.ToString("dd/MM/yyyy HH:mm"));
+                                            else if (v.LastAppUsedAt.HasValue)
+                                                tooltipParts.Add("Sidst aktiv: " + v.LastAppUsedAt.Value.ToString("dd/MM/yyyy HH:mm"));
+                                            appBadgeTooltip = tooltipParts.Count > 0 ? string.Join(" · ", tooltipParts) : "App aktiveret";
+                                        }
+                                    }
                                     @if (v.AppInstalled)
                                     {
-                                        <span class="badge badge-ok"><i class="bi bi-phone me-1"></i>Ja</span>
-                                        <i class="bi bi-info-circle ms-1"
-                                           style="color:var(--clr-text-muted);cursor:help;"
-                                           title="Sidst aktiv: @v.LastAppUsedAt?.ToString("dd/MM/yyyy HH:mm")"></i>
+                                        <span class="badge badge-ok" title="@appBadgeTooltip" style="cursor:default;">
+                                            <i class="bi bi-phone me-1"></i>Ja
+                                        </span>
                                     }
                                     else
                                     {

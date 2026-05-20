@@ -49,7 +49,9 @@ public class VolunteerRowViewModel
     public string? Email { get; set; }
     public string? PhoneNumber { get; set; }
     public DateTime? LastAppUsedAt { get; set; }
-    public bool AppInstalled => LastAppUsedAt.HasValue;
+    public DateTime? AppInstalledAt { get; set; }
+    public string? AppDeviceName { get; set; }
+    public bool AppInstalled => AppInstalledAt.HasValue || LastAppUsedAt.HasValue;
 }
 
 // ── Vagttyper ────────────────────────────────────────────────────
