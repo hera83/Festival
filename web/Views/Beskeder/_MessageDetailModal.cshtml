@@ -61,16 +61,29 @@
                          style="border: 1px solid var(--clr-border); background: var(--clr-bg); max-width:180px;">
                         @if (isImage)
                         {
-                            <a href="@attUrl" target="_blank">
+                            <button type="button"
+                                    class="msg-media-preview-trigger"
+                                    data-media-type="image"
+                                    data-media-src="@attUrl"
+                                    data-media-name="@att.OriginalFileName"
+                                    style="border:none;background:none;padding:0;width:100%;display:block;">
                                 <img src="@attUrl" alt="@att.OriginalFileName"
-                                     style="width:180px; height:120px; object-fit:cover; display:block;" />
-                            </a>
+                                     style="width:180px; height:120px; object-fit:cover; display:block; cursor:zoom-in;" />
+                            </button>
                         }
                         else if (isVideo)
                         {
-                            <video controls style="width:180px; height:120px; display:block; object-fit:cover;">
-                                <source src="@attUrl" type="@att.ContentType" />
-                            </video>
+                            <button type="button"
+                                    class="msg-media-preview-trigger"
+                                    data-media-type="video"
+                                    data-media-src="@attUrl"
+                                    data-media-content-type="@att.ContentType"
+                                    data-media-name="@att.OriginalFileName"
+                                    style="border:none;background:none;padding:0;width:100%;display:block;">
+                                <video muted style="width:180px; height:120px; display:block; object-fit:cover; pointer-events:none;">
+                                    <source src="@attUrl" type="@att.ContentType" />
+                                </video>
+                            </button>
                         }
                         else
                         {
@@ -81,10 +94,24 @@
                         }
                         <div class="px-2 py-1 d-flex align-items-center justify-content-between gap-1"
                              style="font-size:0.7rem; color: var(--clr-text-muted);">
-                            <a href="@attUrl" download="@att.OriginalFileName"
-                               style="color: var(--clr-info); text-decoration:none; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                <i class="bi bi-download me-1"></i>@att.OriginalFileName
-                            </a>
+                            <div class="d-flex align-items-center gap-2" style="min-width:0;">
+                                <a href="@attUrl" download="@att.OriginalFileName"
+                                   style="color: var(--clr-info); text-decoration:none; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:95px;">
+                                    <i class="bi bi-download me-1"></i>@att.OriginalFileName
+                                </a>
+                                @if (isImage || isVideo)
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm msg-media-preview-trigger"
+                                            data-media-type="@(isImage ? "image" : "video")"
+                                            data-media-src="@attUrl"
+                                            data-media-content-type="@att.ContentType"
+                                            data-media-name="@att.OriginalFileName"
+                                            style="padding:0 .35rem;line-height:1.25;font-size:.68rem;background:var(--clr-surface);border:1px solid var(--clr-border);color:var(--clr-text);flex-shrink:0;">
+                                        <i class="bi bi-arrows-fullscreen"></i>
+                                    </button>
+                                }
+                            </div>
                             @if (hasGps)
                             {
                                 <button type="button"
@@ -203,6 +230,40 @@
     </button>
 </div>
 
+<div class="modal fade" id="messageMediaPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0" id="messageMediaPreviewTitle">
+                    <i class="bi bi-arrows-fullscreen me-2" style="color: var(--clr-brand);"></i>Vedhæftning
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body p-2 p-md-3" style="background: var(--clr-surface);">
+                <div class="rounded-3 d-flex align-items-center justify-content-center"
+                     style="min-height: 55vh; background: var(--clr-bg); border: 1px solid var(--clr-border);">
+                    <img id="messageMediaPreviewImage" alt="Preview" style="display:none;max-width:100%;max-height:75vh;object-fit:contain;" />
+                    <video id="messageMediaPreviewVideo" controls style="display:none;max-width:100%;max-height:75vh;object-fit:contain;">
+                        <source id="messageMediaPreviewVideoSource" src="" type="video/mp4" />
+                    </video>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <a id="messageMediaPreviewDownload"
+                   class="btn btn-sm"
+                   href="#"
+                   download
+                   style="background: var(--clr-info); color:#fff; border:none;">
+                    <i class="bi bi-download me-1"></i>Download
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     document.querySelectorAll('.detail-open-task-btn').forEach(function (btn) {
@@ -220,6 +281,55 @@
     });
 
     const form = document.getElementById('replyForm-@msg.Id');
+    const mediaModalEl = document.getElementById('messageMediaPreviewModal');
+    const mediaImage = document.getElementById('messageMediaPreviewImage');
+    const mediaVideo = document.getElementById('messageMediaPreviewVideo');
+    const mediaVideoSource = document.getElementById('messageMediaPreviewVideoSource');
+    const mediaTitle = document.getElementById('messageMediaPreviewTitle');
+    const mediaDownload = document.getElementById('messageMediaPreviewDownload');
+    const mediaModal = mediaModalEl ? new bootstrap.Modal(mediaModalEl) : null;
+
+    document.querySelectorAll('.msg-media-preview-trigger').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!mediaModal) return;
+            const type = this.dataset.mediaType;
+            const src = this.dataset.mediaSrc;
+            const contentType = this.dataset.mediaContentType || 'video/mp4';
+            const name = this.dataset.mediaName || 'Vedhæftning';
+
+            mediaTitle.innerHTML = '<i class="bi bi-arrows-fullscreen me-2" style="color: var(--clr-brand);"></i>' + name;
+            mediaDownload.href = src;
+            mediaDownload.setAttribute('download', name);
+
+            if (type === 'video') {
+                mediaImage.style.display = 'none';
+                mediaImage.removeAttribute('src');
+                mediaVideo.style.display = 'block';
+                mediaVideoSource.src = src;
+                mediaVideoSource.type = contentType;
+                mediaVideo.load();
+            } else {
+                mediaVideo.pause();
+                mediaVideo.style.display = 'none';
+                mediaVideoSource.src = '';
+                mediaVideo.load();
+                mediaImage.style.display = 'block';
+                mediaImage.src = src;
+            }
+
+            mediaModal.show();
+        });
+    });
+
+    if (mediaModalEl) {
+        mediaModalEl.addEventListener('hidden.bs.modal', function () {
+            mediaVideo.pause();
+            mediaVideoSource.src = '';
+            mediaVideo.load();
+            mediaImage.removeAttribute('src');
+        });
+    }
+
     if (!form) return;
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
