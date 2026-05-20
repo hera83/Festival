@@ -174,7 +174,7 @@
             </div>`;
         }).join('');
 
-        const shiftName = shift ? shift.name : 'Vagt';
+        const shiftName = shift ? shift.name : 'Uregistreret vagt';
         const shiftTime = shift ? `${formatTime(shift.startLocal)} – ${formatTime(shift.endLocal)}` : '';
 
         return `<div class="card mb-3" style="border-color:var(--clr-ok);">
@@ -239,6 +239,16 @@
             });
             const todayShift = todayShifts[0] || null;
 
+            // Aktiv session i dag? (tjekkes tidligt – gælder uanset om der er registrerede vagter)
+            const activeCheckIn = data.activeCheckIn;
+            const hasHadCheckInToday = data.hasHadCheckInToday;
+
+            // STATE 4a: Har aktiv check-in i dag → vis aktiv vagt med tidslinje (selv uden registreret vagt)
+            if (activeCheckIn) {
+                body.innerHTML = renderActiveShift(data, todayShift);
+                return;
+            }
+
             // STATE 1: Ingen vagter overhovedet
             if (shifts.length === 0) {
                 body.innerHTML = renderNoShifts();
@@ -247,17 +257,12 @@
 
             // STATE 2: Alle vagter er fortidige, ingen fremtidige
             if (futureShifts.length === 0) {
+                // Har haft check-in i dag men er nu checket ud → vis afsluttet
+                if (hasHadCheckInToday) {
+                    body.innerHTML = renderCheckedOutSummary(data, todayShift);
+                    return;
+                }
                 body.innerHTML = renderNoPastFuture();
-                return;
-            }
-
-            // Aktiv session i dag?
-            const activeCheckIn = data.activeCheckIn;
-            const hasHadCheckInToday = data.hasHadCheckInToday;
-
-            // STATE 4a: Har aktiv check-in i dag → vis aktiv vagt med tidslinje
-            if (activeCheckIn) {
-                body.innerHTML = renderActiveShift(data, todayShift);
                 return;
             }
 
