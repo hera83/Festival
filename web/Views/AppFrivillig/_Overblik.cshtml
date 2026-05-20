@@ -174,7 +174,7 @@
             </div>`;
         }).join('');
 
-        const shiftName = shift ? shift.name : 'Uregistreret vagt';
+        const shiftName = shift ? shift.name : 'Ekstra';
         const shiftTime = shift ? `${formatTime(shift.startLocal)} – ${formatTime(shift.endLocal)}` : '';
 
         return `<div class="card mb-3" style="border-color:var(--clr-ok);">
@@ -230,6 +230,19 @@
             // Klassificer vagter
             const futureShifts = shifts.filter(s => new Date(s.endLocal) > now);
             const pastShifts = shifts.filter(s => new Date(s.endLocal) <= now);
+            // Aktiv session i dag? (tjekkes tidligt – gælder uanset om der er registrerede vagter)
+            const activeCheckIn = data.activeCheckIn;
+            const hasHadCheckInToday = data.hasHadCheckInToday;
+
+            // Find vagt der overlapper med check-in tidspunktet (ikke bare "en vagt i dag")
+            const checkInTime = activeCheckIn ? new Date(activeCheckIn.checkedInAt) : now;
+            const overlappingShift = shifts.find(s => {
+                const start = new Date(s.startLocal);
+                const end = new Date(s.endLocal);
+                return checkInTime >= start && checkInTime <= end;
+            }) || null;
+
+            // Fallback: en hvilken som helst vagt der er i dag (til andre states der ikke har check-in)
             const todayShifts = shifts.filter(s => {
                 const start = new Date(s.startLocal);
                 const end = new Date(s.endLocal);
@@ -239,13 +252,9 @@
             });
             const todayShift = todayShifts[0] || null;
 
-            // Aktiv session i dag? (tjekkes tidligt – gælder uanset om der er registrerede vagter)
-            const activeCheckIn = data.activeCheckIn;
-            const hasHadCheckInToday = data.hasHadCheckInToday;
-
             // STATE 4a: Har aktiv check-in i dag → vis aktiv vagt med tidslinje (selv uden registreret vagt)
             if (activeCheckIn) {
-                body.innerHTML = renderActiveShift(data, todayShift);
+                body.innerHTML = renderActiveShift(data, overlappingShift);
                 return;
             }
 
