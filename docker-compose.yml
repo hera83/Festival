@@ -9,6 +9,7 @@ services:
       - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      TZ: Europe/Copenhagen
       Email__Smtp__Host: ${EMAIL_SMTP_HOST}
       Email__Smtp__Username: ${EMAIL_SMTP_USERNAME}
       Email__Smtp__Password: ${EMAIL_SMTP_PASSWORD}
