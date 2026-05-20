@@ -73,7 +73,7 @@
         <div class="card-header"><i class="bi bi-palette"></i> Udseende</div>
         <div class="card-body">
             <p class="mb-3" style="font-size:0.825rem;color:var(--clr-text-muted);">
-                Vælg dit foretrukne farvetema. Valget gemmes når du trykker "Gem ændringer".
+                Vælg dit foretrukne farvetema. Valget gemmes når du trykker "Gem".
             </p>
             <div class="d-flex gap-3 flex-wrap">
                 <button type="button" id="modeSystem"
@@ -147,11 +147,11 @@
     </div>
 
     <div class="d-flex gap-2 justify-content-end">
-        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary btn-sm">
+        <a asp-controller="Profile" asp-action="Index" class="btn btn-secondary btn-sm" style="text-decoration:none;">
             <i class="bi bi-x-lg me-1"></i>Annuller
         </a>
         <button type="submit" class="btn btn-primary btn-sm">
-            <i class="bi bi-floppy me-1"></i>Gem ændringer
+            <i class="bi bi-floppy me-1"></i>Gem
         </button>
     </div>
 </form>

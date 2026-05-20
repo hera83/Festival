@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Dashboard";
 }
 
@@ -15,7 +15,7 @@
                     <i class="bi bi-person-check" style="color:var(--clr-ok);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="checkedInCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="checkedInCount">�</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Checkede ind</div>
                 </div>
             </div>
@@ -26,7 +26,7 @@
                     <i class="bi bi-person-x" style="color:var(--clr-warn);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="noShowCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="noShowCount">�</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Udeblivelser</div>
                 </div>
             </div>
@@ -37,7 +37,7 @@
                     <i class="bi bi-people" style="color:var(--clr-info);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="pitCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="pitCount">�</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">I pitten</div>
                 </div>
             </div>
@@ -48,7 +48,7 @@
                     <i class="bi bi-geo-alt" style="color:var(--clr-brand);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activePostsCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activePostsCount">�</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive poster</div>
                 </div>
             </div>
@@ -59,7 +59,7 @@
                     <i class="bi bi-bell" style="color:var(--clr-alarm);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activeAlarmsCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activeAlarmsCount">�</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive alarmer</div>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                 </button>
             </div>
             <div class="card-body" style="padding:0.75rem; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <!-- Ikon-række -->
+                <!-- Ikon-r�kke -->
                 <div class="d-flex gap-1 mb-2" style="flex-shrink:0;">
                     <button type="button" class="btn btn-sm" title="Opret post"
                             data-bs-toggle="modal" data-bs-target="#createPostModal"
@@ -99,18 +99,18 @@
                             style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
                         <i class="bi bi-arrows-collapse"></i>
                     </button>
-                    <button type="button" id="qrPitScanBtn" class="btn btn-sm" title="QR Scanner – tænd/sluk"
+                    <button type="button" id="qrPitScanBtn" class="btn btn-sm" title="QR Scanner � t�nd/sluk"
                             style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
                         <i class="bi bi-qr-code-scan"></i>
                     </button>
                 </div>
 
-                <!-- Søgefelt -->
+                <!-- S�gefelt -->
                 <div class="input-group mb-2" style="flex-shrink:0;">
                     <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="pitSearch" class="form-control" placeholder="Søg efter frivillig..."
+                    <input type="text" id="pitSearch" class="form-control" placeholder="S�g efter frivillig..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
                 </div>
 
@@ -165,11 +165,11 @@
                     <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="checkInSearch" class="form-control" placeholder="Søg på frivillig..."
+                    <input type="text" id="checkInSearch" class="form-control" placeholder="S�g p� frivillig..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
                     <button type="button" id="checkInSearchClear" class="btn btn-sm d-none"
                             style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);border-left:none;"
-                            tabindex="-1" aria-label="Ryd søgning">
+                            tabindex="-1" aria-label="Ryd s�gning">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
@@ -223,17 +223,17 @@
             </div>
             <div class="modal-body">
                 <p class="mb-3" style="font-size:0.85rem;color:var(--clr-text-muted);">
-                    Frivillige med en vagt i dag hvor mødetidspunktet er passeret, men som ikke er checket ind.
+                    Frivillige med en vagt i dag hvor m�detidspunktet er passeret, men som ikke er checket ind.
                 </p>
                 <div class="input-group mb-3">
                     <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="noShowSearch" class="form-control" placeholder="Søg på navn..."
+                    <input type="text" id="noShowSearch" class="form-control" placeholder="S�g p� navn..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
                     <button type="button" id="noShowSearchClear" class="btn btn-sm d-none"
                             style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);border-left:none;"
-                            tabindex="-1" aria-label="Ryd søgning">
+                            tabindex="-1" aria-label="Ryd s�gning">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
@@ -261,7 +261,7 @@
                     </table>
                     <div id="noShowEmpty" class="text-center py-4 d-none" style="color:var(--clr-text-muted);">
                         <i class="bi bi-check2-circle" style="font-size:2rem;color:var(--clr-ok);"></i>
-                        <p class="mt-2 mb-0">Ingen udeblivelser – alle er mødt op!</p>
+                        <p class="mt-2 mb-0">Ingen udeblivelser � alle er m�dt op!</p>
                     </div>
                 </div>
             </div>
@@ -287,12 +287,12 @@
             </div>
             <div class="modal-body">
                 <label class="form-label" style="font-size:0.85rem;color:var(--clr-text-muted);">
-                    Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                    Alarm efter (minutter) <span style="color:var(--clr-text-dim);">� tom = ingen alarm</span>
                 </label>
                 <input type="number" id="pitAlarmInput" class="form-control" placeholder="fx 30" min="1"
                        style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
                 <div class="mt-2" style="font-size:0.78rem;color:var(--clr-text-muted);">
-                    Frivillige der har stået i pitten længere end dette vil blive vist øverst med en alarm.
+                    Frivillige der har st�et i pitten l�ngere end dette vil blive vist �verst med en alarm.
                 </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
@@ -302,7 +302,7 @@
                 </button>
                 <button type="button" id="savePitAlarmBtn" class="btn btn-sm"
                         style="background:var(--clr-brand);border:none;color:#fff;">
-                    <i class="bi bi-check-lg me-1"></i>Gem
+                    <i class="bi bi-floppy me-1"></i>Gem
                 </button>
             </div>
         </div>
@@ -322,11 +322,11 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Postnavn</label>
-                    <input type="text" id="newPostName" class="form-control" placeholder="fx Bar 8, Blå Scene..."
+                    <input type="text" id="newPostName" class="form-control" placeholder="fx Bar 8, Bl� Scene..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off" maxlength="128">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Placér i zone</label>
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Plac�r i zone</label>
                     <select id="newPostColumn" class="form-select"
                             style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
                         <option value="1">Zone 1</option>
@@ -338,7 +338,7 @@
                 </div>
                 <div class="mb-1">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">
-                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">� tom = ingen alarm</span>
                     </label>
                     <input type="number" id="newPostAlarm" class="form-control" placeholder="fx 60"
                            min="1" max="9999"
@@ -350,7 +350,7 @@
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
                 <button type="button" id="createPostBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
-                    <i class="bi bi-plus-lg me-1"></i>Opret post
+                    <i class="bi bi-plus-lg me-1"></i>Opret
                 </button>
             </div>
         </div>
@@ -371,12 +371,12 @@
                 <input type="hidden" id="editPostId">
                 <div class="mb-3">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Postnavn</label>
-                    <input type="text" id="editPostName" class="form-control" placeholder="fx Bar 8, Blå Scene..."
+                    <input type="text" id="editPostName" class="form-control" placeholder="fx Bar 8, Bl� Scene..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off" maxlength="128">
                 </div>
                 <div class="mb-1">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">
-                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">� tom = ingen alarm</span>
                     </label>
                     <input type="number" id="editPostAlarm" class="form-control" placeholder="fx 60"
                            min="1" max="9999"
@@ -387,15 +387,15 @@
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="saveEditPostBtn" class="btn btn-sm" style="background:var(--clr-info);color:#fff;border:none;">
-                    <i class="bi bi-check-lg me-1"></i>Gem ændringer
+                <button type="button" id="saveEditPostBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
+                    <i class="bi bi-floppy me-1"></i>Gem
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Slet Post Bekræft Modal -->
+<!-- Slet Post Bekr�ft Modal -->
 <div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
@@ -408,11 +408,11 @@
             <div class="modal-body">
                 <input type="hidden" id="deletePostId">
                 <p class="mb-2" style="color:var(--clr-text);font-size:0.88rem;">
-                    Er du sikker på at du vil slette posten <strong id="deletePostName" style="color:#e6edf3;"></strong>?
+                    Er du sikker p� at du vil slette posten <strong id="deletePostName" style="color:#e6edf3;"></strong>?
                 </p>
                 <div id="deletePostWarning" class="d-none p-2" style="background:var(--clr-warn-bg);border:1px solid var(--clr-warn);border-radius:var(--radius-md);font-size:0.8rem;color:var(--clr-warn);">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    <span id="deletePostVolunteerCount"></span> frivillig(e) på posten flyttes automatisk tilbage til Pitten.
+                    <span id="deletePostVolunteerCount"></span> frivillig(e) p� posten flyttes automatisk tilbage til Pitten.
                 </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
@@ -420,7 +420,7 @@
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
                 <button type="button" id="confirmDeletePostBtn" class="btn btn-sm" style="background:var(--clr-alarm);color:#fff;border:none;">
-                    <i class="bi bi-trash3 me-1"></i>Slet post
+                    <i class="bi bi-trash3 me-1"></i>Slet
                 </button>
             </div>
         </div>
@@ -518,12 +518,12 @@
 </style>
 <script>
 (function () {
-    // ── Globals ──────────────────────────────────────────────────────────────
+    // -- Globals --------------------------------------------------------------
     let searchTimer = null;
     let pitSearchTimer = null;
     let dragPayload = null; // { type: 'volunteer'|'post', id, fromLocation, element }
 
-    // ── DOM refs ─────────────────────────────────────────────────────────────
+    // -- DOM refs -------------------------------------------------------------
     const modal        = document.getElementById('checkInModal');
     const searchInput  = document.getElementById('checkInSearch');
     const searchClear  = document.getElementById('checkInSearchClear');
@@ -537,7 +537,7 @@
     const pitEmpty       = null; // Tom-tilstand renderes nu inde i pitList
     const pitSpinner     = document.getElementById('pitSpinner');
 
-    // ── Event delegation for frivillig kontekstmenu ──────────────────────────
+    // -- Event delegation for frivillig kontekstmenu --------------------------
     document.addEventListener('pointerdown', (e) => {
         const btn = e.target.closest('.vol-menu-btn');
         if (!btn) return;
@@ -551,7 +551,7 @@
         openVolunteerMenu(btn);
     });
 
-    // ── Check-in Modal ────────────────────────────────────────────────────────
+    // -- Check-in Modal --------------------------------------------------------
     modal.addEventListener('shown.bs.modal', () => {
         searchInput.value = '';
         searchClear.classList.add('d-none');
@@ -588,7 +588,7 @@
             .then(data => { spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none'); renderRows(data); })
             .catch(() => {
                 spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none');
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indl�sning</td></tr>';
                 emptyDiv.classList.add('d-none');
             });
     }
@@ -607,7 +607,7 @@
                 <td><span style="font-weight:600;">${escHtml(v.name)}</span>
                 ${v.isCheckedIn ? '<span class="badge-ok ms-2" style="font-size:0.68rem;"><i class="bi bi-check2-circle me-1"></i>Checket ind</span>' : ''}
                 ${v.email ? `<br><small style="color:var(--clr-text-muted);">${escHtml(v.email)}</small>` : ''}</td>
-                <td style="color:var(--clr-text-muted);">${v.phoneNumber ? escHtml(v.phoneNumber) : '—'}</td>
+                <td style="color:var(--clr-text-muted);">${v.phoneNumber ? escHtml(v.phoneNumber) : '�'}</td>
                 <td>${v.hasShiftToday ? '<span class="badge-ok" style="font-size:0.72rem;"><i class="bi bi-check2 me-1"></i>Ja</span>' : '<span style="color:var(--clr-text-dim);font-size:0.8rem;">Ingen vagt</span>'}</td>
                 <td class="text-end">${actionBtn}</td>`;
             tbody.appendChild(tr);
@@ -623,7 +623,7 @@
                 if (res.success) { showToast(res.message, 'success'); updateCheckedInCount(); updateNoShowCount(); loadVolunteers(searchInput.value); }
                 else { showToast(res.message, 'warning'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; }
             })
-            .catch(() => { showToast('Noget gik galt. Prøv igen.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; });
+            .catch(() => { showToast('Noget gik galt. Pr�v igen.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; });
     }
 
     function doCheckOut(volunteerId, name, btn) {
@@ -637,10 +637,10 @@
                 }
                 else { showToast(res.message, 'warning'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } }
             })
-            .catch(() => { showToast('Noget gik galt. Prøv igen.', 'error'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } });
+            .catch(() => { showToast('Noget gik galt. Pr�v igen.', 'error'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } });
     }
 
-    // ── Tæller ────────────────────────────────────────────────────────────────
+    // -- T�ller ----------------------------------------------------------------
     function updateCheckedInCount() {
         fetch('/Home/GetCheckedInCount').then(r => r.json()).then(data => {
             const el = document.getElementById('checkedInCount');
@@ -658,7 +658,7 @@
         }).catch(() => {});
     }
 
-    // ── Udeblivelser Modal ────────────────────────────────────────────────────
+    // -- Udeblivelser Modal ----------------------------------------------------
     const noShowModal      = document.getElementById('noShowModal');
     const noShowSearchInput = document.getElementById('noShowSearch');
     const noShowSearchClear = document.getElementById('noShowSearchClear');
@@ -704,7 +704,7 @@
             .catch(() => {
                 noShowSpinner.classList.add('d-none');
                 noShowWrapper.classList.remove('d-none');
-                noShowTbody.innerHTML = '<tr><td colspan="3" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                noShowTbody.innerHTML = '<tr><td colspan="3" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indl�sning</td></tr>';
                 noShowEmpty.classList.add('d-none');
             });
     }
@@ -723,7 +723,7 @@
             tr.style.borderColor = 'var(--clr-border)';
             const phone = v.phoneNumber
                 ? `<span style="color:var(--clr-info);"><i class="bi bi-telephone me-1"></i>${escHtml(v.phoneNumber)}</span>`
-                : '<span style="color:var(--clr-text-dim);">—</span>';
+                : '<span style="color:var(--clr-text-dim);">�</span>';
             const start = parseLocalDate(v.earliestStart);
             const startStr = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
             const minsLate = Math.floor((Date.now() - start.getTime()) / 60000);
@@ -738,7 +738,7 @@
         });
     }
 
-    // ── Pitten ────────────────────────────────────────────────────────────────
+    // -- Pitten ----------------------------------------------------------------
     pitSearchInput.addEventListener('keyup', () => {
         clearTimeout(pitSearchTimer);
         pitSearchTimer = setTimeout(() => loadPitVolunteers(pitSearchInput.value), 250);
@@ -752,7 +752,7 @@
             .then(data => { pitSpinner.classList.add('d-none'); renderPitList(data, q || ''); })
             .catch(() => {
                 pitSpinner.classList.add('d-none');
-                pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</div>';
+                pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indl�sning</div>';
                 pitList.classList.remove('d-none');
             });
     }
@@ -763,7 +763,7 @@
         pitList.innerHTML = '';
         const hasQuery = q && q.trim() !== '';
 
-        // Filtrer post-chips baseret på søgningen
+        // Filtrer post-chips baseret p� s�gningen
         filterPostChips(hasQuery ? volunteers.map(v => v.volunteerId) : null);
 
         const pitVolunteers = volunteers.filter(v => v.currentLocation === 'Pit' || !v.currentLocation);
@@ -786,14 +786,14 @@
             return;
         }
 
-        // Sorter: alarmerede øverst, derefter alfabetisk
+        // Sorter: alarmerede �verst, derefter alfabetisk
         const now = Date.now();
         const withAlarm = (v) => alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
             && !disabledAlarmVolunteers.has(v.volunteerId)
                     ? (now - parseLocalDate(v.arrivedAtPit).getTime()) >= pitAlarmMinutes * 60 * 1000
             : false;
 
-        // Opdater pit alarm count og den globale tæller
+        // Opdater pit alarm count og den globale t�ller
         _pitAlarmCount = pitVolunteers.filter(v => withAlarm(v)).length;
         updateAlarmCounter();
 
@@ -832,7 +832,7 @@
             pitList.appendChild(row);
         });
 
-        // Vis frivillige i poster som søgeresultat (ikke i Pit)
+        // Vis frivillige i poster som s�geresultat (ikke i Pit)
         const postVolunteers = volunteers.filter(v => v.currentLocation && v.currentLocation !== 'Pit');
         if (hasQuery && postVolunteers.length > 0) {
             const sep = document.createElement('div');
@@ -860,7 +860,7 @@
         setupPitDropZone();
     }
 
-    // Skjul/vis volunteer-chips i poster baseret på søgning
+    // Skjul/vis volunteer-chips i poster baseret p� s�gning
     function filterPostChips(matchingIds) {
         document.querySelectorAll('.volunteer-chip').forEach(chip => {
             if (!matchingIds) {
@@ -871,14 +871,14 @@
         });
     }
 
-    // Ryd søgefeltet og nulstil visningen
+    // Ryd s�gefeltet og nulstil visningen
     function clearPitSearch() {
         if (pitSearchInput.value === '') return;
         pitSearchInput.value = '';
         filterPostChips(null);
     }
 
-    // ── Poster ────────────────────────────────────────────────────────────────
+    // -- Poster ----------------------------------------------------------------
     function loadAllPosts() {
         fetch('/Post/GetAll').then(r => r.json()).then(renderAllPosts).catch(() => {});
     }
@@ -1028,7 +1028,7 @@
             card.remove();
             renderPost(p);
             updateCollapseAllBtn(_lastPosts);
-            // Genåbn den nye card i samme parent
+            // Gen�bn den nye card i samme parent
             if (parent) {
                 const newCard = parent.querySelector(`[data-post-id="${p.id}"]`);
                 // kort er allerede appended af renderPost
@@ -1049,7 +1049,7 @@
             openDeletePostModal(parseInt(btn.dataset.postId), btn.dataset.postName, parseInt(btn.dataset.volunteerCount) || 0);
         });
 
-        // Setup volunteer drop-zone på posten
+        // Setup volunteer drop-zone p� posten
         const vZone = card.querySelector('.post-volunteer-zone');
         setupVolunteerDropZoneOnPost(vZone, p.name);
 
@@ -1087,8 +1087,8 @@
         </span>`;
     }
 
-    // ── Frivillig kontekstmenu ────────────────────────────────────────────────
-    let _volMenuOpen = null; // reference til åben dropdown
+    // -- Frivillig kontekstmenu ------------------------------------------------
+    let _volMenuOpen = null; // reference til �ben dropdown
 
     function openVolunteerMenu(btn) {
         // Luk eksisterende menu
@@ -1100,7 +1100,7 @@
         const isMuted = disabledAlarmVolunteers.has(volunteerId);
         const rect = btn.getBoundingClientRect();
 
-        // Byg post-submenu items (Pit øverst, derefter alle poster)
+        // Byg post-submenu items (Pit �verst, derefter alle poster)
         const pitItem = `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="Pit"><i class="bi bi-arrow-left-circle me-2" style="color:var(--clr-brand);"></i>Pitten</a></li>`;
         const postItems = _lastPosts.map(p =>
             `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="${escHtml(p.name)}"><i class="bi bi-geo-alt me-2"></i>${escHtml(p.name)}</a></li>`
@@ -1176,7 +1176,7 @@
         const sub = el.closest('li').querySelector('.vol-submenu');
         if (!sub) return;
         sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
-        // Tilpas menuens højde dynamisk
+        // Tilpas menuens h�jde dynamisk
         if (_volMenuOpen) {
             const rect2 = _volMenuOpen.getBoundingClientRect();
             if (rect2.bottom > window.innerHeight - 8) {
@@ -1208,12 +1208,12 @@
 
     function volMenuCheckOut(volunteerId, name) {
         closeVolunteerMenu();
-        // Simuler et checkout via doCheckOut — find eller opret en knap-reference
+        // Simuler et checkout via doCheckOut � find eller opret en knap-reference
         const fakeBtn = { disabled: false, innerHTML: '' };
         doCheckOut(volunteerId, name, fakeBtn);
     }
 
-    // ── Opret Post ────────────────────────────────────────────────────────────
+    // -- Opret Post ------------------------------------------------------------
     document.getElementById('createPostBtn').addEventListener('click', () => {
         const name = document.getElementById('newPostName').value.trim();
         const col  = parseInt(document.getElementById('newPostColumn').value);
@@ -1244,11 +1244,11 @@
             .catch(() => {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Opret post';
-                showToast('Noget gik galt. Prøv igen.', 'error');
+                showToast('Noget gik galt. Pr�v igen.', 'error');
             });
     });
 
-    // ── Rediger Post ──────────────────────────────────────────────────────────
+    // -- Rediger Post ----------------------------------------------------------
     document.getElementById('saveEditPostBtn').addEventListener('click', () => {
         const postId = parseInt(document.getElementById('editPostId').value);
         const name = document.getElementById('editPostName').value.trim();
@@ -1264,7 +1264,7 @@
         postJson('/Post/Update', { postId, name, alarmAfterMinutes: alarmMinutes })
             .then(res => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Gem ændringer';
+                btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Gem';
                 if (res.success) {
                     showToast(res.message, 'success');
                     bootstrap.Modal.getInstance(document.getElementById('editPostModal')).hide();
@@ -1276,12 +1276,12 @@
             })
             .catch(() => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Gem ændringer';
-                showToast('Noget gik galt. Prøv igen.', 'error');
+                btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Gem';
+                showToast('Noget gik galt. Pr�v igen.', 'error');
             });
     });
 
-    // ── Slet Post Bekræft ─────────────────────────────────────────────────────
+    // -- Slet Post Bekr�ft -----------------------------------------------------
     document.getElementById('confirmDeletePostBtn').addEventListener('click', () => {
         const postId = parseInt(document.getElementById('deletePostId').value);
         const btn = document.getElementById('confirmDeletePostBtn');
@@ -1327,7 +1327,7 @@
             .catch(() => showToast('Noget gik galt.', 'error'));
     }
 
-    // ── Drag & Drop ───────────────────────────────────────────────────────────
+    // -- Drag & Drop -----------------------------------------------------------
     function onPostDragStart(e) {
         dragPayload = { type: 'post', id: parseInt(this.dataset.postId), element: this };
         this.classList.add('dragging');
@@ -1356,7 +1356,7 @@
         document.querySelectorAll('.post-drop-zone-active').forEach(el => el.classList.remove('post-drop-zone-active'));
     }
 
-    // Drop-zone: pit-listen (frivillige kan droppes her → flyttes til Pit)
+    // Drop-zone: pit-listen (frivillige kan droppes her ? flyttes til Pit)
     let _pitDropZoneAbort = null;
     function setupPitDropZone() {
         if (_pitDropZoneAbort) _pitDropZoneAbort.abort();
@@ -1400,7 +1400,7 @@
         }, sig);
     }
 
-    // Drop-zone: frivillig-zone på en post
+    // Drop-zone: frivillig-zone p� en post
     function setupVolunteerDropZoneOnPost(zone, postName) {
         zone.addEventListener('dragover', e => {
             if (dragPayload?.type !== 'volunteer') return;
@@ -1441,7 +1441,7 @@
             .catch(() => showToast('Noget gik galt.', 'error'));
     }
 
-    // ── Hjælpefunktioner ──────────────────────────────────────────────────────
+    // -- Hj�lpefunktioner ------------------------------------------------------
     function postJson(url, data) {
         return fetch(url, {
             method: 'POST',
@@ -1467,7 +1467,7 @@
         return new Date(value);
     }
 
-    // ── Alarm toggle ──────────────────────────────────────────────────────────
+    // -- Alarm toggle ----------------------------------------------------------
     let alarmsEnabled = true;
     let pitAlarmMinutes = null;
     let _pitAlarmCount = 0;
@@ -1475,7 +1475,7 @@
     const disabledAlarmVolunteers = new Set(); // lokal per-frivillig alarm deaktivering
     let _lastPosts = [];
 
-    // Opdater minimer-alle ikonet baseret på om alle poster er minimerede
+    // Opdater minimer-alle ikonet baseret p� om alle poster er minimerede
     function updateCollapseAllBtn(allPosts) {
         const btn = document.getElementById('collapseAllBtn');
         if (!btn) return;
@@ -1514,7 +1514,7 @@
         });
     }
 
-    // ── Collapse alle poster ──────────────────────────────────────────────────
+    // -- Collapse alle poster --------------------------------------------------
     const collapseAllBtn = document.getElementById('collapseAllBtn');
     if (collapseAllBtn) {
         collapseAllBtn.addEventListener('click', () => {
@@ -1539,7 +1539,7 @@
         });
     }
 
-    // ── Pit alarm modal ───────────────────────────────────────────────────────
+    // -- Pit alarm modal -------------------------------------------------------
     const pitAlarmModal = document.getElementById('pitAlarmModal');
     const pitAlarmInput = document.getElementById('pitAlarmInput');
 
@@ -1589,25 +1589,25 @@
         loadPitVolunteers(pitSearchInput.value);
     });
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // -- Init ------------------------------------------------------------------
     updateCheckedInCount();
     updateNoShowCount();
     syncPitAlarm().then(() => loadPitVolunteers(''));
     loadAllPosts();
 
-    // ── Background auto-refresh ───────────────────────────────────────────────
+    // -- Background auto-refresh -----------------------------------------------
     // Poller et let "state hash" endpoint hvert 3. sekund.
-    // Kun hvis hash'en er ændret OG brugeren ikke er i gang med noget,
+    // Kun hvis hash'en er �ndret OG brugeren ikke er i gang med noget,
     // hentes de faktiske data og UI opdateres stille og roligt.
     let _lastStateHash = null;
-    let _autoRefreshPaused = false; // sættes true under drag/drop
+    let _autoRefreshPaused = false; // s�ttes true under drag/drop
 
-    // Lyt på drag-events for at pause refresh under drag
+    // Lyt p� drag-events for at pause refresh under drag
     document.addEventListener('dragstart', () => { _autoRefreshPaused = true; });
     document.addEventListener('dragend',   () => { setTimeout(() => { _autoRefreshPaused = false; }, 500); });
 
     async function backgroundRefresh() {
-        // Spring over hvis brugeren er i gang med drag eller søger aktivt
+        // Spring over hvis brugeren er i gang med drag eller s�ger aktivt
         if (_autoRefreshPaused) return;
         if (document.hidden) return; // tab er ikke synlig
 
@@ -1616,11 +1616,11 @@
             const data = await res.json();
             const hash = data.hash;
 
-            if (hash === _lastStateHash) return; // ingen ændring
+            if (hash === _lastStateHash) return; // ingen �ndring
 
             _lastStateHash = hash;
 
-            // Opdater alt – men bevar pit-søgefeltet hvis det er i brug
+            // Opdater alt � men bevar pit-s�gefeltet hvis det er i brug
             const pitQ = pitSearchInput.value;
             syncPitAlarm().then(() => loadPitVolunteers(pitQ));
             loadAllPosts();
@@ -1630,7 +1630,7 @@
             // Diskret prik der viser at siden er synkroniseret
             showSyncDot();
         } catch {
-            // Netværksfejl – ignorer stille
+            // Netv�rksfejl � ignorer stille
         }
     }
 
@@ -1648,14 +1648,14 @@
         dot._t = setTimeout(() => { dot.style.opacity = '0'; }, 1800);
     }
 
-    // Sæt hash ved første load så vi ikke refresher unødvendigt med det samme
+    // S�t hash ved f�rste load s� vi ikke refresher un�dvendigt med det samme
     fetch('/Home/StateHash').then(r => r.json()).then(d => { _lastStateHash = d.hash; }).catch(() => {});
 
     setInterval(backgroundRefresh, 3 * 1000);
 })();
 </script>
 
-@* ── QR Pit-scanner: skjult kamera ── *@
+@* -- QR Pit-scanner: skjult kamera -- *@
 <video id="qrPitVideo" autoplay playsinline muted style="display:none;position:fixed;bottom:12px;right:12px;width:1px;height:1px;opacity:0;pointer-events:none;"></video>
 <canvas id="qrPitCanvas" style="display:none;"></canvas>
 
@@ -1674,7 +1674,7 @@
     let lastKey   = null;
     let cooldown  = false;
 
-    // ── Audio ─────────────────────────────────────────────────────
+    // -- Audio -----------------------------------------------------
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(type) {
         const seqs = {
@@ -1696,7 +1696,7 @@
         }
     }
 
-    // ── Toast ─────────────────────────────────────────────────────
+    // -- Toast -----------------------------------------------------
     function showQrToast(message, type) {
         // type: 'success' | 'warning' | 'error'
         const colorMap = { success: 'var(--clr-ok)', warning: 'var(--clr-brand)', error: 'var(--clr-alarm)' };
@@ -1721,7 +1721,7 @@
         }, 10000);
     }
 
-    // ── Knap tænd/sluk ───────────────────────────────────────────
+    // -- Knap t�nd/sluk -------------------------------------------
     btn.addEventListener('click', () => {
         if (active) stopScanner();
         else        startScanner();
@@ -1748,7 +1748,7 @@
     }
 
     async function startScanner() {
-        // Tillad kamera så enumerateDevices returnerer labels
+        // Tillad kamera s� enumerateDevices returnerer labels
         let devices = [];
         try {
             const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -1764,7 +1764,7 @@
             videoConstraints = { deviceId: { exact: pref.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } };
         } else {
             if (pref.deviceFingerprint && pref.deviceFingerprint !== currentFp) {
-                // Anden enhed – slet gammel indstilling stille
+                // Anden enhed � slet gammel indstilling stille
                 try {
                     await fetch(prefClrUrl, { method: 'POST', headers: { 'RequestVerificationToken': csrfToken } });
                 } catch { /* ignorer */ }
@@ -1776,7 +1776,7 @@
             stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
         } catch {
             try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
-            catch { showQrToast('Kamera ikke tilgængeligt', 'error'); return; }
+            catch { showQrToast('Kamera ikke tilg�ngeligt', 'error'); return; }
         }
         video.srcObject = stream;
         await video.play();
@@ -1787,7 +1787,7 @@
         btn.style.background   = 'var(--clr-brand)';
         btn.style.color        = '#fff';
         btn.style.borderColor  = 'var(--clr-brand)';
-        btn.title              = 'QR Scanner – sluk';
+        btn.title              = 'QR Scanner � sluk';
         rafId = requestAnimationFrame(tick);
     }
 
@@ -1798,14 +1798,14 @@
         btn.style.background  = 'var(--clr-bg)';
         btn.style.color       = 'var(--clr-text-muted)';
         btn.style.borderColor = 'var(--clr-border)';
-        btn.title             = 'QR Scanner – tænd';
+        btn.title             = 'QR Scanner � t�nd';
     }
 
-    const SCAN_W  = 640; // nedskaleret scanopløsning – QR kræver ikke fuld HD
+    const SCAN_W  = 640; // nedskaleret scanopl�sning � QR kr�ver ikke fuld HD
     const SCAN_H  = 480;
     let workerBusy = false;
 
-    // ── Web Worker ────────────────────────────────────────────────
+    // -- Web Worker ------------------------------------------------
     const worker = new Worker('/js/qr-worker.js');
     worker.onmessage = function (e) {
         workerBusy = false;
@@ -1817,7 +1817,7 @@
         }
     };
 
-    // ── Scan-loop (throttled til ~8fps) ───────────────────────────
+    // -- Scan-loop (throttled til ~8fps) ---------------------------
     let lastScanTime = 0;
     function tick(now) {
         if (active) rafId = requestAnimationFrame(tick);
@@ -1829,7 +1829,7 @@
 
         canvas.width  = SCAN_W;
         canvas.height = SCAN_H;
-        // Kontrast-boost hjælper mod overeksponerede skærme
+        // Kontrast-boost hj�lper mod overeksponerede sk�rme
         ctx.filter = 'contrast(1.5) brightness(1.05) saturate(0)';
         ctx.drawImage(video, 0, 0, SCAN_W, SCAN_H);
         ctx.filter = 'none';
@@ -1839,7 +1839,7 @@
         worker.postMessage({ data: imgData.data, width: SCAN_W, height: SCAN_H }, [imgData.data.buffer]);
     }
 
-    // ── Opslag ────────────────────────────────────────────────────
+    // -- Opslag ----------------------------------------------------
     async function handleScan(key) {
         cooldown = true;
         setTimeout(() => { cooldown = false; lastKey = null; }, 3500);
@@ -1863,7 +1863,7 @@
                 case 'moved':
                     playBeep('success');
                     showQrToast(data.message, 'success');
-                    // Fjern chippen øjeblikkeligt fra alle poster i DOM
+                    // Fjern chippen �jeblikkeligt fra alle poster i DOM
                     document.querySelectorAll(`[data-volunteer-id="${data.volunteerId}"]`)
                         .forEach(el => el.remove());
                     if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
@@ -1879,7 +1879,7 @@
             }
         } catch {
             playBeep('error');
-            showQrToast('Netværksfejl – kunne ikke kontakte server', 'error');
+            showQrToast('Netv�rksfejl � kunne ikke kontakte server', 'error');
         }
     }
 })();
