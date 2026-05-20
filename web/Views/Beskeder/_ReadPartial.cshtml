@@ -101,6 +101,7 @@
                             <th>Forhåndsvisning</th>
                             <th>Modtaget</th>
                             <th>Læst</th>
+                            <th>Opgaver</th>
                             <th class="pe-3" style="width:130px;"></th>
                         </tr>
                     </thead>
@@ -108,7 +109,7 @@
                         @if (!Model.Messages.Any())
                         {
                             <tr>
-                                <td colspan="6" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                <td colspan="7" class="text-center py-4" style="color: var(--clr-text-muted);">
                                     <i class="bi bi-envelope-open fs-4 d-block mb-1"></i>
                                     Ingen læste beskeder fundet
                                 </td>
@@ -136,22 +137,19 @@
                                         <span style="color: var(--clr-ok);">@m.ReadAt.Value.ToString("dd/MM HH:mm")</span>
                                     }
                                 </td>
+                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">
+                                    <span class="badge badge-info">@m.TaskCount</span>
+                                </td>
                                 <td class="pe-3 align-middle text-end">
                                     <div class="d-flex gap-1 justify-content-end">
-                                        <button type="button" class="btn btn-sm read-task-btn"
-                                                style="background: var(--clr-warn); color: #fff; border: none;"
-                                                title="Opret opgave" data-id="@m.Id">
-                                            <i class="bi bi-check2-square"></i>
+                                        <button type="button" class="btn btn-sm btn-secondary read-detail-btn"
+                                                style="white-space: nowrap;"
+                                                title="Åbn besked" data-id="@m.Id">
+                                            <i class="bi bi-eye me-1"></i>Åbn besked
                                         </button>
-                                        <button type="button" class="btn btn-sm read-markUnread-btn"
-                                                style="background: var(--clr-surface); color: var(--clr-text-muted); border: 1px solid var(--clr-border);"
+                                        <button type="button" class="btn btn-sm btn-secondary read-markUnread-btn"
                                                 title="Marker som ulæst" data-id="@m.Id">
                                             <i class="bi bi-envelope"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm read-detail-btn"
-                                                style="background: var(--clr-info); color: #fff; border: none;"
-                                                title="Vis besked" data-id="@m.Id">
-                                            <i class="bi bi-eye"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm read-delete-btn"
                                                 style="background: var(--clr-alarm); color: #fff; border: none;"
@@ -306,6 +304,7 @@
             if (res.ok) {
                 detailModalBody.innerHTML = await res.text();
                 execScripts(detailModalBody);
+                bindDetailActions();
             }
             else { bsDetailModal.hide(); showToast('Kunne ikke hente besked.', 'error'); }
         } catch (e) { bsDetailModal.hide(); showToast('Netværksfejl.', 'error'); }
@@ -324,6 +323,16 @@
             if (res.ok) { taskModalBody.innerHTML = await res.text(); bindTaskForm(); }
             else { bsTaskModal.hide(); showToast('Kunne ikke hente opgave-formular.', 'error'); }
         } catch (e) { bsTaskModal.hide(); showToast('Netværksfejl.', 'error'); }
+    }
+
+    function bindDetailActions() {
+        var btn = detailModalBody.querySelector('.detail-create-task-btn');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var msgId = parseInt(this.dataset.messageId);
+            bsDetailModal.hide();
+            setTimeout(function () { openTaskModal(msgId); }, 180);
+        });
     }
 
     function bindTaskForm() {
@@ -386,9 +395,6 @@
         });
         document.querySelectorAll('.read-delete-btn').forEach(function (btn) {
             btn.addEventListener('click', function () { pendingDeleteId = parseInt(this.dataset.id); bsDeleteModal.show(); });
-        });
-        document.querySelectorAll('.read-task-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () { openTaskModal(parseInt(this.dataset.id)); });
         });
         document.querySelectorAll('.read-markUnread-btn').forEach(function (btn) {
             btn.addEventListener('click', async function () {

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using web.Data;
 using web.Models;
 using web.Utils;
@@ -14,6 +15,8 @@ public class BeskederController(
     UserManager<AppUser> userManager,
     IWebHostEnvironment env) : Controller
 {
+    private const string TaskMetaMarker = "\n\n__FV_TASK_META__\n";
+
     private static int CurrentSeason => AppTime.CurrentSeason;
 
     private string AttachmentDirectory =>
@@ -124,9 +127,9 @@ public class BeskederController(
     {
         var season = CurrentSeason;
         var query = db.MessageTasks
-            .Where(t => t.Message.SeasonId == season)
+            .Where(t => t.MessageId == null || t.Message!.SeasonId == season)
             .Include(t => t.Message)
-                .ThenInclude(m => m.Volunteer)
+                .ThenInclude(m => m!.Volunteer)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(q))
@@ -134,11 +137,18 @@ public class BeskederController(
             var ql = q.ToLower();
             query = query.Where(t =>
                 t.Title.ToLower().Contains(ql) ||
-                t.Message.Volunteer.Name.ToLower().Contains(ql) ||
-                t.Message.Subject.ToLower().Contains(ql));
+                (t.Message != null && t.Message.Volunteer.Name.ToLower().Contains(ql)) ||
+                (t.Message != null && t.Message.Subject.ToLower().Contains(ql)));
         }
 
-        query = query.OrderBy(t => t.Status).ThenBy(t => t.DueDate).ThenByDescending(t => t.CreatedAt);
+        var now = DateTime.Now;
+        query = query
+            .OrderBy(t =>
+                t.Status != MessageTaskStatus.Udført && t.DueDate.HasValue && t.DueDate.Value < now ? 0 :
+                t.Status == MessageTaskStatus.Åben ? 1 :
+                t.Status == MessageTaskStatus.IGang ? 2 : 3)
+            .ThenBy(t => t.DueDate ?? DateTime.MaxValue)
+            .ThenByDescending(t => t.CreatedAt);
 
         var totalCount = await query.CountAsync();
         if (pageSize < 1) pageSize = 10;
@@ -155,13 +165,13 @@ public class BeskederController(
                 Id             = t.Id,
                 MessageId      = t.MessageId,
                 Title          = t.Title,
-                Description    = t.Description,
+                Description    = GetTaskDescription(t.Description),
                 Status         = t.Status,
                 CreatedAt      = t.CreatedAt,
                 DueDate        = t.DueDate,
-                VolunteerName  = t.Message.Volunteer.Name,
-                VolunteerKey   = t.Message.Volunteer.Key,
-                MessageSubject = t.Message.Subject
+                VolunteerName  = t.Message?.Volunteer?.Name ?? "—",
+                VolunteerKey   = t.Message?.Volunteer?.Key ?? "",
+                MessageSubject = t.Message?.Subject ?? "—"
             }).ToList(),
             Page       = page,
             PageSize   = pageSize,
@@ -414,6 +424,35 @@ public class BeskederController(
         return Json(new { success = true, message = "Opgave oprettet." });
     }
 
+    // ── Opret standalone opgave (uden tilknyttet besked) ─────────
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateStandaloneTask([FromForm] string title,
+        [FromForm] string? description, [FromForm] string? dueDate)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return Json(new { success = false, message = "Titel er påkrævet." });
+
+        var user = await userManager.GetUserAsync(User);
+        if (user is null) return Json(new { success = false, message = "Ikke logget ind." });
+
+        DateTime? due = null;
+        if (!string.IsNullOrWhiteSpace(dueDate) && DateTime.TryParse(dueDate, out var d))
+            due = d;
+
+        db.MessageTasks.Add(new MessageTask
+        {
+            MessageId       = null,
+            Title           = title.Trim(),
+            Description     = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
+            Status          = MessageTaskStatus.Åben,
+            CreatedAt       = DateTime.Now,
+            CreatedByUserId = user.Id,
+            DueDate         = due
+        });
+        await db.SaveChangesAsync();
+        return Json(new { success = true, message = "Opgave oprettet." });
+    }
+
     // ── Opdater opgave status ────────────────────────────────────
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateTaskStatus([FromForm] int id, [FromForm] MessageTaskStatus status)
@@ -438,6 +477,111 @@ public class BeskederController(
         return Json(new { success = true, message = "Status opdateret." });
     }
 
+    // ── Opdater opgave beskrivelse ───────────────────────────────
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateTaskDescription([FromForm] int id, [FromForm] string? description)
+    {
+        var task = await db.MessageTasks.FindAsync(id);
+        if (task is null) return Json(new { success = false, message = "Opgave ikke fundet." });
+
+        var meta = ParseTaskMeta(task.Description);
+        meta.Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        task.Description = SerializeTaskMeta(meta);
+        await db.SaveChangesAsync();
+
+        return Json(new { success = true, message = "Beskrivelse opdateret." });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetTaskEditorData(int id)
+    {
+        var task = await db.MessageTasks.FindAsync(id);
+        if (task is null) return Json(new { success = false, message = "Opgave ikke fundet." });
+
+        var meta = ParseTaskMeta(task.Description);
+        return Json(new
+        {
+            success = true,
+            title = task.Title,
+            description = meta.Description ?? string.Empty,
+            dueDate = task.DueDate.HasValue ? task.DueDate.Value.ToString("yyyy-MM-dd") : string.Empty,
+            status = (int)task.Status,
+            notes = meta.Notes
+                .OrderBy(n => n.CreatedAt)
+                .Select(n => new { author = n.Author, note = n.Note, createdAt = n.CreatedAt.ToString("dd/MM HH:mm") })
+        });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateTaskEditor([FromForm] int id, [FromForm] string? description, [FromForm] string? dueDate, [FromForm] MessageTaskStatus status)
+    {
+        var task = await db.MessageTasks.FindAsync(id);
+        if (task is null) return Json(new { success = false, message = "Opgave ikke fundet." });
+
+        var meta = ParseTaskMeta(task.Description);
+        meta.Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        task.Description = SerializeTaskMeta(meta);
+
+        if (string.IsNullOrWhiteSpace(dueDate))
+        {
+            task.DueDate = null;
+        }
+        else if (DateTime.TryParse(dueDate, out var parsedDueDate))
+        {
+            task.DueDate = parsedDueDate;
+        }
+
+        task.Status = status;
+        if (status == MessageTaskStatus.Udført)
+        {
+            var user = await userManager.GetUserAsync(User);
+            task.CompletedAt = DateTime.Now;
+            task.CompletedByUserId = user?.Id;
+        }
+        else
+        {
+            task.CompletedAt = null;
+            task.CompletedByUserId = null;
+        }
+
+        await db.SaveChangesAsync();
+        return Json(new { success = true, message = "Opgave opdateret." });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddTaskEditorNote([FromForm] int id, [FromForm] string note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+            return Json(new { success = false, message = "Noten må ikke være tom." });
+
+        var task = await db.MessageTasks.FindAsync(id);
+        if (task is null) return Json(new { success = false, message = "Opgave ikke fundet." });
+
+        var user = await userManager.GetUserAsync(User);
+        if (user is null) return Json(new { success = false, message = "Ikke logget ind." });
+
+        var role = await userManager.IsInRoleAsync(user, "Administrator")
+            ? "Administrator"
+            : "Koordinator";
+
+        var authorName = string.IsNullOrWhiteSpace(user.DisplayName)
+            ? (user.UserName ?? "Ukendt")
+            : user.DisplayName;
+
+        var meta = ParseTaskMeta(task.Description);
+        meta.Notes.Add(new TaskLogNote
+        {
+            Author = $"{authorName} ({role})",
+            Note = note.Trim(),
+            CreatedAt = DateTime.Now
+        });
+
+        task.Description = SerializeTaskMeta(meta);
+        await db.SaveChangesAsync();
+
+        return Json(new { success = true, message = "Note gemt." });
+    }
+
     // ── Slet opgave ───────────────────────────────────────────────
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteTask([FromForm] int id)
@@ -451,6 +595,13 @@ public class BeskederController(
         if (task is null) return Json(new { success = false, message = "Opgave ikke fundet." });
 
         var msg = task.Message;
+        if (msg is null)
+        {
+            db.MessageTasks.Remove(task);
+            await db.SaveChangesAsync();
+            return Json(new { success = true, message = "Opgave slettet." });
+        }
+
         db.MessageTasks.Remove(task);
 
         // Hvis beskeden er soft-deleted og det var den sidste opgave, hard-delete nu
@@ -474,6 +625,72 @@ public class BeskederController(
         var path = Path.Combine(AttachmentDirectory, att.StoredFileName);
         if (!System.IO.File.Exists(path)) return NotFound();
         return PhysicalFile(path, att.ContentType, att.OriginalFileName);
+    }
+
+    private static string? GetTaskDescription(string? rawDescription)
+        => ParseTaskMeta(rawDescription).Description;
+
+    private static TaskMetaEnvelope ParseTaskMeta(string? rawDescription)
+    {
+        if (string.IsNullOrWhiteSpace(rawDescription))
+            return new TaskMetaEnvelope();
+
+        var markerIndex = rawDescription.IndexOf(TaskMetaMarker, StringComparison.Ordinal);
+        if (markerIndex < 0)
+        {
+            return new TaskMetaEnvelope
+            {
+                Description = rawDescription
+            };
+        }
+
+        var description = rawDescription[..markerIndex];
+        var metaJson = rawDescription[(markerIndex + TaskMetaMarker.Length)..];
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<TaskMetaEnvelope>(metaJson) ?? new TaskMetaEnvelope();
+            parsed.Description = description;
+            parsed.Notes ??= new List<TaskLogNote>();
+            return parsed;
+        }
+        catch
+        {
+            return new TaskMetaEnvelope
+            {
+                Description = rawDescription
+            };
+        }
+    }
+
+    private static string? SerializeTaskMeta(TaskMetaEnvelope meta)
+    {
+        var description = string.IsNullOrWhiteSpace(meta.Description) ? null : meta.Description.Trim();
+        var notes = meta.Notes?.Where(n => !string.IsNullOrWhiteSpace(n.Note)).ToList() ?? new List<TaskLogNote>();
+
+        if (!notes.Any())
+            return description;
+
+        var payload = new TaskMetaEnvelope
+        {
+            Description = null,
+            Notes = notes
+        };
+
+        return (description ?? string.Empty) + TaskMetaMarker + JsonSerializer.Serialize(payload);
+    }
+
+    private sealed class TaskMetaEnvelope
+    {
+        public string? Description { get; set; }
+        public List<TaskLogNote> Notes { get; set; } = new();
+    }
+
+    private sealed class TaskLogNote
+    {
+        public string Author { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
     }
 }
 

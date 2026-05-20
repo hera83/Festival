@@ -77,8 +77,7 @@
                                 }
                             </td>
                             <td class="pe-3 align-middle text-end">
-                                <button type="button" class="btn btn-sm btn-stat-detail"
-                                        style="background: var(--clr-info); color: #fff; border: none;"
+                                <button type="button" class="btn btn-sm btn-secondary btn-stat-detail"
                                         title="Se detaljer"
                                         data-volunteer-id="@row.Id"
                                         data-volunteer-name="@row.Name"
@@ -313,6 +312,18 @@
             return;
         }
 
+        function parseLocalDateTime(raw) {
+            if (!raw) return null;
+            var parts = String(raw).split(/[-T:]/).map(Number);
+            if (parts.length < 5 || parts.some(isNaN)) return null;
+            return new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4], parts[5] || 0);
+        }
+
+        function dayLabel(dateObj) {
+            if (!dateObj) return '';
+            return dateObj.toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' });
+        }
+
         // Tidslinjen: mærker hvert 3. time
         var hourMarks = '';
         for (var h = 0; h <= 24; h += 3) {
@@ -324,7 +335,20 @@
                 String(h).padStart(2,'0') + ':00</span>';
         }
 
+        function makeTimelineRow(dateLabelHtml, barHtml, rightHtml, isLast) {
+            return '<div class="d-flex align-items-center gap-3 pt-2 pb-2" style="border-bottom:' + (isLast ? '1px solid var(--clr-border)' : 'none') + ';">' +
+                '<div style="min-width:150px;font-size:0.78rem;color:var(--clr-text-muted);">' + dateLabelHtml + '</div>' +
+                '<div style="flex:1;position:relative;height:28px;margin-top:18px;">' +
+                    hourMarks +
+                    barHtml +
+                '</div>' +
+                '<div style="min-width:140px;font-size:0.78rem;text-align:right;">' + rightHtml + '</div>' +
+            '</div>';
+        }
+
         var rows = data.sessions.map(function (s) {
+            var startDt = parseLocalDateTime(s.startAt);
+            var endDt   = parseLocalDateTime(s.endAt);
             var barColor  = s.isOpen
                 ? 'repeating-linear-gradient(45deg,var(--clr-warn),var(--clr-warn) 6px,var(--clr-surface) 6px,var(--clr-surface) 12px)'
                 : 'var(--clr-brand)';
@@ -332,8 +356,9 @@
                 ? s.checkOutTime
                 : '<span style="color:var(--clr-warn);font-size:0.75rem;"><i class="bi bi-record-circle"></i> Aktiv</span>';
             var duration  = s.durationHours.toFixed(1) + ' t';
+            var spansMidnight = !!s.spansMidnight && !!startDt && !!endDt;
 
-            // Poster-badges under tidslinjen
+            // Poster-badges
             var locationHtml = '';
             if (s.locations && s.locations.length > 0) {
                 var icons = { CheckIn: 'bi-box-arrow-in-right', Move: 'bi-arrow-right-short', CheckOut: 'bi-box-arrow-right' };
@@ -351,37 +376,62 @@
                         '</span>';
                 }).join('<span style="color:var(--clr-border);font-size:0.7rem;"> › </span>');
                 locationHtml = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;' +
-                    'padding:5px 0 4px;border-bottom:1px solid var(--clr-border);">' + badges + '</div>';
+                    'padding:5px 0 4px;">' + badges + '</div>';
             }
 
-            var timelineRow = '<div class="d-flex align-items-center gap-3 pt-2 ' + (locationHtml ? '' : 'pb-2') + '" style="border-bottom:' + (locationHtml ? 'none' : '1px solid var(--clr-border)') + ';">' +
-                '<div style="min-width:110px;font-size:0.8rem;color:var(--clr-text-muted);">' + s.date + '</div>' +
-                '<div style="flex:1;position:relative;height:28px;margin-top:18px;">' +
-                    hourMarks +
-                    '<div style="position:absolute;top:4px;height:20px;' +
-                        'left:' + s.leftPct + '%;width:' + s.widthPct + '%;' +
-                        'background:' + barColor + ';border-radius:4px;' +
-                        'box-shadow:0 0 6px rgba(232,93,46,0.35);"' +
-                        'title="' + s.checkInTime + ' – ' + (s.checkOutTime || 'nu') + ' (' + duration + ')">' +
-                    '</div>' +
-                '</div>' +
-                '<div style="min-width:140px;font-size:0.78rem;text-align:right;">' +
-                    '<span style="color:var(--clr-ok);">' + s.checkInTime + '</span>' +
-                    '<span style="color:var(--clr-text-muted);"> – </span>' +
-                    checkOut +
-                    '<span style="color:var(--clr-text-muted);margin-left:6px;">(' + duration + ')</span>' +
-                '</div>' +
-            '</div>';
-
             var locationsRow = locationHtml
-                ? '<div class="d-flex gap-3" style="border-bottom:1px solid var(--clr-border);padding-bottom:6px;">' +
-                    '<div style="min-width:110px;"></div>' +
+                ? '<div class="d-flex gap-3 pb-2" style="border-bottom:1px solid var(--clr-border);">' +
+                    '<div style="min-width:150px;"></div>' +
                     '<div style="flex:1;">' + locationHtml + '</div>' +
                     '<div style="min-width:140px;"></div>' +
                   '</div>'
                 : '';
 
-            return timelineRow + locationsRow;
+            if (!spansMidnight) {
+                var singleBar = '<div style="position:absolute;top:4px;height:20px;' +
+                    'left:' + s.leftPct + '%;width:' + s.widthPct + '%;' +
+                    'background:' + barColor + ';border-radius:4px;' +
+                    'box-shadow:0 0 6px rgba(232,93,46,0.35);"' +
+                    'title="' + s.checkInTime + ' – ' + (s.checkOutTime || 'nu') + ' (' + duration + ')"></div>';
+                var rightHtml = '<span style="color:var(--clr-ok);">' + s.checkInTime + '</span>' +
+                    '<span style="color:var(--clr-text-muted);"> – </span>' +
+                    checkOut +
+                    '<span style="color:var(--clr-text-muted);margin-left:6px;">(' + duration + ')</span>';
+                return makeTimelineRow(s.date, singleBar, rightHtml, !locationHtml) + locationsRow;
+            }
+
+            // ── Vagt krydser midnat: to separate tidslinje-rækker ──
+            var startMins   = startDt.getHours() * 60 + startDt.getMinutes();
+            var endMins     = endDt.getHours()   * 60 + endDt.getMinutes();
+            var firstLeft   = (startMins / 1440 * 100).toFixed(2);
+            var firstWidth  = Math.max(100 - parseFloat(firstLeft), 0.5).toFixed(2);
+            var secondWidth = Math.max(endMins / 1440 * 100, 0.5).toFixed(2);
+
+            var day1Label = s.date +
+                ' <i class="bi bi-arrow-bar-right" style="color:var(--clr-info);font-size:0.7rem;" title="Fortsætter næste dag"></i>';
+            var day2Label = '<i class="bi bi-arrow-bar-right" style="color:var(--clr-info);font-size:0.7rem;transform:rotate(180deg);display:inline-block;" title="Fortsat fra forrige dag"></i> ' +
+                (s.endDate || dayLabel(endDt));
+
+            var bar1 = '<div style="position:absolute;top:4px;height:20px;left:' + firstLeft + '%;width:' + firstWidth + '%;' +
+                'background:' + barColor + ';border-radius:4px;' +
+                'box-shadow:0 0 6px rgba(232,93,46,0.35);"' +
+                'title="' + s.checkInTime + ' – 24:00"></div>';
+            var bar2 = '<div style="position:absolute;top:4px;height:20px;left:0;width:' + secondWidth + '%;' +
+                'background:' + barColor + ';border-radius:4px;' +
+                'box-shadow:0 0 6px rgba(232,93,46,0.35);"' +
+                'title="00:00 – ' + (s.checkOutTime || 'nu') + '"></div>';
+
+            var right1 = '<span style="color:var(--clr-ok);">' + s.checkInTime + '</span>' +
+                '<span style="color:var(--clr-text-muted);"> – </span>' +
+                '<span style="color:var(--clr-text-muted);">24:00</span>';
+            var right2 = '<span style="color:var(--clr-text-muted);">00:00 – </span>' +
+                checkOut +
+                '<span style="color:var(--clr-text-muted);margin-left:6px;">(' + duration + ')</span>';
+
+            var row1 = makeTimelineRow(day1Label, bar1, right1, false);
+            var row2 = makeTimelineRow(day2Label, bar2, right2, !locationHtml);
+
+            return row1 + row2 + locationsRow;
         }).join('');
 
         var totalLine = '<div class="d-flex justify-content-end pt-2" style="font-size:0.85rem;">' +

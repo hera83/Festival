@@ -43,7 +43,7 @@ public class ReadMessagesViewModel : PagedViewModelBase
 public class TaskRowViewModel
 {
     public int    Id              { get; set; }
-    public int    MessageId       { get; set; }
+    public int?   MessageId       { get; set; }
     public string Title           { get; set; } = string.Empty;
     public string? Description    { get; set; }
     public MessageTaskStatus Status { get; set; }

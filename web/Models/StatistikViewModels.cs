@@ -25,11 +25,15 @@ public class LocationEventDto
 public class DaySessionDto
 {
     public string Date { get; set; } = string.Empty;
+    public string? EndDate { get; set; }
     public string CheckInTime { get; set; } = string.Empty;
     public string? CheckOutTime { get; set; }
+    public string StartAt { get; set; } = string.Empty;
+    public string EndAt { get; set; } = string.Empty;
     public double DurationHours { get; set; }
     public double LeftPct { get; set; }
     public double WidthPct { get; set; }
+    public bool SpansMidnight { get; set; }
     public bool IsOpen { get; set; }
     public IList<LocationEventDto> Locations { get; set; } = [];
 }

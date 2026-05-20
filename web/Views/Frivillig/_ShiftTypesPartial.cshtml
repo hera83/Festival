@@ -16,6 +16,36 @@
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
+    <button type="button" id="btnOpenCreateSt" class="btn btn-sm"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
+        <i class="bi bi-plus-square me-1"></i>Opret vagttype
+    </button>
+</div>
+
+@* Opret-modal *@
+<div class="modal fade" id="createStModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+            <div id="createStModalBody">
+                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Rediger-modal *@
+<div class="modal fade" id="editStModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+            <div id="editStModalBody">
+                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @* Resultat-zone — kun denne div overskrives ved søgning/sideskift *@
@@ -32,14 +62,14 @@
                                 <th class="ps-3">Navn</th>
                                 <th>Start</th>
                                 <th>Slut</th>
-                                <th class="pe-3" style="width:60px;"></th>
+                                <th class="pe-3" style="width:110px;"></th>
                             </tr>
                     </thead>
                     <tbody>
                         @if (!Model.ShiftTypes.Any())
                         {
                             <tr>
-                                <td colspan="3" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                <td colspan="4" class="text-center py-4" style="color: var(--clr-text-muted);">
                                     <i class="bi bi-diagram-3 fs-4 d-block mb-1"></i>
                                     Ingen vagttyper fundet
                                 </td>
@@ -52,13 +82,20 @@
                                 <td class="align-middle">@st.StartTime.ToString("dd-MM-yyyy HH:mm")</td>
                                 <td class="align-middle">@st.EndTime.ToString("dd-MM-yyyy HH:mm")</td>
                                 <td class="pe-3 align-middle text-end">
-                                    <button type="button" class="btn btn-sm st-delete-btn"
-                                            style="background: var(--clr-alarm); color: #fff; border: none;"
-                                            title="Slet vagttype"
-                                            data-id="@st.Id" data-name="@st.ShiftName"
-                                            data-bs-toggle="modal" data-bs-target="#deleteStModal">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-sm btn-secondary st-edit-btn"
+                                                title="Rediger vagttype"
+                                                data-id="@st.Id">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm st-delete-btn"
+                                                style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                title="Slet vagttype"
+                                                data-id="@st.Id" data-name="@st.ShiftName"
+                                                data-bs-toggle="modal" data-bs-target="#deleteStModal">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -150,6 +187,10 @@
 <script>
 (function () {
     var searchUrl    = '@Url.Action("ShiftTypesSearch", "Frivillig")';
+    var createFormUrl = '@Url.Action("GetCreateShiftTypeForm", "Frivillig")';
+    var createPostUrl = '@Url.Action("CreateShiftType", "Frivillig")';
+    var editFormUrl   = '@Url.Action("GetEditShiftTypeForm", "Frivillig")';
+    var editPostUrl   = '@Url.Action("UpdateShiftType", "Frivillig")';
     var deleteUrl    = '@Url.Action("DeleteShiftType",  "Frivillig")';
     var debounce;
     var currentSize  = @Model.PageSize;
@@ -181,6 +222,94 @@
                 var p = parseInt(this.dataset.page);
                 if (!isNaN(p) && p >= 1) loadPage(p, currentSize);
             });
+        });
+        bindRowActions();
+    }
+
+    // ── Opret / rediger ──────────────────────────────────────────
+    var createModalEl = document.getElementById('createStModal');
+    var editModalEl   = document.getElementById('editStModal');
+    var bsCreateModal = new bootstrap.Modal(createModalEl);
+    var bsEditModal   = new bootstrap.Modal(editModalEl);
+
+    document.getElementById('btnOpenCreateSt').addEventListener('click', async function () {
+        try {
+            var res = await fetch(createFormUrl);
+            if (!res.ok) { showToast('Kunne ikke åbne opret-formular.', 'error'); return; }
+            document.getElementById('createStModalBody').innerHTML = await res.text();
+            bsCreateModal.show();
+            bindCreateForm();
+        } catch (e) {
+            showToast('Netværksfejl – prøv igen.', 'error');
+        }
+    });
+
+    function bindRowActions() {
+        document.querySelectorAll('.st-edit-btn').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+                var id = parseInt(this.dataset.id);
+                if (!id) return;
+                try {
+                    var res = await fetch(editFormUrl + '?id=' + id);
+                    if (!res.ok) { showToast('Kunne ikke åbne rediger-formular.', 'error'); return; }
+                    document.getElementById('editStModalBody').innerHTML = await res.text();
+                    bsEditModal.show();
+                    bindEditForm();
+                } catch (e) {
+                    showToast('Netværksfejl – prøv igen.', 'error');
+                }
+            });
+        });
+    }
+
+    function bindCreateForm() {
+        var form = document.getElementById('createShiftTypeForm');
+        if (!form) return;
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            var submitBtn = document.getElementById('createShiftTypeSubmit');
+            submitBtn.disabled = true;
+            try {
+                var res = await fetch(createPostUrl, { method: 'POST', body: new FormData(form) });
+                var json = await res.json();
+                if (json.success) {
+                    bsCreateModal.hide();
+                    showToast(json.message, 'success');
+                    document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                    await loadPage(1, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (err) {
+                showToast('Netværksfejl – kunne ikke oprette vagttype.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    function bindEditForm() {
+        var form = document.getElementById('editShiftTypeForm');
+        if (!form) return;
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            var submitBtn = document.getElementById('editShiftTypeSubmit');
+            submitBtn.disabled = true;
+            try {
+                var res = await fetch(editPostUrl, { method: 'POST', body: new FormData(form) });
+                var json = await res.json();
+                if (json.success) {
+                    bsEditModal.hide();
+                    showToast(json.message, 'success');
+                    await loadPage(currentPage, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (err) {
+                showToast('Netværksfejl – kunne ikke opdatere vagttype.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
         });
     }
 

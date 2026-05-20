@@ -234,6 +234,34 @@ a:hover { color: #58a6ff; text-decoration: underline; }
   font-size: 1rem;
 }
 
+.menu-icon-notify {
+  position: relative;
+}
+
+.menu-notify-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--clr-alarm);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border: 1px solid var(--clr-surface);
+  display: none;
+}
+
+.menu-notify-badge.show {
+  display: inline-block;
+}
+
+
+
 /* ── Label text (smooth hide) ── */
 .menu-text {
   overflow: hidden;

@@ -1,29 +1,108 @@
 @model web.Models.TasksViewModel
 
-@* Opdater status modal *@
-<div class="modal fade" id="updateTaskStatusModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+@* Opret standalone opgave modal *@
+<div class="modal fade" id="createStandaloneTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
             <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
-                <h6 class="modal-title mb-0"><i class="bi bi-check2-square me-2" style="color: var(--clr-brand);"></i>Opdater status</h6>
+                <h6 class="modal-title mb-0"><i class="bi bi-plus-square me-2" style="color: var(--clr-brand);"></i>Opret opgave</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
             <div class="modal-body" style="background: var(--clr-surface);">
-                <p class="mb-2 fw-semibold" id="taskStatusTitle" style="font-size:0.9rem;"></p>
-                <div class="d-flex flex-column gap-2">
-                    <button type="button" class="btn btn-sm task-status-set" data-status="0"
-                            style="background: var(--clr-info-bg); color: var(--clr-info); border: 1px solid var(--clr-info); text-align:left;">
-                        <i class="bi bi-circle me-2"></i>Åben
-                    </button>
-                    <button type="button" class="btn btn-sm task-status-set" data-status="1"
-                            style="background: var(--clr-warn-bg); color: var(--clr-warn); border: 1px solid var(--clr-warn); text-align:left;">
-                        <i class="bi bi-arrow-repeat me-2"></i>I gang
-                    </button>
-                    <button type="button" class="btn btn-sm task-status-set" data-status="2"
-                            style="background: var(--clr-ok-bg); color: var(--clr-ok); border: 1px solid var(--clr-ok); text-align:left;">
-                        <i class="bi bi-check-circle me-2"></i>Udført
-                    </button>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Titel <span style="color:var(--clr-alarm);">*</span></label>
+                    <input type="text" id="cstTitle" class="form-control form-control-sm"
+                           style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                           placeholder="Opgavens titel" />
                 </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Beskrivelse</label>
+                    <textarea id="cstDescription" class="form-control form-control-sm" rows="3"
+                              style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text); resize:vertical;"
+                              placeholder="Valgfri beskrivelse…"></textarea>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Forfaldsdato</label>
+                    <input type="date" id="cstDueDate" class="form-control form-control-sm"
+                           style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Annuller
+                </button>
+                <button type="button" id="cstSaveBtn" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+                    <i class="bi bi-check2-square me-1"></i>Opret opgave
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Åbn/rediger opgave modal *@
+<div class="modal fade" id="openTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0"><i class="bi bi-check2-square me-2" style="color: var(--clr-brand);"></i>Åbn opgave</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" style="background: var(--clr-surface);">
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <label for="openTaskTitle" class="form-label" style="font-size:0.8rem; color: var(--clr-text-muted);">Titel</label>
+                        <input id="openTaskTitle" type="text" class="form-control form-control-sm mb-3" readonly
+                               style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+
+                        <label for="openTaskDescription" class="form-label" style="font-size:0.8rem; color: var(--clr-text-muted);">Beskrivelse</label>
+                        <textarea id="openTaskDescription" class="form-control form-control-sm mb-3" rows="7"
+                                  style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text); resize: vertical;"
+                                  placeholder="Skriv beskrivelse…"></textarea>
+
+                        <label for="openTaskDueDate" class="form-label" style="font-size:0.8rem; color: var(--clr-text-muted);">Forfaldsdato</label>
+                        <input id="openTaskDueDate" type="date" class="form-control form-control-sm mb-3"
+                               style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+
+                        <label class="form-label" style="font-size:0.8rem; color: var(--clr-text-muted);">Status</label>
+                        <div class="d-flex flex-wrap gap-2" id="openTaskStatusGroup">
+                            <button type="button" class="btn btn-sm btn-secondary task-status-select" data-status="0">
+                                <i class="bi bi-circle me-1"></i>Åben
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary task-status-select" data-status="1">
+                                <i class="bi bi-arrow-repeat me-1"></i>I gang
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary task-status-select" data-status="2">
+                                <i class="bi bi-check-circle me-1"></i>Udført
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <p class="mb-2 fw-semibold" style="font-size:0.85rem; color: var(--clr-text-muted);">
+                            <i class="bi bi-clock-history me-1"></i>Hændelseslog
+                        </p>
+                        <div id="openTaskLogList" class="d-flex flex-column gap-2 mb-3"
+                             style="max-height: 360px; overflow-y: auto; padding-right: 2px;"></div>
+
+                        <label for="openTaskNewNote" class="form-label" style="font-size:0.8rem; color: var(--clr-text-muted);">Ny note</label>
+                        <textarea id="openTaskNewNote" class="form-control form-control-sm" rows="4"
+                                  style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text); resize: vertical;"
+                                  placeholder="Skriv hvordan det går med opgaven…"></textarea>
+                        <div class="d-flex justify-content-end mt-2">
+                            <button type="button" class="btn btn-sm btn-secondary" id="openTaskAddNoteBtn">
+                                <i class="bi bi-plus-lg me-1"></i>Gem note
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Luk
+                </button>
+                <button type="button" class="btn btn-sm" id="openTaskSaveBtn" style="background: var(--clr-brand); color:#fff; border:none;">
+                    <i class="bi bi-save me-1"></i>Gem
+                </button>
             </div>
         </div>
     </div>
@@ -69,7 +148,10 @@
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div></div>
+    <button type="button" class="btn btn-sm" id="createStandaloneTaskBtn"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
+        <i class="bi bi-plus-lg me-1"></i>Opret opgave
+    </button>
 </div>
 
 @* Resultat-zone *@
@@ -136,11 +218,10 @@
                                 <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@t.CreatedAt.ToString("dd/MM HH:mm")</td>
                                 <td class="pe-3 align-middle text-end">
                                     <div class="d-flex gap-1 justify-content-end">
-                                        <button type="button" class="btn btn-sm task-status-btn"
-                                                style="background: var(--clr-info); color: #fff; border: none;"
-                                                title="Skift status"
-                                                data-id="@t.Id" data-title="@t.Title">
-                                            <i class="bi bi-arrow-repeat"></i>
+                                        <button type="button" class="btn btn-sm btn-secondary task-open-btn"
+                                                title="Åbn opgave"
+                                                data-id="@t.Id">
+                                            <i class="bi bi-box-arrow-up-right"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm task-delete-btn"
                                                 style="background: var(--clr-alarm); color: #fff; border: none;"
@@ -216,13 +297,17 @@
 <script>
 (function () {
     var searchUrl       = '@Url.Action("TasksSearch",         "Beskeder")';
-    var statusPostUrl   = '@Url.Action("UpdateTaskStatus",    "Beskeder")';
-    var deletePostUrl   = '@Url.Action("DeleteTask",          "Beskeder")';
+    var taskDataUrl     = '@Url.Action("GetTaskEditorData",    "Beskeder")';
+    var updateTaskUrl   = '@Url.Action("UpdateTaskEditor",     "Beskeder")';
+    var addTaskNoteUrl  = '@Url.Action("AddTaskEditorNote",    "Beskeder")';
+    var deletePostUrl             = '@Url.Action("DeleteTask",              "Beskeder")';
+    var createStandaloneTaskUrl   = '@Url.Action("CreateStandaloneTask",    "Beskeder")';
 
     var debounce;
     var currentSize = @Model.PageSize;
     var currentPage = @Model.Page;
-    var pendingStatusId = null;
+    var pendingOpenId = null;
+    var pendingOpenStatus = 0;
     var pendingDeleteId = null;
 
     async function loadPage(page, size) {
@@ -255,30 +340,131 @@
         bindRowActions();
     }
 
-    // ── Status modal ──────────────────────────────────────────────
-    var statusModalEl = document.getElementById('updateTaskStatusModal');
-    var bsStatusModal = new bootstrap.Modal(statusModalEl);
+    // ── Åbn/rediger opgave modal ─────────────────────────────────
+    var openTaskModalEl = document.getElementById('openTaskModal');
+    var bsOpenTaskModal = new bootstrap.Modal(openTaskModalEl);
+    var titleInput = document.getElementById('openTaskTitle');
+    var descriptionInput = document.getElementById('openTaskDescription');
+    var dueDateInput = document.getElementById('openTaskDueDate');
+    var noteInput = document.getElementById('openTaskNewNote');
+    var logList = document.getElementById('openTaskLogList');
 
-    document.querySelectorAll('.task-status-set').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-            if (!pendingStatusId) return;
-            var status = parseInt(this.dataset.status);
+    function setStatusVisual() {
+        document.querySelectorAll('.task-status-select').forEach(function (b) {
+            var status = parseInt(b.dataset.status);
+            var isActive = status === pendingOpenStatus;
+
+            if (!isActive) {
+                b.style.background = 'var(--clr-surface-2)';
+                b.style.color = 'var(--clr-text)';
+                b.style.border = '1px solid var(--clr-border)';
+                b.style.boxShadow = 'none';
+                b.style.opacity = '1';
+                return;
+            }
+
+            if (status === 0) {
+                b.style.background = 'var(--clr-info-bg)';
+                b.style.color = 'var(--clr-info)';
+                b.style.border = '1px solid var(--clr-info)';
+            } else if (status === 1) {
+                b.style.background = 'var(--clr-warn-bg)';
+                b.style.color = 'var(--clr-warn)';
+                b.style.border = '1px solid var(--clr-warn)';
+            } else {
+                b.style.background = 'var(--clr-ok-bg)';
+                b.style.color = 'var(--clr-ok)';
+                b.style.border = '1px solid var(--clr-ok)';
+            }
+
+            b.style.boxShadow = '0 0 0 2px var(--clr-brand-dim)';
+            b.style.opacity = '1';
+        });
+    }
+
+    document.querySelectorAll('.task-status-select').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            pendingOpenStatus = parseInt(this.dataset.status);
+            setStatusVisual();
+        });
+    });
+
+    function renderTaskNotes(notes) {
+        if (!notes || notes.length === 0) {
+            logList.innerHTML = '<div class="rounded-2 p-3" style="border:1px solid var(--clr-border); background:var(--clr-bg); color:var(--clr-text-muted); font-size:.85rem;">Ingen noter endnu.</div>';
+            return;
+        }
+        logList.innerHTML = notes.map(function (n) {
+            return '<div class="rounded-2 p-2" style="border:1px solid var(--clr-border); background:var(--clr-bg);">' +
+                   '<div style="font-size:.75rem;color:var(--clr-text-muted);margin-bottom:4px;">' +
+                   '<i class="bi bi-person me-1"></i>' + n.author + ' <span>&nbsp;·&nbsp;</span>' + n.createdAt +
+                   '</div>' +
+                   '<div style="font-size:.85rem;white-space:pre-wrap;word-break:break-word;">' + n.note + '</div>' +
+                   '</div>';
+        }).join('');
+    }
+
+    async function loadTaskEditorData(id) {
+        var res = await fetch(taskDataUrl + '?id=' + id);
+        if (!res.ok) throw new Error();
+        var json = await res.json();
+        if (!json.success) throw new Error();
+        titleInput.value = json.title || '';
+        descriptionInput.value = json.description || '';
+        dueDateInput.value = json.dueDate || '';
+        pendingOpenStatus = parseInt(json.status || 0);
+        setStatusVisual();
+        renderTaskNotes(json.notes || []);
+    }
+
+    document.getElementById('openTaskSaveBtn').addEventListener('click', async function () {
+            if (!pendingOpenId) return;
+            var btn = this;
+            btn.disabled = true;
+            var description = descriptionInput.value;
             var fd = new FormData();
-            fd.append('id', pendingStatusId);
-            fd.append('status', status);
+            fd.append('id', pendingOpenId);
+            fd.append('description', description);
+            fd.append('dueDate', dueDateInput.value || '');
+            fd.append('status', pendingOpenStatus);
             fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
             try {
-                var res  = await fetch(statusPostUrl, { method: 'POST', body: fd });
+                var res  = await fetch(updateTaskUrl, { method: 'POST', body: fd });
                 var json = await res.json();
-                bsStatusModal.hide();
+                bsOpenTaskModal.hide();
                 if (json.success) {
                     showToast(json.message, 'success');
                     document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
                     await loadPage(currentPage, currentSize);
                 } else { showToast(json.message, 'error'); }
-            } catch (e) { bsStatusModal.hide(); showToast('Netværksfejl.', 'error'); }
-            finally { pendingStatusId = null; }
+            } catch (e) { bsOpenTaskModal.hide(); showToast('Netværksfejl.', 'error'); }
+            finally { pendingOpenId = null; btn.disabled = false; }
         });
+
+    document.getElementById('openTaskAddNoteBtn').addEventListener('click', async function () {
+        if (!pendingOpenId) return;
+        var note = noteInput.value.trim();
+        if (!note) { showToast('Skriv en note først.', 'warn'); return; }
+
+        var btn = this;
+        btn.disabled = true;
+        var fd = new FormData();
+        fd.append('id', pendingOpenId);
+        fd.append('note', note);
+        fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+        try {
+            var res = await fetch(addTaskNoteUrl, { method: 'POST', body: fd });
+            var json = await res.json();
+            if (!json.success) { showToast(json.message, 'error'); return; }
+            noteInput.value = '';
+            await loadTaskEditorData(pendingOpenId);
+            showToast(json.message, 'success');
+        } catch (e) {
+            showToast('Netværksfejl.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
     });
 
     // ── Slet modal ────────────────────────────────────────────────
@@ -305,11 +491,18 @@
     });
 
     function bindRowActions() {
-        document.querySelectorAll('.task-status-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                pendingStatusId = parseInt(this.dataset.id);
-                document.getElementById('taskStatusTitle').textContent = this.dataset.title;
-                bsStatusModal.show();
+        document.querySelectorAll('.task-open-btn').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+                pendingOpenId = parseInt(this.dataset.id);
+                noteInput.value = '';
+                try {
+                    await loadTaskEditorData(pendingOpenId);
+                } catch (e) {
+                    showToast('Kunne ikke hente opgavedata.', 'error');
+                    pendingOpenId = null;
+                    return;
+                }
+                bsOpenTaskModal.show();
             });
         });
         document.querySelectorAll('.task-delete-btn').forEach(function (btn) {
@@ -318,5 +511,42 @@
     }
 
     bindZoneEvents();
+
+    // ── Opret standalone opgave ───────────────────────────────────
+    var bsCreateStandaloneModal = new bootstrap.Modal(document.getElementById('createStandaloneTaskModal'));
+    document.getElementById('createStandaloneTaskBtn').addEventListener('click', function () {
+        document.getElementById('cstTitle').value = '';
+        document.getElementById('cstDescription').value = '';
+        document.getElementById('cstDueDate').value = '';
+        bsCreateStandaloneModal.show();
+    });
+    document.getElementById('cstSaveBtn').addEventListener('click', async function () {
+        var title = document.getElementById('cstTitle').value.trim();
+        if (!title) { showToast('Titel er påkrævet.', 'warn'); document.getElementById('cstTitle').focus(); return; }
+        var btn = this; btn.disabled = true;
+        var fd = new FormData();
+        fd.append('title', title);
+        fd.append('description', document.getElementById('cstDescription').value);
+        fd.append('dueDate', document.getElementById('cstDueDate').value || '');
+        fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        try {
+            var res  = await fetch(createStandaloneTaskUrl, { method: 'POST', body: fd });
+            var json = await res.json();
+            bsCreateStandaloneModal.hide();
+            if (json.success) {
+                showToast(json.message, 'success');
+                document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
+                await loadPage(1, currentSize);
+            } else { showToast(json.message, 'error'); }
+        } catch (e) { bsCreateStandaloneModal.hide(); showToast('Netværksfejl.', 'error'); }
+        finally { btn.disabled = false; }
+    });
+
+    if (window.pendingBeskederTaskId) {
+        var wanted = parseInt(window.pendingBeskederTaskId);
+        window.pendingBeskederTaskId = null;
+        var openBtn = document.querySelector('.task-open-btn[data-id="' + wanted + '"]');
+        if (openBtn) openBtn.click();
+    }
 })();
 </script>

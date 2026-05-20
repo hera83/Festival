@@ -171,6 +171,7 @@ public class AdminController : Controller
             var isOpen    = c.CheckedOutAt == null;
             var local     = c.CheckedInAt;
             var localOut  = checkOut;
+            var spansMidnight = local.Date != localOut.Date;
 
             var midnightLocal = local.Date;
             var startMin  = (local - midnightLocal).TotalMinutes;
@@ -199,11 +200,15 @@ public class AdminController : Controller
             return new DaySessionDto
             {
                 Date          = local.ToString("ddd. d. MMM", new System.Globalization.CultureInfo("da-DK")),
+                EndDate       = spansMidnight ? localOut.ToString("ddd. d. MMM", new System.Globalization.CultureInfo("da-DK")) : null,
                 CheckInTime   = local.ToString("HH:mm"),
                 CheckOutTime  = isOpen ? null : localOut.ToString("HH:mm"),
+                StartAt       = local.ToString("yyyy-MM-ddTHH:mm:ss"),
+                EndAt         = localOut.ToString("yyyy-MM-ddTHH:mm:ss"),
                 DurationHours = Math.Round((checkOut - c.CheckedInAt).TotalHours, 1),
                 LeftPct       = Math.Round(startMin / 1440.0 * 100, 2),
                 WidthPct      = Math.Round(widthMin  / 1440.0 * 100, 2),
+                SpansMidnight = spansMidnight,
                 IsOpen        = isOpen,
                 Locations     = locations,
             };

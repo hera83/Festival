@@ -100,7 +100,7 @@
                             <th>Emne</th>
                             <th>Forhåndsvisning</th>
                             <th>Modtaget</th>
-                            <th class="pe-3" style="width:120px;"></th>
+                            <th class="pe-3" style="width:170px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,20 +131,9 @@
                                 <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@m.SentAt.ToString("dd/MM HH:mm")</td>
                                 <td class="pe-3 align-middle text-end">
                                     <div class="d-flex gap-1 justify-content-end">
-                                        <button type="button" class="btn btn-sm msg-task-btn"
-                                                style="background: var(--clr-warn); color: #fff; border: none;"
-                                                title="Opret opgave" data-id="@m.Id">
-                                            <i class="bi bi-check2-square"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm msg-detail-btn"
-                                                style="background: var(--clr-info); color: #fff; border: none;"
-                                                title="Vis besked" data-id="@m.Id">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm msg-delete-btn"
-                                                style="background: var(--clr-alarm); color: #fff; border: none;"
-                                                title="Slet besked" data-id="@m.Id">
-                                            <i class="bi bi-trash"></i>
+                                        <button type="button" class="btn btn-sm btn-secondary msg-detail-btn"
+                                                title="Åbn besked" data-id="@m.Id">
+                                            <i class="bi bi-eye me-1"></i>Åbn besked
                                         </button>
                                     </div>
                                 </td>
@@ -241,6 +230,10 @@
         } catch (e) { showToast('Netværksfejl – prøv igen.', 'error'); }
     }
 
+    window.refreshUnreadMessagesTable = function () {
+        loadPage(currentPage, currentSize);
+    };
+
     var input = document.getElementById('unreadSearchInput');
     var clear = document.getElementById('unreadSearchClear');
     input.addEventListener('input', function () { clear.classList.toggle('d-none', this.value === ''); });
@@ -293,6 +286,7 @@
             if (res.ok) {
                 detailModalBody.innerHTML = await res.text();
                 execScripts(detailModalBody);
+                bindDetailActions();
                 document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
                 await loadPage(currentPage, currentSize);
             } else { bsDetailModal.hide(); showToast('Kunne ikke hente besked.', 'error'); }
@@ -312,6 +306,16 @@
             if (res.ok) { taskModalBody.innerHTML = await res.text(); bindTaskForm(); }
             else { bsTaskModal.hide(); showToast('Kunne ikke hente opgave-formular.', 'error'); }
         } catch (e) { bsTaskModal.hide(); showToast('Netværksfejl.', 'error'); }
+    }
+
+    function bindDetailActions() {
+        var btn = detailModalBody.querySelector('.detail-create-task-btn');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var msgId = parseInt(this.dataset.messageId);
+            bsDetailModal.hide();
+            setTimeout(function () { openTaskModal(msgId); }, 180);
+        });
     }
 
     function bindTaskForm() {

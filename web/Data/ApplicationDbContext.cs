@@ -156,6 +156,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.Message)
                 .WithMany(x => x.Tasks)
                 .HasForeignKey(x => x.MessageId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

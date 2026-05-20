@@ -70,6 +70,10 @@
             document.getElementById('countUnread').textContent = d.unreadCount;
             document.getElementById('countRead').textContent   = d.readCount;
             document.getElementById('countTasks').textContent  = d.taskCount;
+
+            if (typeof window.refreshBeskedMenuIndicator === 'function') {
+                window.refreshBeskedMenuIndicator();
+            }
         }
 
         document.addEventListener('beskeder:countsChanged', refreshCounts);
@@ -78,8 +82,8 @@
         const spinner = document.getElementById('tableSpinner');
         let   active  = null;
 
-        async function loadPanel(key) {
-            if (active === key) {
+        async function loadPanel(key, forceReload) {
+            if (!forceReload && active === key) {
                 pane.innerHTML = '';
                 active = null;
                 document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('stat-card-active'));
@@ -103,14 +107,31 @@
             spinner.classList.add('d-none');
         }
 
+        window.openBeskedTaskFromMessage = async function (taskId) {
+            window.pendingBeskederTaskId = taskId;
+            await loadPanel('tasks', true);
+        };
+
         document.querySelectorAll('.stat-card').forEach(card => {
             card.addEventListener('click', function () {
-                loadPanel(this.dataset.panel);
+                loadPanel(this.dataset.panel, false);
             });
         });
 
+        async function backgroundRefresh() {
+            await refreshCounts();
+            if (active === 'unread' && typeof window.refreshUnreadMessagesTable === 'function') {
+                window.refreshUnreadMessagesTable();
+            }
+        }
+
+        setInterval(backgroundRefresh, 30000);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') backgroundRefresh();
+        });
+
         // Åbn Ulæste som standard
-        loadPanel('unread');
+        loadPanel('unread', false);
     })();
     </script>
     <style>

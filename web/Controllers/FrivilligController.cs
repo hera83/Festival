@@ -109,18 +109,18 @@ public class FrivilligController(ApplicationDbContext db) : Controller
 
     public async Task<IActionResult> VolunteersSearch(string q = "", int page = 1, int pageSize = 10)
     {
-        var query = db.Volunteers.Where(v => v.SeasonId == CurrentSeason);
+        var baseQuery = db.Volunteers.Where(v => v.SeasonId == CurrentSeason);
         if (!string.IsNullOrWhiteSpace(q))
         {
             var ql = q.ToLower();
-            query = query.Where(v =>
+            baseQuery = baseQuery.Where(v =>
                 v.Name.ToLower().Contains(ql) ||
                 v.Key.ToLower().Contains(ql) ||
                 (v.Email != null && v.Email.ToLower().Contains(ql)) ||
                 (v.PhoneNumber != null && v.PhoneNumber.ToLower().Contains(ql)));
         }
 
-        query = query.OrderBy(v => v.Name);
+        var query = baseQuery.OrderBy(v => v.Name);
 
         var totalCount = await query.CountAsync();
         if (pageSize < 1) pageSize = 10;
@@ -128,9 +128,33 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
         if (page > totalPages && totalPages > 0) page = totalPages;
 
+        var pagedVolunteers = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(v => new { v.Id, v.Key, v.Name, v.Email, v.PhoneNumber })
+            .ToListAsync();
+
+        var volunteerIds = pagedVolunteers.Select(v => v.Id).ToList();
+
+        var appUsageLookup = await db.VolunteerGpsLogs
+            .Where(g => g.SeasonId == CurrentSeason && volunteerIds.Contains(g.VolunteerId))
+            .GroupBy(g => g.VolunteerId)
+            .Select(g => new { VolunteerId = g.Key, LastAppUsedAt = g.Max(x => x.LoggedAt) })
+            .ToDictionaryAsync(x => x.VolunteerId, x => (DateTime?)x.LastAppUsedAt);
+
         var vm = new VolunteersPagedViewModel
         {
-            Volunteers = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(),
+            Volunteers = pagedVolunteers
+                .Select(v => new VolunteerRowViewModel
+                {
+                    Id = v.Id,
+                    Key = v.Key,
+                    Name = v.Name,
+                    Email = v.Email,
+                    PhoneNumber = v.PhoneNumber,
+                    LastAppUsedAt = appUsageLookup.GetValueOrDefault(v.Id)
+                })
+                .ToList(),
             Page       = page,
             PageSize   = pageSize,
             TotalCount = totalCount,
@@ -170,6 +194,93 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         };
 
         return PartialView("_ShiftTypesPartial", vm);
+    }
+
+    public IActionResult GetCreateShiftTypeForm()
+    {
+        var vm = new ShiftTypeFormViewModel
+        {
+            StartTime = AppTime.Now,
+            EndTime = AppTime.Now.AddHours(1),
+            RequiredCount = 0,
+        };
+
+        return PartialView("_CreateShiftTypeModal", vm);
+    }
+
+    public async Task<IActionResult> GetEditShiftTypeForm(int id)
+    {
+        var shiftType = await db.ShiftTypes
+            .FirstOrDefaultAsync(st => st.Id == id && st.SeasonId == CurrentSeason);
+
+        if (shiftType is null) return NotFound();
+
+        var vm = new ShiftTypeFormViewModel
+        {
+            Id = shiftType.Id,
+            ShiftName = shiftType.ShiftName,
+            StartTime = shiftType.StartTime,
+            EndTime = shiftType.EndTime,
+            RequiredCount = shiftType.RequiredCount,
+        };
+
+        return PartialView("_EditShiftTypeModal", vm);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateShiftType([FromForm] ShiftTypeFormViewModel vm)
+    {
+        if (string.IsNullOrWhiteSpace(vm.ShiftName))
+            return Json(new { success = false, message = "Navn er påkrævet." });
+
+        if (vm.EndTime <= vm.StartTime)
+            return Json(new { success = false, message = "Sluttid skal være efter starttid." });
+
+        if (vm.RequiredCount < 0)
+            return Json(new { success = false, message = "Behov kan ikke være negativt." });
+
+        var shiftType = new ShiftType
+        {
+            SeasonId = CurrentSeason,
+            ShiftName = vm.ShiftName.Trim(),
+            StartTime = vm.StartTime,
+            EndTime = vm.EndTime,
+            RequiredCount = vm.RequiredCount,
+        };
+
+        db.ShiftTypes.Add(shiftType);
+        await db.SaveChangesAsync();
+
+        return Json(new { success = true, message = $"Vagttype '{shiftType.ShiftName}' oprettet." });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateShiftType([FromForm] ShiftTypeFormViewModel vm)
+    {
+        if (string.IsNullOrWhiteSpace(vm.ShiftName))
+            return Json(new { success = false, message = "Navn er påkrævet." });
+
+        if (vm.EndTime <= vm.StartTime)
+            return Json(new { success = false, message = "Sluttid skal være efter starttid." });
+
+        if (vm.RequiredCount < 0)
+            return Json(new { success = false, message = "Behov kan ikke være negativt." });
+
+        var shiftType = await db.ShiftTypes
+            .FirstOrDefaultAsync(st => st.Id == vm.Id && st.SeasonId == CurrentSeason);
+
+        if (shiftType is null)
+            return Json(new { success = false, message = "Vagttype ikke fundet." });
+
+        shiftType.ShiftName = vm.ShiftName.Trim();
+        shiftType.StartTime = vm.StartTime;
+        shiftType.EndTime = vm.EndTime;
+        shiftType.RequiredCount = vm.RequiredCount;
+        shiftType.UpdatedAt = AppTime.Now;
+
+        await db.SaveChangesAsync();
+
+        return Json(new { success = true, message = $"Vagttype '{shiftType.ShiftName}' opdateret." });
     }
 
     // ── Vagter ────────────────────────────────────────────────────

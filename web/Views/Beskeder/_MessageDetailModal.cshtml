@@ -45,7 +45,7 @@
             }
         </div>
         <div class="p-3 rounded-3"
-             style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; line-height:1.6; font-size:0.9rem;">@msg.Body</div>
+             style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-line; line-height:1.6; font-size:0.9rem; text-align:left; word-break:break-word;">@msg.Body</div>
 
         @* Vedhæftninger på original besked *@
         @if (msg.Attachments.Any())
@@ -112,10 +112,10 @@
                         <div class="px-3 py-2 rounded-3"
                              style="background: @(isOutbound ? "var(--clr-brand)" : "var(--clr-bg)");
                                     border: 1px solid var(--clr-border);
-                                    white-space: pre-wrap; font-size:0.9rem; line-height:1.5;
-                                    color: @(isOutbound ? "#fff" : "var(--clr-text)");">
-                            @r.Body
-                        </div>
+                                    white-space: pre-line; font-size:0.9rem; line-height:1.5;
+                                    color: @(isOutbound ? "#fff" : "var(--clr-text)");
+                                    text-align:left; word-break:break-word;
+                                    border-bottom-@(isOutbound ? "right" : "left")-radius: 4px;">@r.Body</div>
                         <div class="mt-1 px-1 d-flex align-items-center gap-1"
                              style="font-size: 0.72rem; color: var(--clr-text-muted);
                              justify-content: @(isOutbound ? "flex-end" : "flex-start");">
@@ -150,18 +150,23 @@
                     <div class="d-flex align-items-center justify-content-between px-3 py-2 rounded-2"
                          style="background: var(--clr-bg); border: 1px solid var(--clr-border); font-size:0.85rem;">
                         <span class="fw-semibold">@t.Title</span>
-                        @if (t.Status == web.Models.MessageTaskStatus.Åben)
-                        {
-                            <span class="badge badge-info">Åben</span>
-                        }
-                        else if (t.Status == web.Models.MessageTaskStatus.IGang)
-                        {
-                            <span class="badge badge-warn">I gang</span>
-                        }
-                        else
-                        {
-                            <span class="badge badge-ok">Udført</span>
-                        }
+                        <div class="d-flex align-items-center gap-2">
+                            @if (t.Status == web.Models.MessageTaskStatus.Åben)
+                            {
+                                <span class="badge badge-info">Åben</span>
+                            }
+                            else if (t.Status == web.Models.MessageTaskStatus.IGang)
+                            {
+                                <span class="badge badge-warn">I gang</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-ok">Udført</span>
+                            }
+                            <button type="button" class="btn btn-sm btn-secondary detail-open-task-btn" data-task-id="@t.Id" title="Åbn opgave">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </button>
+                        </div>
                     </div>
                 }
             </div>
@@ -189,6 +194,10 @@
     </div>
 </div>
 <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+    <button type="button" class="btn btn-sm detail-create-task-btn" data-message-id="@msg.Id"
+            style="background: var(--clr-warn); color:#fff; border:none;">
+        <i class="bi bi-check2-square me-1"></i>Opret opgave
+    </button>
     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
         <i class="bi bi-x me-1"></i>Luk
     </button>
@@ -196,6 +205,20 @@
 
 <script>
 (function () {
+    document.querySelectorAll('.detail-open-task-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var taskId = parseInt(this.dataset.taskId);
+            var detailModalEl = document.getElementById('detailMsgModal') || document.getElementById('detailMsgModalRead');
+            if (detailModalEl) {
+                var modal = bootstrap.Modal.getInstance(detailModalEl);
+                if (modal) modal.hide();
+            }
+            if (typeof window.openBeskedTaskFromMessage === 'function') {
+                window.openBeskedTaskFromMessage(taskId);
+            }
+        });
+    });
+
     const form = document.getElementById('replyForm-@msg.Id');
     if (!form) return;
     form.addEventListener('submit', async function (e) {
@@ -221,7 +244,7 @@
                     const div = document.createElement('div');
                     div.className = 'd-flex justify-content-end';
                     div.innerHTML = `<div style="max-width:85%;">
-                        <div class="px-3 py-2 rounded-3" style="background:var(--clr-brand);border:1px solid transparent;white-space:pre-wrap;font-size:.9rem;line-height:1.5;color:#fff;border-bottom-right-radius:4px;">${esc(body)}</div>
+                        <div class="px-3 py-2 rounded-3" style="background:var(--clr-brand);border:1px solid transparent;white-space:pre-line;font-size:.9rem;line-height:1.5;color:#fff;text-align:left;word-break:break-word;border-bottom-right-radius:4px;">${esc(body)}</div>
                         <div class="mt-1 px-1" style="font-size:.72rem;color:var(--clr-text-muted);text-align:right;"><i class="bi bi-person me-1"></i>Dig &nbsp;·&nbsp; <i class="bi bi-clock me-1"></i>${timeStr}</div>
                     </div>`;
                     container.appendChild(div);

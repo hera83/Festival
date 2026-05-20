@@ -6,8 +6,8 @@ public class MessageTask
 {
     public int Id { get; set; }
 
-    public int MessageId { get; set; }
-    public Message Message { get; set; } = null!;
+    public int? MessageId { get; set; }
+    public Message? Message { get; set; }
 
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }

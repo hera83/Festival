@@ -38,13 +38,33 @@ public abstract class PagedViewModelBase
 // ── Frivillige ───────────────────────────────────────────────────
 public class VolunteersPagedViewModel : PagedViewModelBase
 {
-    public IList<Volunteer> Volunteers { get; set; } = [];
+    public IList<VolunteerRowViewModel> Volunteers { get; set; } = [];
+}
+
+public class VolunteerRowViewModel
+{
+    public int Id { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public DateTime? LastAppUsedAt { get; set; }
+    public bool AppInstalled => LastAppUsedAt.HasValue;
 }
 
 // ── Vagttyper ────────────────────────────────────────────────────
 public class ShiftTypesPagedViewModel : PagedViewModelBase
 {
     public IList<ShiftType> ShiftTypes { get; set; } = [];
+}
+
+public class ShiftTypeFormViewModel
+{
+    public int Id { get; set; }
+    public string ShiftName { get; set; } = string.Empty;
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public int RequiredCount { get; set; }
 }
 
 // ── Vagter ───────────────────────────────────────────────────────

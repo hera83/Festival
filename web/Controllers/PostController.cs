@@ -30,11 +30,9 @@ public class PostController : Controller
             .ThenBy(p => p.Name)
             .ToListAsync();
 
-        var today = AppTime.CopenhagenToday;
-
         // Hent frivillige per post (CurrentLocation matcher postens navn)
         var checkIns = await _db.VolunteerCheckIns
-            .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null && c.CurrentLocation != "Pit")
+            .Where(c => c.SeasonId == seasonId && c.CheckedOutAt == null && c.CurrentLocation != "Pit")
             .Include(c => c.Volunteer)
             .ToListAsync();
 
@@ -161,9 +159,8 @@ public class PostController : Controller
         // Opdater CurrentLocation på aktive check-ins hvis navnet ændrer sig
         if (oldName != newName)
         {
-            var today = AppTime.CopenhagenToday;
             var checkIns = await _db.VolunteerCheckIns
-                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null && c.CurrentLocation == oldName)
+                .Where(c => c.SeasonId == seasonId && c.CheckedOutAt == null && c.CurrentLocation == oldName)
                 .ToListAsync();
             foreach (var ci in checkIns)
                 ci.CurrentLocation = newName;
@@ -186,10 +183,9 @@ public class PostController : Controller
             return Json(new { success = false, message = "Post ikke fundet." });
 
         // Flyt frivillige der er på posten tilbage til Pit
-        var today = AppTime.CopenhagenToday;
         var seasonId = AppTime.CurrentSeason;
         var checkIns = await _db.VolunteerCheckIns
-            .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null && c.CurrentLocation == post.Name)
+            .Where(c => c.SeasonId == seasonId && c.CheckedOutAt == null && c.CurrentLocation == post.Name)
             .ToListAsync();
 
         var now = AppTime.Now;

@@ -29,9 +29,9 @@ namespace web.Controllers
             var today = date != null && DateOnly.TryParse(date, out var d) ? d : AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
-            // Frivillige der allerede er checket ind i dag (åben session)
+            // Frivillige der allerede er checket ind (åben session)
             var alreadyCheckedInIds = await _db.VolunteerCheckIns
-                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null)
+                .Where(c => c.SeasonId == seasonId && c.CheckedOutAt == null)
                 .Select(c => c.VolunteerId)
                 .ToListAsync();
 
@@ -126,12 +126,11 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCheckedInCount()
         {
-            var today = AppTime.CopenhagenToday;
-            var seasonId = today.Year;
+            var seasonId = AppTime.CopenhagenToday.Year;
             var checkedIn = await _db.VolunteerCheckIns
-                .CountAsync(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null);
+                .CountAsync(c => c.SeasonId == seasonId && c.CheckedOutAt == null);
             var inPit = await _db.VolunteerCheckIns
-                .CountAsync(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null && c.CurrentLocation == "Pit");
+                .CountAsync(c => c.SeasonId == seasonId && c.CheckedOutAt == null && c.CurrentLocation == "Pit");
             return Json(new { count = checkedIn, pitCount = inPit });
         }
 
@@ -215,14 +214,13 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetPitVolunteers(string? q)
         {
-            var today = AppTime.CopenhagenToday;
-            var seasonId = today.Year;
+            var seasonId = AppTime.CopenhagenToday.Year;
 
             var hasQuery = !string.IsNullOrWhiteSpace(q);
 
-            // Hent alle checkede ind i dag (ikke udcheckede)
+            // Hent alle checkede ind (ikke udcheckede)
             var allCheckIns = await _db.VolunteerCheckIns
-                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null)
+                .Where(c => c.SeasonId == seasonId && c.CheckedOutAt == null)
                 .Include(c => c.Volunteer)
                 .ToListAsync();
 
@@ -278,12 +276,11 @@ namespace web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MoveVolunteer([FromBody] MoveVolunteerRequest request)
         {
-            var today = AppTime.CopenhagenToday;
-            var seasonId = today.Year;
+            var seasonId = AppTime.CopenhagenToday.Year;
 
             var checkIn = await _db.VolunteerCheckIns
                 .Include(c => c.Volunteer)
-                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == request.VolunteerId && c.CheckInDate == today && c.CheckedOutAt == null);
+                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == request.VolunteerId && c.CheckedOutAt == null);
 
             if (checkIn == null)
                 return Json(new { success = false, message = "Frivillig er ikke checket ind." });
@@ -327,8 +324,7 @@ namespace web.Controllers
             if (string.IsNullOrWhiteSpace(request.Key))
                 return Json(new { result = "error", message = "Ugyldig QR kode." });
 
-            var today = AppTime.CopenhagenToday;
-            var seasonId = today.Year;
+            var seasonId = AppTime.CopenhagenToday.Year;
 
             var volunteer = await _db.Volunteers
                 .FirstOrDefaultAsync(v => v.Key == request.Key.Trim() && v.SeasonId == seasonId);
@@ -336,9 +332,9 @@ namespace web.Controllers
             if (volunteer == null)
                 return Json(new { result = "notfound", message = $"Ingen frivillig fundet med nøgle \"{request.Key}\"." });
 
-            // Find en åben session (ikke udchecket) – der kan godt være tidligere udcheckede sessioner i dag
+            // Find en åben session (ikke udchecket) – der kan godt være tidligere udcheckede sessioner
             var existing = await _db.VolunteerCheckIns
-                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == volunteer.Id && c.CheckInDate == today && c.CheckedOutAt == null);
+                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == volunteer.Id && c.CheckedOutAt == null);
 
             var now = AppTime.Now;
 
@@ -349,7 +345,7 @@ namespace web.Controllers
                 {
                     SeasonId = seasonId,
                     VolunteerId = volunteer.Id,
-                    CheckInDate = today,
+                    CheckInDate = AppTime.CopenhagenToday,
                     CheckedInAt = now,
                     CurrentLocation = "Pit"
                 };
@@ -400,11 +396,10 @@ namespace web.Controllers
         [HttpGet]
         public async Task<IActionResult> StateHash()
         {
-            var today = AppTime.CopenhagenToday;
-            var seasonId = today.Year;
+            var seasonId = AppTime.CopenhagenToday.Year;
 
             var checkInCount = await _db.VolunteerCheckIns
-                .CountAsync(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null);
+                .CountAsync(c => c.SeasonId == seasonId && c.CheckedOutAt == null);
 
             var lastLogTick = await _db.VolunteerLocationLogs
                 .Where(l => l.SeasonId == seasonId)
@@ -432,15 +427,14 @@ namespace web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckOut([FromBody] CheckInRequest request)
         {
-            var today = AppTime.CopenhagenToday;
-            var seasonId = today.Year;
+            var seasonId = AppTime.CopenhagenToday.Year;
 
             var volunteer = await _db.Volunteers.FindAsync(request.VolunteerId);
             if (volunteer == null)
                 return Json(new { success = false, message = "Frivillig ikke fundet." });
 
             var existing = await _db.VolunteerCheckIns
-                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == request.VolunteerId && c.CheckInDate == today && c.CheckedOutAt == null);
+                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == request.VolunteerId && c.CheckedOutAt == null);
 
             if (existing == null)
                 return Json(new { success = false, message = $"{volunteer.Name} er ikke checket ind." });

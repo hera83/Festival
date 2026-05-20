@@ -66,8 +66,11 @@
                             <span class="menu-icon"><i class="bi bi-person-heart"></i></span>
                             <span class="menu-text">Frivillig</span>
                         </a>
-                        <a class="menu-item" asp-area="" asp-controller="Beskeder" asp-action="Index">
-                            <span class="menu-icon"><i class="bi bi-chat-dots"></i></span>
+                        <a class="menu-item" asp-area="" asp-controller="Beskeder" asp-action="Index" id="menuItemBeskeder">
+                            <span class="menu-icon menu-icon-notify">
+                                <i class="bi bi-chat-dots"></i>
+                                <span class="menu-notify-badge" id="menuBeskedBadge"></span>
+                            </span>
                             <span class="menu-text">Besked Center</span>
                         </a>
                         <a class="menu-item" asp-area="" asp-controller="Kort" asp-action="Index">
@@ -187,6 +190,51 @@
                 menuToggle.setAttribute("aria-expanded", String(!isCollapsed));
                 localStorage.setItem("sidebarCollapsed", String(isCollapsed));
             });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const badgeEl = document.getElementById('menuBeskedBadge');
+            const itemEl = document.getElementById('menuItemBeskeder');
+            if (!badgeEl || !itemEl) return;
+
+            let previousUnread = null;
+
+            async function refreshBeskedMenuIndicator() {
+                try {
+                    const res = await fetch('@Url.Action("GetCounts", "Beskeder")', {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!res.ok) return;
+
+                    const data = await res.json();
+                    const unread = Number(data.unreadCount || 0);
+
+                    if (unread > 0) {
+                        badgeEl.textContent = unread > 99 ? '99+' : String(unread);
+                        badgeEl.classList.add('show');
+                    } else {
+                        badgeEl.classList.remove('show');
+                        badgeEl.textContent = '';
+                    }
+                    previousUnread = unread;
+                } catch {
+                    // Netværksfejl ignoreres bevidst for ikke at forstyrre brugeren
+                }
+            }
+
+            refreshBeskedMenuIndicator();
+            setInterval(refreshBeskedMenuIndicator, 30000);
+
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') refreshBeskedMenuIndicator();
+            });
+
+            document.addEventListener('beskeder:countsChanged', function () {
+                refreshBeskedMenuIndicator();
+            });
+
+            window.refreshBeskedMenuIndicator = refreshBeskedMenuIndicator;
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

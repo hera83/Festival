@@ -1,0 +1,52 @@
+@model web.Models.ShiftTypeFormViewModel
+
+<div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Rediger vagttype</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+</div>
+
+<form id="editShiftTypeForm" autocomplete="off">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="modal-body" style="background: var(--clr-surface); color: var(--clr-text);">
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label small fw-semibold">Navn <span class="text-danger">*</span></label>
+                <input type="text" name="ShiftName" class="form-control form-control-sm"
+                       value="@Model.ShiftName"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">Start <span class="text-danger">*</span></label>
+                <input type="datetime-local" name="StartTime" class="form-control form-control-sm"
+                       value="@Model.StartTime.ToString("yyyy-MM-ddTHH:mm")"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">Slut <span class="text-danger">*</span></label>
+                <input type="datetime-local" name="EndTime" class="form-control form-control-sm"
+                       value="@Model.EndTime.ToString("yyyy-MM-ddTHH:mm")"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"
+                       required />
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label small fw-semibold">Behov</label>
+                <input type="number" min="0" name="RequiredCount" class="form-control form-control-sm"
+                       value="@Model.RequiredCount"
+                       style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-surface);">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x me-1"></i>Annuller
+        </button>
+        <button type="submit" id="editShiftTypeSubmit" class="btn btn-sm btn-primary">
+            <i class="bi bi-floppy me-1"></i>Gem ændringer
+        </button>
+    </div>
+</form>
