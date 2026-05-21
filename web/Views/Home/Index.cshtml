@@ -15,7 +15,7 @@
                     <i class="bi bi-person-check" style="color:var(--clr-ok);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="checkedInCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="checkedInCount">â€”</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Checkede ind</div>
                 </div>
             </div>
@@ -26,7 +26,7 @@
                     <i class="bi bi-person-x" style="color:var(--clr-warn);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="noShowCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="noShowCount">â€”</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Udeblivelser</div>
                 </div>
             </div>
@@ -37,7 +37,7 @@
                     <i class="bi bi-people" style="color:var(--clr-info);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="pitCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="pitCount">â€”</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">I pitten</div>
                 </div>
             </div>
@@ -48,7 +48,7 @@
                     <i class="bi bi-geo-alt" style="color:var(--clr-brand);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activePostsCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activePostsCount">â€”</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive poster</div>
                 </div>
             </div>
@@ -59,7 +59,7 @@
                     <i class="bi bi-bell" style="color:var(--clr-alarm);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activeAlarmsCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activeAlarmsCount">â€”</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive alarmer</div>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                 </button>
             </div>
             <div class="card-body" style="padding:0.75rem; display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                <!-- Ikon-række -->
+                <!-- Ikon-rÃ¦kke -->
                 <div class="d-flex gap-1 mb-2" style="flex-shrink:0;">
                     <button type="button" class="btn btn-sm" title="Opret post"
                             data-bs-toggle="modal" data-bs-target="#createPostModal"
@@ -99,18 +99,18 @@
                             style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
                         <i class="bi bi-arrows-collapse"></i>
                     </button>
-                    <button type="button" id="qrPitScanBtn" class="btn btn-sm" title="QR Scanner – tænd/sluk"
+                    <button type="button" id="qrPitScanBtn" class="btn btn-sm" title="QR Scanner â€“ tÃ¦nd/sluk"
                             style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
                         <i class="bi bi-qr-code-scan"></i>
                     </button>
                 </div>
 
-                <!-- Søgefelt -->
+                <!-- SÃ¸gefelt -->
                 <div class="input-group mb-2" style="flex-shrink:0;">
                     <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="pitSearch" class="form-control" placeholder="Søg efter frivillig..."
+                    <input type="text" id="pitSearch" class="form-control" placeholder="SÃ¸g efter frivillig..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
                 </div>
 
@@ -165,11 +165,11 @@
                     <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="checkInSearch" class="form-control" placeholder="Søg på frivillig..."
+                    <input type="text" id="checkInSearch" class="form-control" placeholder="SÃ¸g pÃ¥ frivillig..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
                     <button type="button" id="checkInSearchClear" class="btn btn-sm d-none"
                             style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);border-left:none;"
-                            tabindex="-1" aria-label="Ryd søgning">
+                            tabindex="-1" aria-label="Ryd sÃ¸gning">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
@@ -223,17 +223,17 @@
             </div>
             <div class="modal-body">
                 <p class="mb-3" style="font-size:0.85rem;color:var(--clr-text-muted);">
-                    Frivillige med en vagt i dag hvor mødetidspunktet er passeret, men som ikke er checket ind.
+                    Frivillige med en vagt i dag hvor mÃ¸detidspunktet er passeret, men som ikke er checket ind.
                 </p>
                 <div class="input-group mb-3">
                     <span class="input-group-text" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="noShowSearch" class="form-control" placeholder="Søg på navn..."
+                    <input type="text" id="noShowSearch" class="form-control" placeholder="SÃ¸g pÃ¥ navn..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off">
                     <button type="button" id="noShowSearchClear" class="btn btn-sm d-none"
                             style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);border-left:none;"
-                            tabindex="-1" aria-label="Ryd søgning">
+                            tabindex="-1" aria-label="Ryd sÃ¸gning">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
@@ -261,7 +261,7 @@
                     </table>
                     <div id="noShowEmpty" class="text-center py-4 d-none" style="color:var(--clr-text-muted);">
                         <i class="bi bi-check2-circle" style="font-size:2rem;color:var(--clr-ok);"></i>
-                        <p class="mt-2 mb-0">Ingen udeblivelser – alle er mødt op!</p>
+                        <p class="mt-2 mb-0">Ingen udeblivelser â€“ alle er mÃ¸dt op!</p>
                     </div>
                 </div>
             </div>
@@ -287,12 +287,12 @@
             </div>
             <div class="modal-body">
                 <label class="form-label" style="font-size:0.85rem;color:var(--clr-text-muted);">
-                    Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                    Alarm efter (minutter) <span style="color:var(--clr-text-dim);">â€” tom = ingen alarm</span>
                 </label>
                 <input type="number" id="pitAlarmInput" class="form-control" placeholder="fx 30" min="1"
                        style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
                 <div class="mt-2" style="font-size:0.78rem;color:var(--clr-text-muted);">
-                    Frivillige der har stået i pitten længere end dette vil blive vist øverst med en alarm.
+                    Frivillige der har stÃ¥et i pitten lÃ¦ngere end dette vil blive vist Ã¸verst med en alarm.
                 </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
@@ -322,11 +322,11 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Postnavn</label>
-                    <input type="text" id="newPostName" class="form-control" placeholder="fx Bar 8, Blå Scene..."
+                    <input type="text" id="newPostName" class="form-control" placeholder="fx Bar 8, BlÃ¥ Scene..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off" maxlength="128">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Placér i zone</label>
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">PlacÃ©r i zone</label>
                     <select id="newPostColumn" class="form-select"
                             style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
                         <option value="1">Zone 1</option>
@@ -338,7 +338,7 @@
                 </div>
                 <div class="mb-1">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">
-                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">â€” tom = ingen alarm</span>
                     </label>
                     <input type="number" id="newPostAlarm" class="form-control" placeholder="fx 60"
                            min="1" max="9999"
@@ -371,12 +371,12 @@
                 <input type="hidden" id="editPostId">
                 <div class="mb-3">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Postnavn</label>
-                    <input type="text" id="editPostName" class="form-control" placeholder="fx Bar 8, Blå Scene..."
+                    <input type="text" id="editPostName" class="form-control" placeholder="fx Bar 8, BlÃ¥ Scene..."
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);" autocomplete="off" maxlength="128">
                 </div>
                 <div class="mb-1">
                     <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">
-                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">— tom = ingen alarm</span>
+                        Alarm efter (minutter) <span style="color:var(--clr-text-dim);">â€” tom = ingen alarm</span>
                     </label>
                     <input type="number" id="editPostAlarm" class="form-control" placeholder="fx 60"
                            min="1" max="9999"
@@ -395,7 +395,7 @@
     </div>
 </div>
 
-<!-- Slet Post Bekræft Modal -->
+<!-- Slet Post BekrÃ¦ft Modal -->
 <div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
@@ -408,11 +408,11 @@
             <div class="modal-body">
                 <input type="hidden" id="deletePostId">
                 <p class="mb-2" style="color:var(--clr-text);font-size:0.88rem;">
-                    Er du sikker på at du vil slette posten <strong id="deletePostName" style="color:#e6edf3;"></strong>?
+                    Er du sikker pÃ¥ at du vil slette posten <strong id="deletePostName" style="color:#e6edf3;"></strong>?
                 </p>
                 <div id="deletePostWarning" class="d-none p-2" style="background:var(--clr-warn-bg);border:1px solid var(--clr-warn);border-radius:var(--radius-md);font-size:0.8rem;color:var(--clr-warn);">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    <span id="deletePostVolunteerCount"></span> frivillig(e) på posten flyttes automatisk tilbage til Pitten.
+                    <span id="deletePostVolunteerCount"></span> frivillig(e) pÃ¥ posten flyttes automatisk tilbage til Pitten.
                 </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
@@ -588,7 +588,7 @@
             .then(data => { spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none'); renderRows(data); })
             .catch(() => {
                 spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none');
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlÃ¦sning</td></tr>';
                 emptyDiv.classList.add('d-none');
             });
     }
@@ -607,7 +607,7 @@
                 <td><span style="font-weight:600;">${escHtml(v.name)}</span>
                 ${v.isCheckedIn ? '<span class="badge-ok ms-2" style="font-size:0.68rem;"><i class="bi bi-check2-circle me-1"></i>Checket ind</span>' : ''}
                 ${v.email ? `<br><small style="color:var(--clr-text-muted);">${escHtml(v.email)}</small>` : ''}</td>
-                <td style="color:var(--clr-text-muted);">${v.phoneNumber ? escHtml(v.phoneNumber) : '—'}</td>
+                <td style="color:var(--clr-text-muted);">${v.phoneNumber ? escHtml(v.phoneNumber) : 'â€”'}</td>
                 <td>${v.hasShiftToday ? '<span class="badge-ok" style="font-size:0.72rem;"><i class="bi bi-check2 me-1"></i>Ja</span>' : '<span style="color:var(--clr-text-dim);font-size:0.8rem;">Ingen vagt</span>'}</td>
                 <td class="text-end">${actionBtn}</td>`;
             tbody.appendChild(tr);
@@ -623,7 +623,7 @@
                 if (res.success) { showToast(res.message, 'success'); updateCheckedInCount(); updateNoShowCount(); loadVolunteers(searchInput.value); }
                 else { showToast(res.message, 'warning'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; }
             })
-            .catch(() => { showToast('Noget gik galt. Prøv igen.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; });
+            .catch(() => { showToast('Noget gik galt. PrÃ¸v igen.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; });
     }
 
     function doCheckOut(volunteerId, name, btn) {
@@ -637,10 +637,10 @@
                 }
                 else { showToast(res.message, 'warning'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } }
             })
-            .catch(() => { showToast('Noget gik galt. Prøv igen.', 'error'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } });
+            .catch(() => { showToast('Noget gik galt. PrÃ¸v igen.', 'error'); if (btn && btn.disabled !== undefined) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Check ud'; } });
     }
 
-    // -- Tæller ----------------------------------------------------------------
+    // -- TÃ¦ller ----------------------------------------------------------------
     function updateCheckedInCount() {
         fetch('/Home/GetCheckedInCount').then(r => r.json()).then(data => {
             const el = document.getElementById('checkedInCount');
@@ -704,7 +704,7 @@
             .catch(() => {
                 noShowSpinner.classList.add('d-none');
                 noShowWrapper.classList.remove('d-none');
-                noShowTbody.innerHTML = '<tr><td colspan="3" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                noShowTbody.innerHTML = '<tr><td colspan="3" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlÃ¦sning</td></tr>';
                 noShowEmpty.classList.add('d-none');
             });
     }
@@ -723,7 +723,7 @@
             tr.style.borderColor = 'var(--clr-border)';
             const phone = v.phoneNumber
                 ? `<span style="color:var(--clr-info);"><i class="bi bi-telephone me-1"></i>${escHtml(v.phoneNumber)}</span>`
-                : '<span style="color:var(--clr-text-dim);">—</span>';
+                : '<span style="color:var(--clr-text-dim);">â€”</span>';
             const start = parseLocalDate(v.earliestStart);
             const startStr = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
             const minsLate = Math.floor((Date.now() - start.getTime()) / 60000);
@@ -752,7 +752,7 @@
             .then(data => { pitSpinner.classList.add('d-none'); renderPitList(data, q || ''); })
             .catch(() => {
                 pitSpinner.classList.add('d-none');
-                pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</div>';
+                pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlÃ¦sning</div>';
                 pitList.classList.remove('d-none');
             });
     }
@@ -763,7 +763,7 @@
         pitList.innerHTML = '';
         const hasQuery = q && q.trim() !== '';
 
-        // Filtrer post-chips baseret på søgningen
+        // Filtrer post-chips baseret pÃ¥ sÃ¸gningen
         filterPostChips(hasQuery ? volunteers.map(v => v.volunteerId) : null);
 
         const pitVolunteers = volunteers.filter(v => v.currentLocation === 'Pit' || !v.currentLocation);
@@ -786,14 +786,14 @@
             return;
         }
 
-        // Sorter: alarmerede øverst, derefter alfabetisk
+        // Sorter: alarmerede Ã¸verst, derefter alfabetisk
         const now = Date.now();
         const withAlarm = (v) => alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
             && !disabledAlarmVolunteers.has(v.volunteerId)
                     ? (now - parseLocalDate(v.arrivedAtPit).getTime()) >= pitAlarmMinutes * 60 * 1000
             : false;
 
-        // Opdater pit alarm count og den globale tæller
+        // Opdater pit alarm count og den globale tÃ¦ller
         _pitAlarmCount = pitVolunteers.filter(v => withAlarm(v)).length;
         updateAlarmCounter();
 
@@ -832,7 +832,7 @@
             pitList.appendChild(row);
         });
 
-        // Vis frivillige i poster som søgeresultat (ikke i Pit)
+        // Vis frivillige i poster som sÃ¸geresultat (ikke i Pit)
         const postVolunteers = volunteers.filter(v => v.currentLocation && v.currentLocation !== 'Pit');
         if (hasQuery && postVolunteers.length > 0) {
             const sep = document.createElement('div');
@@ -860,7 +860,7 @@
         setupPitDropZone();
     }
 
-    // Skjul/vis volunteer-chips i poster baseret på søgning
+    // Skjul/vis volunteer-chips i poster baseret pÃ¥ sÃ¸gning
     function filterPostChips(matchingIds) {
         document.querySelectorAll('.volunteer-chip').forEach(chip => {
             if (!matchingIds) {
@@ -871,7 +871,7 @@
         });
     }
 
-    // Ryd søgefeltet og nulstil visningen
+    // Ryd sÃ¸gefeltet og nulstil visningen
     function clearPitSearch() {
         if (pitSearchInput.value === '') return;
         pitSearchInput.value = '';
@@ -1028,7 +1028,7 @@
             card.remove();
             renderPost(p);
             updateCollapseAllBtn(_lastPosts);
-            // Genåbn den nye card i samme parent
+            // GenÃ¥bn den nye card i samme parent
             if (parent) {
                 const newCard = parent.querySelector(`[data-post-id="${p.id}"]`);
                 // kort er allerede appended af renderPost
@@ -1049,7 +1049,7 @@
             openDeletePostModal(parseInt(btn.dataset.postId), btn.dataset.postName, parseInt(btn.dataset.volunteerCount) || 0);
         });
 
-        // Setup volunteer drop-zone på posten
+        // Setup volunteer drop-zone pÃ¥ posten
         const vZone = card.querySelector('.post-volunteer-zone');
         setupVolunteerDropZoneOnPost(vZone, p.name);
 
@@ -1088,7 +1088,7 @@
     }
 
     // -- Frivillig kontekstmenu ------------------------------------------------
-    let _volMenuOpen = null; // reference til åben dropdown
+    let _volMenuOpen = null; // reference til Ã¥ben dropdown
 
     function openVolunteerMenu(btn) {
         // Luk eksisterende menu
@@ -1100,7 +1100,7 @@
         const isMuted = disabledAlarmVolunteers.has(volunteerId);
         const rect = btn.getBoundingClientRect();
 
-        // Byg post-submenu items (Pit øverst, derefter alle poster)
+        // Byg post-submenu items (Pit Ã¸verst, derefter alle poster)
         const pitItem = `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="Pit"><i class="bi bi-arrow-left-circle me-2" style="color:var(--clr-brand);"></i>Pitten</a></li>`;
         const postItems = _lastPosts.map(p =>
             `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="${escHtml(p.name)}"><i class="bi bi-geo-alt me-2"></i>${escHtml(p.name)}</a></li>`
@@ -1176,7 +1176,7 @@
         const sub = el.closest('li').querySelector('.vol-submenu');
         if (!sub) return;
         sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
-        // Tilpas menuens højde dynamisk
+        // Tilpas menuens hÃ¸jde dynamisk
         if (_volMenuOpen) {
             const rect2 = _volMenuOpen.getBoundingClientRect();
             if (rect2.bottom > window.innerHeight - 8) {
@@ -1208,7 +1208,7 @@
 
     function volMenuCheckOut(volunteerId, name) {
         closeVolunteerMenu();
-        // Simuler et checkout via doCheckOut — find eller opret en knap-reference
+        // Simuler et checkout via doCheckOut â€” find eller opret en knap-reference
         const fakeBtn = { disabled: false, innerHTML: '' };
         doCheckOut(volunteerId, name, fakeBtn);
     }
@@ -1244,7 +1244,7 @@
             .catch(() => {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Opret post';
-                showToast('Noget gik galt. Prøv igen.', 'error');
+                showToast('Noget gik galt. PrÃ¸v igen.', 'error');
             });
     });
 
@@ -1277,11 +1277,11 @@
             .catch(() => {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Gem';
-                showToast('Noget gik galt. Prøv igen.', 'error');
+                showToast('Noget gik galt. PrÃ¸v igen.', 'error');
             });
     });
 
-    // -- Slet Post Bekræft -----------------------------------------------------
+    // -- Slet Post BekrÃ¦ft -----------------------------------------------------
     document.getElementById('confirmDeletePostBtn').addEventListener('click', () => {
         const postId = parseInt(document.getElementById('deletePostId').value);
         const btn = document.getElementById('confirmDeletePostBtn');
@@ -1400,7 +1400,7 @@
         }, sig);
     }
 
-    // Drop-zone: frivillig-zone på en post
+    // Drop-zone: frivillig-zone pÃ¥ en post
     function setupVolunteerDropZoneOnPost(zone, postName) {
         zone.addEventListener('dragover', e => {
             if (dragPayload?.type !== 'volunteer') return;
@@ -1441,7 +1441,7 @@
             .catch(() => showToast('Noget gik galt.', 'error'));
     }
 
-    // -- Hjælpefunktioner ------------------------------------------------------
+    // -- HjÃ¦lpefunktioner ------------------------------------------------------
     function postJson(url, data) {
         return fetch(url, {
             method: 'POST',
@@ -1475,7 +1475,7 @@
     const disabledAlarmVolunteers = new Set(); // lokal per-frivillig alarm deaktivering
     let _lastPosts = [];
 
-    // Opdater minimer-alle ikonet baseret på om alle poster er minimerede
+    // Opdater minimer-alle ikonet baseret pÃ¥ om alle poster er minimerede
     function updateCollapseAllBtn(allPosts) {
         const btn = document.getElementById('collapseAllBtn');
         if (!btn) return;
@@ -1597,17 +1597,17 @@
 
     // -- Background auto-refresh -----------------------------------------------
     // Poller et let "state hash" endpoint hvert 3. sekund.
-    // Kun hvis hash'en er ændret OG brugeren ikke er i gang med noget,
+    // Kun hvis hash'en er Ã¦ndret OG brugeren ikke er i gang med noget,
     // hentes de faktiske data og UI opdateres stille og roligt.
     let _lastStateHash = null;
-    let _autoRefreshPaused = false; // sættes true under drag/drop
+    let _autoRefreshPaused = false; // sÃ¦ttes true under drag/drop
 
-    // Lyt på drag-events for at pause refresh under drag
+    // Lyt pÃ¥ drag-events for at pause refresh under drag
     document.addEventListener('dragstart', () => { _autoRefreshPaused = true; });
     document.addEventListener('dragend',   () => { setTimeout(() => { _autoRefreshPaused = false; }, 500); });
 
     async function backgroundRefresh() {
-        // Spring over hvis brugeren er i gang med drag eller søger aktivt
+        // Spring over hvis brugeren er i gang med drag eller sÃ¸ger aktivt
         if (_autoRefreshPaused) return;
         if (document.hidden) return; // tab er ikke synlig
 
@@ -1616,11 +1616,11 @@
             const data = await res.json();
             const hash = data.hash;
 
-            if (hash === _lastStateHash) return; // ingen ændring
+            if (hash === _lastStateHash) return; // ingen Ã¦ndring
 
             _lastStateHash = hash;
 
-            // Opdater alt – men bevar pit-søgefeltet hvis det er i brug
+            // Opdater alt â€“ men bevar pit-sÃ¸gefeltet hvis det er i brug
             const pitQ = pitSearchInput.value;
             syncPitAlarm().then(() => loadPitVolunteers(pitQ));
             loadAllPosts();
@@ -1630,7 +1630,7 @@
             // Diskret prik der viser at siden er synkroniseret
             showSyncDot();
         } catch {
-            // Netværksfejl – ignorer stille
+            // NetvÃ¦rksfejl â€“ ignorer stille
         }
     }
 
@@ -1648,7 +1648,7 @@
         dot._t = setTimeout(() => { dot.style.opacity = '0'; }, 1800);
     }
 
-    // Sæt hash ved første load så vi ikke refresher unødvendigt med det samme
+    // SÃ¦t hash ved fÃ¸rste load sÃ¥ vi ikke refresher unÃ¸dvendigt med det samme
     fetch('/Home/StateHash').then(r => r.json()).then(d => { _lastStateHash = d.hash; }).catch(() => {});
 
     setInterval(backgroundRefresh, 3 * 1000);
@@ -1721,7 +1721,7 @@
         }, 10000);
     }
 
-    // -- Knap tænd/sluk -------------------------------------------
+    // -- Knap tÃ¦nd/sluk -------------------------------------------
     btn.addEventListener('click', () => {
         if (active) stopScanner();
         else        startScanner();
@@ -1748,7 +1748,7 @@
     }
 
     async function startScanner() {
-        // Tillad kamera så enumerateDevices returnerer labels
+        // Tillad kamera sÃ¥ enumerateDevices returnerer labels
         let devices = [];
         try {
             const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -1764,7 +1764,7 @@
             videoConstraints = { deviceId: { exact: pref.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } };
         } else {
             if (pref.deviceFingerprint && pref.deviceFingerprint !== currentFp) {
-                // Anden enhed – slet gammel indstilling stille
+                // Anden enhed â€“ slet gammel indstilling stille
                 try {
                     await fetch(prefClrUrl, { method: 'POST', headers: { 'RequestVerificationToken': csrfToken } });
                 } catch { /* ignorer */ }
@@ -1776,7 +1776,7 @@
             stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
         } catch {
             try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
-            catch { showQrToast('Kamera ikke tilgængeligt', 'error'); return; }
+            catch { showQrToast('Kamera ikke tilgÃ¦ngeligt', 'error'); return; }
         }
         video.srcObject = stream;
         await video.play();
@@ -1787,7 +1787,7 @@
         btn.style.background   = 'var(--clr-brand)';
         btn.style.color        = '#fff';
         btn.style.borderColor  = 'var(--clr-brand)';
-        btn.title              = 'QR Scanner – sluk';
+        btn.title              = 'QR Scanner â€“ sluk';
         rafId = requestAnimationFrame(tick);
     }
 
@@ -1798,10 +1798,10 @@
         btn.style.background  = 'var(--clr-bg)';
         btn.style.color       = 'var(--clr-text-muted)';
         btn.style.borderColor = 'var(--clr-border)';
-        btn.title             = 'QR Scanner – tænd';
+        btn.title             = 'QR Scanner â€“ tÃ¦nd';
     }
 
-    const SCAN_W  = 640; // nedskaleret scanopløsning – QR kræver ikke fuld HD
+    const SCAN_W  = 640; // nedskaleret scanoplÃ¸sning â€“ QR krÃ¦ver ikke fuld HD
     const SCAN_H  = 480;
     let workerBusy = false;
 
@@ -1829,7 +1829,7 @@
 
         canvas.width  = SCAN_W;
         canvas.height = SCAN_H;
-        // Kontrast-boost hjælper mod overeksponerede skærme
+        // Kontrast-boost hjÃ¦lper mod overeksponerede skÃ¦rme
         ctx.filter = 'contrast(1.5) brightness(1.05) saturate(0)';
         ctx.drawImage(video, 0, 0, SCAN_W, SCAN_H);
         ctx.filter = 'none';
@@ -1863,7 +1863,7 @@
                 case 'moved':
                     playBeep('success');
                     showQrToast(data.message, 'success');
-                    // Fjern chippen øjeblikkeligt fra alle poster i DOM
+                    // Fjern chippen Ã¸jeblikkeligt fra alle poster i DOM
                     document.querySelectorAll(`[data-volunteer-id="${data.volunteerId}"]`)
                         .forEach(el => el.remove());
                     if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
@@ -1879,7 +1879,7 @@
             }
         } catch {
             playBeep('error');
-            showQrToast('Netværksfejl – kunne ikke kontakte server', 'error');
+            showQrToast('NetvÃ¦rksfejl â€“ kunne ikke kontakte server', 'error');
         }
     }
 })();

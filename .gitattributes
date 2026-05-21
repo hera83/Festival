@@ -61,3 +61,20 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# enforce UTF-8 working tree encoding for project text files
+###############################################################################
+*.cs         text working-tree-encoding=UTF-8
+*.cshtml     text working-tree-encoding=UTF-8
+*.css        text working-tree-encoding=UTF-8
+*.js         text working-tree-encoding=UTF-8
+*.json       text working-tree-encoding=UTF-8
+*.md         text working-tree-encoding=UTF-8
+*.sln        text working-tree-encoding=UTF-8
+*.csproj     text working-tree-encoding=UTF-8
+*.props      text working-tree-encoding=UTF-8
+*.targets    text working-tree-encoding=UTF-8
+*.xml        text working-tree-encoding=UTF-8
+*.yml        text working-tree-encoding=UTF-8
+*.yaml       text working-tree-encoding=UTF-8
