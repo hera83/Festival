@@ -176,6 +176,12 @@ docker volume inspect festival_app_dbs
 - Tag backup af `data/app_dbs` og `data/app_files`.
 - Overvej logrotation og monitorering af container.
 
+## License
+
+This project is licensed under the CC BY-NC 4.0 license.
+
+You may use, modify and share the code for non-commercial purposes only.
+
 ## Projektstruktur (kort)
 
 ```text
