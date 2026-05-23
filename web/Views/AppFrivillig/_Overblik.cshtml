@@ -252,6 +252,9 @@
             });
             const todayShift = todayShifts[0] || null;
 
+            // Opdater global GPS-tracking flag
+            window.fvIsCheckedIn = !!activeCheckIn;
+
             // STATE 4a: Har aktiv check-in i dag → vis aktiv vagt med tidslinje (selv uden registreret vagt)
             if (activeCheckIn) {
                 body.innerHTML = renderActiveShift(data, overlappingShift);
@@ -260,12 +263,14 @@
 
             // STATE 1: Ingen vagter overhovedet
             if (shifts.length === 0) {
+                window.fvIsCheckedIn = false;
                 body.innerHTML = renderNoShifts();
                 return;
             }
 
             // STATE 2: Alle vagter er fortidige, ingen fremtidige
             if (futureShifts.length === 0) {
+                window.fvIsCheckedIn = false;
                 // Har haft check-in i dag men er nu checket ud → vis afsluttet
                 if (hasHadCheckInToday) {
                     body.innerHTML = renderCheckedOutSummary(data, todayShift);
@@ -277,6 +282,7 @@
 
             // STATE 4b: Har haft check-in i dag men er nu checket ud → vis afsluttet (ingen nag)
             if (hasHadCheckInToday) {
+                window.fvIsCheckedIn = false;
                 body.innerHTML = renderCheckedOutSummary(data, todayShift);
                 return;
             }
@@ -305,6 +311,7 @@
             }
 
         } catch {
+            window.fvIsCheckedIn = false;
             document.getElementById('overblik-loading').style.display = 'none';
             document.getElementById('overblik-body').style.display = '';
             document.getElementById('overblik-body').innerHTML = `<div class="text-center py-4" style="color:var(--clr-text-muted);">

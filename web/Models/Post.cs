@@ -27,4 +27,10 @@ public class Post
     public int? AlarmAfterMinutes { get; set; }
 
     public DateTime CreatedAt { get; set; } = AppTime.Now;
+
+    /// <summary>
+    /// Valgfrit link til et fysisk GPS-punkt på kortet.
+    /// Bruges til fremtidig rutevejledningsfunktion.
+    /// </summary>
+    public int? MapLocationId { get; set; }
 }

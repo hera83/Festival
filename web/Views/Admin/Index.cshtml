@@ -41,6 +41,14 @@
             <i class="bi bi-qr-code-scan me-2"></i>QR Scanner
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "kortsteder" ? "active" : "")"
+                id="tab-kortsteder"
+                data-tab="kortsteder"
+                type="button" role="tab">
+            <i class="bi bi-geo-alt me-2"></i>Kortsteder
+        </button>
+    </li>
 </ul>
 
 @* ── Tab indhold ── *@
@@ -61,6 +69,7 @@
             importeksport: '@Url.Action("ImportExportPartial", "Admin")',
             statistik: '@Url.Action("StatistikPartial", "Admin")',
             qrscanner: '@Url.Action("QrScannerPartial", "Admin")',
+            kortsteder: '@Url.Action("KortStederPartial", "Admin")',
         };
 
         const pane    = document.getElementById('tabPane');

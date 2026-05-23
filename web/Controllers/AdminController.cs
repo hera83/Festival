@@ -1058,4 +1058,125 @@ public class AdminController : Controller
         TempData["Success"] = $"Brugeren '{model.DisplayName}' blev opdateret.";
         return RedirectToAction(nameof(Index), new { tab = "brugere" });
     }
+
+    // ── Kortsteder (POI) ─────────────────────────────────────────
+
+    public async Task<IActionResult> KortStederPartial()
+        => PartialView("_KortStederPartial", await KortStederQuery("", 1, 10));
+
+    [HttpGet]
+    public async Task<IActionResult> KortStederSearch(string q = "", int page = 1, int pageSize = 10)
+        => PartialView("_KortStederPartial", await KortStederQuery(q, page, pageSize));
+
+    private async Task<KortStederViewModel> KortStederQuery(string q, int page, int pageSize)
+    {
+        var season = AppTime.CurrentSeason;
+        var query = _db.MapLocations
+            .Where(p => p.SeasonId == season);
+
+        if (!string.IsNullOrWhiteSpace(q))
+            query = query.Where(p => p.Name.Contains(q) || p.Category.Contains(q) || (p.Description != null && p.Description.Contains(q)));
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderBy(p => p.Category)
+            .ThenBy(p => p.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new KortStederViewModel
+        {
+            Items      = items,
+            Q          = q,
+            Page       = page,
+            PageSize   = pageSize,
+            TotalCount = total,
+            TotalPages = (int)Math.Ceiling(total / (double)pageSize),
+            RangeFrom  = total == 0 ? 0 : (page - 1) * pageSize + 1,
+            RangeTo    = Math.Min(page * pageSize, total)
+        };
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> KortStederOpret(string name, string category, string latitude, string longitude, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            TempData["Error"] = "Navn er påkrævet.";
+            return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+        }
+
+        if (!double.TryParse(latitude,  System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lat) ||
+            !double.TryParse(longitude, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lng))
+        {
+            TempData["Error"] = "Ugyldige koordinater. Klik på kortet for at sætte positionen.";
+            return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+        }
+
+        _db.MapLocations.Add(new web.Models.MapLocation
+        {
+            SeasonId    = AppTime.CurrentSeason,
+            Name        = name.Trim(),
+            Category    = category,
+            Latitude    = lat,
+            Longitude   = lng,
+            Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
+            CreatedAt   = AppTime.Now
+        });
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = $"Stedet '{name.Trim()}' blev oprettet.";
+        return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> KortStederRediger(int id)
+    {
+        var poi = await _db.MapLocations.FindAsync(id);
+        if (poi == null || poi.SeasonId != AppTime.CurrentSeason)
+            return NotFound();
+        return Json(new { poi.Id, poi.Name, poi.Category, poi.Latitude, poi.Longitude, poi.Description });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> KortStederOpdater(int id, string name, string category, string latitude, string longitude, string? description)
+    {
+        var poi = await _db.MapLocations.FindAsync(id);
+        if (poi == null || poi.SeasonId != AppTime.CurrentSeason)
+            return NotFound();
+
+        if (!double.TryParse(latitude,  System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lat) ||
+            !double.TryParse(longitude, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lng))
+        {
+            TempData["Error"] = "Ugyldige koordinater. Klik på kortet for at sætte positionen.";
+            return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+        }
+
+        poi.Name        = name.Trim();
+        poi.Category    = category;
+        poi.Latitude    = lat;
+        poi.Longitude   = lng;
+        poi.Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = $"Stedet '{poi.Name}' blev opdateret.";
+        return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> KortStederSlet(int id)
+    {
+        var poi = await _db.MapLocations.FindAsync(id);
+        if (poi != null && poi.SeasonId == AppTime.CurrentSeason)
+        {
+            _db.MapLocations.Remove(poi);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Stedet '{poi.Name}' blev slettet.";
+        }
+        return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+    }
 }

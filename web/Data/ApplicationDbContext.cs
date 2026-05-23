@@ -21,6 +21,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MessageTask> MessageTasks => Set<MessageTask>();
     public DbSet<MessageReply> MessageReplies => Set<MessageReply>();
     public DbSet<VolunteerGpsLog> VolunteerGpsLogs => Set<VolunteerGpsLog>();
+    public DbSet<MapLocation> MapLocations => Set<MapLocation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -204,6 +205,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .WithMany()
                 .HasForeignKey(x => x.VolunteerId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<MapLocation>(entity =>
+        {
+            entity.HasIndex(x => x.SeasonId);
+            entity.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(1024);
         });
     }
 }

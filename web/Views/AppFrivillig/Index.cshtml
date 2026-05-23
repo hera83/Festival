@@ -490,52 +490,63 @@
         // Eksponér så _Beskeder.cshtml kan nulstille badge ved åbning
         window.refreshUnreadBadge = refreshUnreadBadge;
 
-        // ── GPS lokation logging ──────────────────────────────────────
-        function logGpsLocation(trigger) {
+        // ── GPS auto-tracking (hvert 3. sekund, kun ved check-in) ────────
+        (function () {
             if (!navigator.geolocation) return;
-            const stored = localStorage.getItem('fv_volunteer');
-            if (!stored) return;
-            let vol;
-            try { vol = JSON.parse(stored); } catch { return; }
-            if (!vol?.id || !vol?.seasonId) return;
 
-            navigator.geolocation.getCurrentPosition(pos => {
-                fetch('/AppFrivillig/LogGpsLocation', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        volunteerId: vol.id,
-                        seasonId: vol.seasonId,
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude,
-                        accuracy: pos.coords.accuracy ?? null,
-                        trigger: trigger
-                    })
-                }).catch(() => { /* ignorer netværksfejl */ });
-            }, () => { /* ignorer GPS-fejl */ }, {
-                enableHighAccuracy: true,
-                timeout: 8000,
-                maximumAge: 30000
-            });
-        }
+            window.fvIsCheckedIn = window.fvIsCheckedIn || false;
 
-        // Log GPS ved åbning af appen
-        logGpsLocation('AppOpen');
+            function getVol() {
+                const s = localStorage.getItem('fv_volunteer');
+                if (!s) return null;
+                try { return JSON.parse(s); } catch { return null; }
+            }
 
-        // Log GPS ved nav-klik
-        document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabName = btn.dataset.tab;
-                const triggerMap = {
-                    overblik: 'NavOverblik',
-                    vagter: 'NavVagter',
-                    observationer: 'NavObservationer',
-                    beskeder: 'NavBeskeder',
-                    profil: 'NavProfil'
-                };
-                logGpsLocation(triggerMap[tabName] || 'NavUnknown');
-            });
-        });
+            function sendGpsLocation() {
+                if (!window.fvIsCheckedIn) return;
+                const vol = getVol();
+                if (!vol?.id || !vol?.seasonId) return;
+
+                navigator.geolocation.getCurrentPosition(pos => {
+                    if (!window.fvIsCheckedIn) return; // dobbelttjek efter asynkront kald
+                    fetch('/AppFrivillig/LogGpsLocation', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            volunteerId: vol.id,
+                            seasonId: vol.seasonId,
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy ?? null,
+                            trigger: 'AutoInterval'
+                        })
+                    }).catch(() => { /* ignorer netværksfejl */ });
+                }, () => { /* ignorer GPS-fejl */ }, {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                });
+            }
+
+            // Poll check-in status hvert 30. sekund for at holde fvIsCheckedIn opdateret
+            async function pollCheckInStatus() {
+                const vol = getVol();
+                if (!vol?.id || !vol?.seasonId) { window.fvIsCheckedIn = false; return; }
+                try {
+                    const res = await fetch(`/AppFrivillig/CheckInStatus?volunteerId=${vol.id}&seasonId=${vol.seasonId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        window.fvIsCheckedIn = !!data.isCheckedIn;
+                    }
+                } catch { /* ignorer netværksfejl */ }
+            }
+
+            // Start GPS-interval
+            setInterval(sendGpsLocation, 3000);
+
+            // Poll status hvert 30. sekund (første kald sker allerede fra _Overblik via loadOverblik)
+            setInterval(pollCheckInStatus, 30000);
+        })();
     </script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

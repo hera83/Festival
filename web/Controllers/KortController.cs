@@ -64,4 +64,27 @@ public class KortController(ApplicationDbContext db) : Controller
 
         return Json(result);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> PoiData()
+    {
+        var season = CurrentSeason;
+
+        var pois = await db.MapLocations
+            .Where(p => p.SeasonId == season)
+            .OrderBy(p => p.Category)
+            .ThenBy(p => p.Name)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Category,
+                p.Latitude,
+                p.Longitude,
+                p.Description
+            })
+            .ToListAsync();
+
+        return Json(pois);
+    }
 }

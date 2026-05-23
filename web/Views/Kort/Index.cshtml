@@ -22,13 +22,6 @@
 <div class="card" style="flex:1;">
     <div class="card-body p-0" style="position:relative;height:calc(100vh - 170px);min-height:460px;overflow:hidden;">
         <div id="kortMap" style="height:100%;min-height:100%;border-radius:var(--radius-md);"></div>
-        <div id="kortNoData" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-             background:var(--clr-card);border:1px solid var(--clr-border);border-radius:var(--radius-md);
-             padding:1.5rem 2rem;text-align:center;z-index:1000;">
-            <i class="bi bi-geo-alt-fill" style="font-size:2rem;color:var(--clr-text-muted);"></i>
-            <p class="mb-0 mt-2" style="color:var(--clr-text-muted);">Ingen GPS-data tilgængeligt</p>
-            <small style="color:var(--clr-text-muted);">Data vises når frivillige er checked ind og har GPS aktiveret</small>
-        </div>
     </div>
 </div>
 
@@ -48,22 +41,48 @@
     map.setView([56.0, 10.0], 7);
 
     var markers = {};
-    var firstLoad = true;
+    var gpsFirstLoad = true;
+    var gpsBounds = [];
+    var poiBoundsReady = [];
+
+    function tryFitAll() {
+        var all = gpsBounds.concat(poiBoundsReady);
+        if (!gpsFirstLoad) return;
+        if (all.length === 0) return;
+        gpsFirstLoad = false;
+        if (all.length === 1) {
+            map.setView(all[0], 16);
+        } else {
+            map.fitBounds(all, { padding: [50, 50] });
+        }
+    }
 
     function makeIcon(isRecent) {
-        var color = isRecent ? '#22c55e' : '#f97316';
-        var shadow = isRecent ? 'rgba(34,197,94,0.35)' : 'rgba(249,115,22,0.35)';
-        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 16 16">'
-            + '<circle cx="8" cy="8" r="8" fill="' + shadow + '"/>'
-            + '<circle cx="8" cy="8" r="6" fill="' + color + '"/>'
-            + '<path fill="white" d="M8 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm0 6.5c-2.33 0-4 1.17-4 1.75V13h8v-.75c0-.58-1.67-1.75-4-1.75z"/>'
-            + '</svg>';
+        var dot = isRecent ? '#22c55e' : '#f97316';
+        var svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">'
+        + '<defs>'
+        + '  <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">'
+        + '    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.18"/>'
+        + '  </filter>'
+        + '</defs>'
+
+        // lys baggrund
+        + '<circle cx="20" cy="20" r="16" fill="rgba(255,255,255,0.92)" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>'
+
+        // person ikon
+        + '<path fill="#334155" opacity="0.9" d="M20 12a4 4 0 1 0 0 8a4 4 0 0 0 0-8zm0 10c-4 0-6.5 2-6.5 3.2V27h13v-1.8c0-1.2-2.5-3.2-6.5-3.2z"/>'
+
+        // status dot
+        + '<circle cx="30" cy="30" r="5" fill="' + dot + '" stroke="white" stroke-width="2"/>'
+
+        + '</svg>';
         return L.divIcon({
             html: svg,
             className: '',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-            popupAnchor: [0, -18]
+            iconSize: [32, 42],
+            iconAnchor: [16, 42],
+            popupAnchor: [0, -44]
         });
     }
 
@@ -83,8 +102,6 @@
                 document.getElementById('kortStatusText').textContent =
                     count === 0 ? '' : count + ' frivillig' + (count === 1 ? '' : 'e') + ' – sidst opdateret ' + new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-                document.getElementById('kortNoData').style.display = count === 0 ? 'flex' : 'none';
-
                 // Fjern markører der ikke længere er i data
                 var currentIds = data.map(function (d) { return d.volunteerId; });
                 Object.keys(markers).forEach(function (id) {
@@ -94,11 +111,11 @@
                     }
                 });
 
-                var bounds = [];
+                gpsBounds = [];
 
                 data.forEach(function (d) {
                     var latlng = [d.latitude, d.longitude];
-                    bounds.push(latlng);
+                    gpsBounds.push(latlng);
 
                     var popup = '<div style="min-width:180px;font-size:0.875rem;">'
                         + '<strong style="font-size:0.95rem;">' + escHtml(d.name) + '</strong><br>'
@@ -122,15 +139,7 @@
                     }
                 });
 
-                // Første load: zoom til alle markører
-                if (firstLoad && bounds.length > 0) {
-                    firstLoad = false;
-                    if (bounds.length === 1) {
-                        map.setView(bounds[0], 16);
-                    } else {
-                        map.fitBounds(bounds, { padding: [40, 40] });
-                    }
-                }
+                tryFitAll();
             })
             .catch(function () {
                 document.getElementById('kortStatusText').textContent = 'Fejl ved hentning af data';
@@ -148,6 +157,86 @@
 
     loadData();
     setInterval(loadData, 30000);
+
+    // ── POI-lag ──────────────────────────────────────────────────
+    var poiCategories = {
+        'Pit':         { color: '#e85d2e', icon: '👥' },
+        'Post':        { color: '#f59e0b', icon: '📍' },
+        'Scene':       { color: '#6366f1', icon: '🎵' },
+        'Toiletter':   { color: '#22c55e', icon: '🚽' },
+        'Førstehjælp': { color: '#ef4444', icon: '🚑' },
+        'Parkering':   { color: '#64748b', icon: '🅿️' },
+        'Andet':       { color: '#94a3b8', icon: '📌' }
+    };
+
+    var poiLayerGroups = {};
+    Object.keys(poiCategories).forEach(function (cat) {
+        poiLayerGroups[cat] = L.layerGroup().addTo(map);
+    });
+
+    function makePoiIcon(category) {
+        var cfg = poiCategories[category] || { color: '#94a3b8', icon: '📌' };
+        // viewBox er 36x46: 2px margin rundt om 32x42 formen så stroke ikke clippes
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="46" viewBox="0 0 36 46">'
+            + '<defs><filter id="ps" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.18"/></filter></defs>'
+            + '<path d="M18 2C9.16 2 2 9.16 2 18c0 12 16 26 16 26S34 30 34 18C34 9.16 26.84 2 18 2z" fill="rgba(255,255,255,0.92)" stroke="#e85d2e" stroke-width="2" filter="url(#ps)"/>'
+            + '<text x="18" y="18" text-anchor="middle" dominant-baseline="central" font-size="16">' + cfg.icon + '</text>'
+            + '</svg>';
+        return L.divIcon({
+            html: svg,
+            className: '',
+            iconSize: [36, 46],
+            iconAnchor: [18, 46],
+            popupAnchor: [0, -48]
+        });
+    }
+
+    function loadPoiData() {
+        fetch('/Kort/PoiData')
+            .then(function (r) { return r.json(); })
+            .then(function (pois) {
+                // Ryd eksisterende POI-markører
+                Object.keys(poiLayerGroups).forEach(function (cat) {
+                    poiLayerGroups[cat].clearLayers();
+                });
+
+                poiBoundsReady = [];
+
+                pois.forEach(function (poi) {
+                    var cat = poi.category || 'Andet';
+                    var group = poiLayerGroups[cat] || poiLayerGroups['Andet'];
+                    var popup = '<div style="min-width:160px;font-size:0.875rem;">'
+                        + '<strong style="font-size:0.95rem;">' + escHtml(poi.name) + '</strong><br>'
+                        + '<span style="color:#888;font-size:0.78rem;">' + escHtml(cat) + '</span>'
+                        + (poi.description ? '<hr style="margin:0.4rem 0;border-color:#444;"><div style="font-size:0.82rem;">' + escHtml(poi.description) + '</div>' : '')
+                        + '</div>';
+                    L.marker([poi.latitude, poi.longitude], { icon: makePoiIcon(cat) })
+                        .bindPopup(popup, { maxWidth: 240 })
+                        .addTo(group);
+                    poiBoundsReady.push([poi.latitude, poi.longitude]);
+                });
+
+                tryFitAll();
+            });
+    }
+
+    // ── Layer control ──
+    var overlayMaps = { 'Frivillige': L.layerGroup(Object.values(markers)) };
+    var volunteersGroup = L.layerGroup().addTo(map);
+
+    // Rebuild overlay map til layer control
+    var layerControlOverlays = { '<i class="bi bi-person-fill"></i> Frivillige': volunteersGroup };
+    Object.keys(poiCategories).forEach(function (cat) {
+        var cfg = poiCategories[cat];
+        layerControlOverlays['<span style="color:' + cfg.color + ';">' + cfg.icon + '</span> ' + cat] = poiLayerGroups[cat];
+    });
+
+    // Frivillige markers skal bruge volunteersGroup fremfor direkte map
+    // Tilføj layer control til kortet
+    L.control.layers(null, layerControlOverlays, { collapsed: false, position: 'topright' }).addTo(map);
+
+    loadPoiData();
+    setInterval(loadPoiData, 60000);
 })();
 </script>
 }

@@ -521,6 +521,16 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
         return Ok(new { sent = true });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> CheckInStatus(int volunteerId, int seasonId)
+    {
+        var today = AppTime.CopenhagenToday;
+        var isCheckedIn = await db.VolunteerCheckIns
+            .AnyAsync(c => c.VolunteerId == volunteerId && c.SeasonId == seasonId
+                        && c.CheckInDate == today && c.CheckedOutAt == null);
+        return Ok(new { isCheckedIn });
+    }
+
     [HttpPost]
     public async Task<IActionResult> LogGpsLocation([FromBody] GpsLocationRequest req)
     {

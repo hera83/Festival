@@ -1,0 +1,445 @@
+@model web.Models.KortStederViewModel
+@{
+    string CatLabel(string cat) => cat switch {
+        "Pit"          => "👥 Pit",
+        "Post"         => "📍 Post",
+        "Scene"        => "🎵 Scene",
+        "Toiletter"    => "🚽 Toiletter",
+        "Førstehjælp"  => "🚑 Førstehjælp",
+        "Parkering"    => "🅿️ Parkering",
+        _              => cat
+    };
+}
+
+@* ── Søgebar + Opret-knap ── *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="poiSearchInput" class="form-control form-control-sm"
+               placeholder="Søg navn, kategori…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               value="@Model.Q" autocomplete="off" />
+    </div>
+    <button type="button" class="btn btn-sm"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;"
+            data-bs-toggle="modal" data-bs-target="#opretPoiModal">
+        <i class="bi bi-pin-map me-1"></i>Opret sted
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-geo-alt me-2"></i>Kortsteder (<span id="poiCount">@Model.TotalCount</span>)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--clr-border);">
+                        <th class="ps-3">Navn</th>
+                        <th>Kategori</th>
+                        <th>Beskrivelse</th>
+                        <th>Koordinater</th>
+                        <th class="pe-3 text-end">Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody id="poiTableBody">
+                    @if (!Model.Items.Any())
+                    {
+                        <tr id="poiEmptyRow">
+                            <td colspan="5" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                <i class="bi bi-geo-alt fs-4 d-block mb-1"></i>
+                                Ingen kortsteder fundet
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var poi in Model.Items)
+                    {
+                        var latStr = poi.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+                        var lngStr = poi.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+                        <tr style="border-bottom: 1px solid var(--clr-border);">
+                            <td class="ps-3 align-middle fw-semibold">@poi.Name</td>
+                            <td class="align-middle">
+                                <span style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.2rem 0.6rem;border-radius:999px;background:var(--clr-surface);border:1px solid var(--clr-border);font-size:0.8rem;font-weight:500;color:var(--clr-text);">@CatLabel(poi.Category)</span>
+                            </td>
+                            <td class="align-middle" style="color: var(--clr-text-muted); font-size: 0.85rem;">
+                                @(poi.Description ?? "–")
+                            </td>
+                            <td class="align-middle" style="font-size: 0.8rem; color: var(--clr-text-muted); font-family: monospace;">
+                                @latStr, @lngStr
+                            </td>
+                            <td class="pe-3 align-middle text-end">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-secondary poi-rediger-btn"
+                                            title="Rediger sted"
+                                            data-id="@poi.Id"
+                                            data-name="@poi.Name"
+                                            data-category="@poi.Category"
+                                            data-lat="@latStr"
+                                            data-lng="@lngStr"
+                                            data-description="@(poi.Description ?? "")">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger poi-slet-btn"
+                                            title="Slet sted"
+                                            data-id="@poi.Id"
+                                            data-name="@poi.Name">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* ── Pagineringsbar ── *@
+<div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2" id="poiPagerBar">
+    <small style="color: var(--clr-text-muted);" id="poiRangeText">@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</small>
+    <div class="d-flex align-items-center gap-2">
+        <span style="font-size: 0.8rem; color: var(--clr-text-muted);">Pr. side</span>
+        <select id="poiPageSize" class="form-select form-select-sm" style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);">
+            @foreach (var s in new[] { 10, 25, 50 })
+            {
+                <option value="@s" selected="@(Model.PageSize == s ? "selected" : null)">@s</option>
+            }
+        </select>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <button type="button" class="page-link poi-page-btn" data-page="@(Model.Page - 1)"
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);">&lsaquo;</button>
+                </li>
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    if (p == 1 || p == Model.TotalPages || Math.Abs(p - Model.Page) <= 1)
+                    {
+                        var isActive = p == Model.Page;
+                        var pgStyle = isActive
+                            ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;"
+                            : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);";
+                        <li class="page-item @(isActive ? "active" : "")">
+                            <button type="button" class="page-link poi-page-btn" data-page="@p" style="@pgStyle">@p</button>
+                        </li>
+                    }
+                    else if (Math.Abs(p - Model.Page) == 2)
+                    {
+                        <li class="page-item disabled">
+                            <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                        </li>
+                    }
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                    <button type="button" class="page-link poi-page-btn" data-page="@(Model.Page + 1)"
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);">&rsaquo;</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@* ── Opret POI modal ── *@
+<div class="modal fade" id="opretPoiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+            <form method="post" action="/Admin/KortStederOpret">
+                @Html.AntiForgeryToken()
+                <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                    <h5 class="modal-title"><i class="bi bi-pin-map me-2" style="color: var(--clr-brand);"></i>Opret nyt sted</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-7">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Navn *</label>
+                            <input type="text" name="name" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                        <div class="col-sm-5">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Kategori *</label>
+                            <select name="category" class="form-select form-select-sm"
+                                    style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);">
+                                <option value="Pit">👥 Pit</option>
+                                <option value="Post">📍 Post</option>
+                                <option value="Scene">🎵 Scene</option>
+                                <option value="Toiletter">🚽 Toiletter</option>
+                                <option value="Førstehjælp">🚑 Førstehjælp</option>
+                                <option value="Parkering">🅿️ Parkering</option>
+                                <option value="Andet">📌 Andet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Beskrivelse</label>
+                        <input type="text" name="description" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Breddegrad (Lat)</label>
+                            <input type="text" inputmode="decimal" name="latitude" id="opretLat" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Længdegrad (Lng)</label>
+                            <input type="text" inputmode="decimal" name="longitude" id="opretLng" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                    </div>
+                    <div class="mb-1">
+                        <small style="color: var(--clr-text-muted);"><i class="bi bi-cursor me-1"></i>Klik på kortet herunder for at sætte koordinater</small>
+                    </div>
+                    <div id="opretPoiMap" style="height: 300px; border-radius: var(--radius-md); border: 1px solid var(--clr-border);"></div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-pin-map me-1"></i>Opret</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Rediger POI modal ── *@
+<div class="modal fade" id="redigerPoiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+            <form method="post" action="/Admin/KortStederOpdater">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="redigerPoiId" />
+                <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2" style="color: var(--clr-brand);"></i>Rediger sted</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-7">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Navn *</label>
+                            <input type="text" name="name" id="redigerPoiName" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                        <div class="col-sm-5">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Kategori *</label>
+                            <select name="category" id="redigerPoiCategory" class="form-select form-select-sm"
+                                    style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);">
+                                <option value="Pit">👥 Pit</option>
+                                <option value="Post">📍 Post</option>
+                                <option value="Scene">🎵 Scene</option>
+                                <option value="Toiletter">🚽 Toiletter</option>
+                                <option value="Førstehjælp">🚑 Førstehjælp</option>
+                                <option value="Parkering">🅿️ Parkering</option>
+                                <option value="Andet">📌 Andet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Beskrivelse</label>
+                        <input type="text" name="description" id="redigerPoiDescription" class="form-control form-control-sm"
+                               style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Breddegrad (Lat)</label>
+                            <input type="text" inputmode="decimal" name="latitude" id="redigerPoiLat" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Længdegrad (Lng)</label>
+                            <input type="text" inputmode="decimal" name="longitude" id="redigerPoiLng" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                    </div>
+                    <div class="mb-1">
+                        <small style="color: var(--clr-text-muted);"><i class="bi bi-cursor me-1"></i>Klik på kortet for at flytte markøren</small>
+                    </div>
+                    <div id="redigerPoiMap" style="height: 300px; border-radius: var(--radius-md); border: 1px solid var(--clr-border);"></div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-floppy me-1"></i>Gem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Slet POI modal ── *@
+<div class="modal fade" id="sletPoiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+            <form method="post" action="/Admin/KortStederSlet">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="sletPoiId" />
+                <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                    <h5 class="modal-title"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet sted</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--clr-text);">Er du sikker på, at du vil slette stedet <strong id="sletPoiNavn"></strong>?</p>
+                    <p style="color: var(--clr-text-muted); font-size: 0.85rem;">Dette kan ikke fortrydes.</p>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash me-1"></i>Slet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Leaflet CSS + JS (dynamisk indlæsning, da partialen hentes via fetch) ── *@
+<script>
+(function () {
+    var _opretMap = null, _opretMarker = null;
+    var _redigerMap = null, _redigerMarker = null;
+
+    function loadLeaflet(callback) {
+        if (window.L) { callback(); return; }
+
+        // Indlæs CSS
+        if (!document.getElementById('leaflet-css')) {
+            var css = document.createElement('link');
+            css.id  = 'leaflet-css';
+            css.rel = 'stylesheet';
+            css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(css);
+        }
+
+        // Indlæs JS
+        var script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = callback;
+        document.head.appendChild(script);
+    }
+    var poiSearchTimer = null;
+    var poiCurrentPage = @Model.Page;
+    var poiCurrentPageSize = @Model.PageSize;
+    var poiCurrentQ = '@Html.Raw(Model.Q.Replace("'", "\\'").Replace("\\", "\\\\"))';
+
+    // ── Søgning ──
+    document.getElementById('poiSearchInput').addEventListener('keyup', function () {
+        clearTimeout(poiSearchTimer);
+        var val = this.value;
+        poiSearchTimer = setTimeout(function () {
+            poiCurrentQ = val;
+            poiCurrentPage = 1;
+            refreshPoiTable();
+        }, 250);
+    });
+
+    document.getElementById('poiPageSize').addEventListener('change', function () {
+        poiCurrentPageSize = parseInt(this.value);
+        poiCurrentPage = 1;
+        refreshPoiTable();
+    });
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.poi-page-btn');
+        if (btn) {
+            var pg = parseInt(btn.dataset.page);
+            if (!isNaN(pg) && pg >= 1) { poiCurrentPage = pg; refreshPoiTable(); }
+        }
+    });
+
+    function refreshPoiTable() {
+        var url = '/Admin/KortStederSearch?q=' + encodeURIComponent(poiCurrentQ)
+            + '&page=' + poiCurrentPage + '&pageSize=' + poiCurrentPageSize;
+        var tbody = document.getElementById('poiTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3"><span class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></span></td></tr>';
+        fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var nb = doc.getElementById('poiTableBody');
+            if (nb) tbody.innerHTML = nb.innerHTML;
+            var nc = doc.getElementById('poiCount');
+            if (nc) document.getElementById('poiCount').textContent = nc.textContent;
+            var nr = doc.getElementById('poiRangeText');
+            if (nr) document.getElementById('poiRangeText').textContent = nr.textContent;
+            var np = doc.querySelector('.pagination');
+            var cp = document.querySelector('.pagination');
+            if (np && cp) cp.innerHTML = np.innerHTML;
+        });
+    }
+
+    // ── Opret modal – kort ──
+    document.getElementById('opretPoiModal').addEventListener('shown.bs.modal', function () {
+        loadLeaflet(function () {
+            if (!_opretMap) {
+                _opretMap = L.map('opretPoiMap').setView([56.0, 10.0], 7);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(_opretMap);
+                _opretMap.on('click', function (e) {
+                    document.getElementById('opretLat').value = e.latlng.lat.toFixed(6);
+                    document.getElementById('opretLng').value = e.latlng.lng.toFixed(6);
+                    if (_opretMarker) { _opretMarker.setLatLng(e.latlng); } else { _opretMarker = L.marker(e.latlng).addTo(_opretMap); }
+                });
+            }
+            _opretMap.invalidateSize();
+        });
+    });
+
+    document.getElementById('opretPoiModal').addEventListener('hidden.bs.modal', function () {
+        if (_opretMarker) { _opretMap.removeLayer(_opretMarker); _opretMarker = null; }
+        document.getElementById('opretLat').value = '';
+        document.getElementById('opretLng').value = '';
+    });
+
+    // ── Rediger modal ──
+    var _redigerLat = null, _redigerLng = null;
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.poi-rediger-btn');
+        if (!btn) return;
+        document.getElementById('redigerPoiId').value          = btn.dataset.id;
+        document.getElementById('redigerPoiName').value        = btn.dataset.name;
+        document.getElementById('redigerPoiDescription').value = btn.dataset.description;
+        document.getElementById('redigerPoiLat').value         = btn.dataset.lat;
+        document.getElementById('redigerPoiLng').value         = btn.dataset.lng;
+        _redigerLat = parseFloat(btn.dataset.lat);
+        _redigerLng = parseFloat(btn.dataset.lng);
+        var sel = document.getElementById('redigerPoiCategory');
+        for (var i = 0; i < sel.options.length; i++) { sel.options[i].selected = sel.options[i].value === btn.dataset.category; }
+        new bootstrap.Modal(document.getElementById('redigerPoiModal')).show();
+    });
+
+    document.getElementById('redigerPoiModal').addEventListener('shown.bs.modal', function () {
+        loadLeaflet(function () {
+            var lat = _redigerLat;
+            var lng = _redigerLng;
+            var hasCoords = lat !== null && !isNaN(lat) && lng !== null && !isNaN(lng);
+            var center = hasCoords ? [lat, lng] : [56.0, 10.0];
+            var zoom   = hasCoords ? 15 : 7;
+            if (!_redigerMap) {
+                _redigerMap = L.map('redigerPoiMap').setView(center, zoom);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(_redigerMap);
+                _redigerMap.on('click', function (e) {
+                    _redigerLat = e.latlng.lat;
+                    _redigerLng = e.latlng.lng;
+                    document.getElementById('redigerPoiLat').value = _redigerLat.toFixed(6);
+                    document.getElementById('redigerPoiLng').value = _redigerLng.toFixed(6);
+                    if (_redigerMarker) { _redigerMarker.setLatLng(e.latlng); } else { _redigerMarker = L.marker(e.latlng).addTo(_redigerMap); }
+                });
+            } else {
+                _redigerMap.setView(center, zoom);
+            }
+            _redigerMap.invalidateSize();
+            if (hasCoords) {
+                if (_redigerMarker) { _redigerMarker.setLatLng([lat, lng]); }
+                else { _redigerMarker = L.marker([lat, lng]).addTo(_redigerMap); }
+            }
+        });
+    });
+
+    // ── Slet modal ──
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.poi-slet-btn');
+        if (!btn) return;
+        document.getElementById('sletPoiId').value = btn.dataset.id;
+        document.getElementById('sletPoiNavn').textContent = btn.dataset.name;
+        new bootstrap.Modal(document.getElementById('sletPoiModal')).show();
+    });
+})();
+</script>
