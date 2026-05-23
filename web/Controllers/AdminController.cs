@@ -1085,16 +1085,21 @@ public class AdminController : Controller
             .Take(pageSize)
             .ToListAsync();
 
+        var allLocations = await _db.MapLocations
+            .Where(p => p.SeasonId == season)
+            .ToListAsync();
+
         return new KortStederViewModel
         {
-            Items      = items,
-            Q          = q,
-            Page       = page,
-            PageSize   = pageSize,
-            TotalCount = total,
-            TotalPages = (int)Math.Ceiling(total / (double)pageSize),
-            RangeFrom  = total == 0 ? 0 : (page - 1) * pageSize + 1,
-            RangeTo    = Math.Min(page * pageSize, total)
+            Items        = items,
+            AllLocations = allLocations,
+            Q            = q,
+            Page         = page,
+            PageSize     = pageSize,
+            TotalCount   = total,
+            TotalPages   = (int)Math.Ceiling(total / (double)pageSize),
+            RangeFrom    = total == 0 ? 0 : (page - 1) * pageSize + 1,
+            RangeTo      = Math.Min(page * pageSize, total)
         };
     }
 

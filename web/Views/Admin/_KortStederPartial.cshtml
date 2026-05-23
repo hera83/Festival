@@ -365,6 +365,42 @@
         });
     }
 
+    var _allPois = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.AllLocations.Select(p => new {
+            id   = p.Id,
+            lat  = p.Latitude,
+            lng  = p.Longitude,
+            name = p.Name,
+            cat  = p.Category
+        })
+    ));
+    var _existingMarkers = [];
+
+    function addExistingMarkers(map, excludeId) {
+        _existingMarkers.forEach(function (m) { map.removeLayer(m); });
+        _existingMarkers = [];
+        var existingIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [20, 33], iconAnchor: [10, 33], popupAnchor: [1, -28]
+        });
+        _allPois.forEach(function (p) {
+            if (excludeId !== undefined && p.id === excludeId) return;
+            var m = L.marker([p.lat, p.lng], { icon: existingIcon, opacity: 0.6 })
+                .bindTooltip(p.name, { permanent: false })
+                .addTo(map);
+            _existingMarkers.push(m);
+        });
+    }
+
+    function fitToExisting(map) {
+        if (_allPois.length === 0) { map.setView([56.0, 10.0], 7); return; }
+        if (_allPois.length === 1) { map.setView([_allPois[0].lat, _allPois[0].lng], 16); return; }
+        var bounds = L.latLngBounds(_allPois.map(function (p) { return [p.lat, p.lng]; }));
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+    }
+
     // ── Opret modal – kort ──
     document.getElementById('opretPoiModal').addEventListener('shown.bs.modal', function () {
         loadLeaflet(function () {
@@ -378,6 +414,8 @@
                 });
             }
             _opretMap.invalidateSize();
+            addExistingMarkers(_opretMap, undefined);
+            if (!_opretMarker) { fitToExisting(_opretMap); }
         });
     });
 
@@ -410,10 +448,8 @@
             var lat = _redigerLat;
             var lng = _redigerLng;
             var hasCoords = lat !== null && !isNaN(lat) && lng !== null && !isNaN(lng);
-            var center = hasCoords ? [lat, lng] : [56.0, 10.0];
-            var zoom   = hasCoords ? 15 : 7;
             if (!_redigerMap) {
-                _redigerMap = L.map('redigerPoiMap').setView(center, zoom);
+                _redigerMap = L.map('redigerPoiMap').setView([56.0, 10.0], 7);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(_redigerMap);
                 _redigerMap.on('click', function (e) {
                     _redigerLat = e.latlng.lat;
@@ -422,14 +458,17 @@
                     document.getElementById('redigerPoiLng').value = _redigerLng.toFixed(6);
                     if (_redigerMarker) { _redigerMarker.setLatLng(e.latlng); } else { _redigerMarker = L.marker(e.latlng).addTo(_redigerMap); }
                 });
-            } else {
-                _redigerMap.setView(center, zoom);
             }
             _redigerMap.invalidateSize();
+            // Placer den redigerede markør (fuld opacitet) inden vi kalder addExistingMarkers
             if (hasCoords) {
                 if (_redigerMarker) { _redigerMarker.setLatLng([lat, lng]); }
                 else { _redigerMarker = L.marker([lat, lng]).addTo(_redigerMap); }
             }
+            var excludeId = parseInt(document.getElementById('redigerPoiId').value);
+            addExistingMarkers(_redigerMap, excludeId);
+            // Zoom til alle eksisterende steder (samme adfærd som Opret)
+            fitToExisting(_redigerMap);
         });
     });
 
