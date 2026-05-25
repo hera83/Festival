@@ -23,8 +23,14 @@
 
   <ItemGroup>
     <Folder Include="App_dbs\" />
-    <Folder Include="App_files\Vejledninger\" />
     <Folder Include="Migrations\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="App_files\Vejledninger\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

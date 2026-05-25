@@ -281,7 +281,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
         // Gem installationstidspunkt første gang, og opdater altid enhedsnavn
         if (meta.AppInstalledAt == null)
             meta.AppInstalledAt = AppTime.Now;
-        var parsedDevice = Request.Headers.UserAgent.ToString(); // ParseDeviceName(Request.Headers.UserAgent.ToString());
+        var parsedDevice = Request.Headers.UserAgent.ToString();
         meta.AppDeviceName = parsedDevice;
         meta.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
@@ -570,37 +570,6 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
 
         await db.SaveChangesAsync();
         return Ok(new { logged = true });
-    }
-    private static string ParseDeviceName(string userAgent)
-    {
-        if (string.IsNullOrWhiteSpace(userAgent)) return "Ukendt enhed";
-
-        // Samsung-model fra Android UA: fx (Linux; Android 14; SM-K926B Build/...)
-        var m = System.Text.RegularExpressions.Regex.Match(userAgent, @"\bSM-[A-Z0-9]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (m.Success) return $"Samsung {m.Value.ToUpper()}";
-
-        // Samsung eksplicit i UA: fx "SAMSUNG SM-G991B" eller "Samsung Galaxy S21"
-        m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Samsung[- ]([^\s/;)]+(?:\s+[^\s/;)]+)*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (m.Success) return $"Samsung {m.Groups[1].Value.Trim()}";
-
-        // Generisk Android-model: (Linux; Android X.X; ModelName Build/...) – strip Build/-delen
-        m = System.Text.RegularExpressions.Regex.Match(userAgent, @"Android [^;]+;\s*([^);]+?)(?:\s+Build/[^)]*)?[);]");
-        if (m.Success)
-        {
-            var model = m.Groups[1].Value.Trim();
-            if (!string.IsNullOrWhiteSpace(model)) return model;
-        }
-
-        // iPhone
-        if (userAgent.Contains("iPhone")) return "iPhone";
-        // iPad
-        if (userAgent.Contains("iPad")) return "iPad";
-        // Windows
-        if (userAgent.Contains("Windows")) return "Windows";
-        // Mac
-        if (userAgent.Contains("Macintosh")) return "Mac";
-
-        return "Ukendt enhed";
     }
 }
 
