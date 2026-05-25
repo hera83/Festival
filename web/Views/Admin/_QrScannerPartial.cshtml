@@ -162,9 +162,9 @@
     const ctx         = canvas.getContext('2d', { willReadFrequently: true });
 
     const lookupUrl   = '@Url.Action("LookupQrToken", "Admin")';
-    const prefGetUrl  = '@Url.Action("Get", "UserCameraPreference")';
-    const prefSaveUrl = '@Url.Action("Save", "UserCameraPreference")';
-    const prefClrUrl  = '@Url.Action("Clear", "UserCameraPreference")';
+    const prefGetUrl  = '@Url.Action("GetCameraPreference", "Dashboard")';
+    const prefSaveUrl = '@Url.Action("SaveCameraPreference", "Dashboard")';
+    const prefClrUrl  = '@Url.Action("ClearCameraPreference", "Dashboard")';
     const csrfToken   = document.querySelector('input[name="__RequestVerificationToken"]')?.value
                      || document.querySelector('meta[name="RequestVerificationToken"]')?.content
                      || '';

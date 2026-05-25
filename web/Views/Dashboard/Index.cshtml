@@ -1,7 +1,3 @@
-@{
-    ViewData["Title"] = "Dashboard";
-}
-
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div class="page-header mb-0" style="border-bottom:none; padding-bottom:0;">
         <h1><i class="bi bi-speedometer2 me-2" style="color: var(--clr-brand);"></i>Dashboard</h1>
@@ -583,7 +579,7 @@
         const today = now.getFullYear() + '-' +
             String(now.getMonth() + 1).padStart(2, '0') + '-' +
             String(now.getDate()).padStart(2, '0');
-        fetch(`/Home/CheckInSearch?q=${encodeURIComponent(q)}&date=${today}`)
+        fetch(`/Dashboard/CheckInSearch?q=${encodeURIComponent(q)}&date=${today}`)
             .then(r => r.json())
             .then(data => { spinner.classList.add('d-none'); tableWrapper.classList.remove('d-none'); renderRows(data); })
             .catch(() => {
@@ -618,7 +614,7 @@
 
     function doCheckIn(volunteerId, name, btn) {
         btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        postJson('/Home/CheckIn', { volunteerId })
+        postJson('/Dashboard/CheckIn', { volunteerId })
             .then(res => {
                 if (res.success) { showToast(res.message, 'success'); updateCheckedInCount(); updateNoShowCount(); loadVolunteers(searchInput.value); }
                 else { showToast(res.message, 'warning'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Check ind'; }
@@ -628,7 +624,7 @@
 
     function doCheckOut(volunteerId, name, btn) {
         if (btn && btn.disabled !== undefined) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
-        postJson('/Home/CheckOut', { volunteerId })
+        postJson('/Dashboard/CheckOut', { volunteerId })
             .then(res => {
                 if (res.success) {
                     disabledAlarmVolunteers.delete(volunteerId);
@@ -642,7 +638,7 @@
 
     // -- Tæller ----------------------------------------------------------------
     function updateCheckedInCount() {
-        fetch('/Home/GetCheckedInCount').then(r => r.json()).then(data => {
+        fetch('/Dashboard/GetCheckedInCount').then(r => r.json()).then(data => {
             const el = document.getElementById('checkedInCount');
             if (el) el.textContent = data.count;
             const pit = document.getElementById('pitCount');
@@ -652,7 +648,7 @@
     window.updateCheckedInCount = updateCheckedInCount;
 
     function updateNoShowCount() {
-        fetch('/Home/GetNoShowCount').then(r => r.json()).then(data => {
+        fetch('/Dashboard/GetNoShowCount').then(r => r.json()).then(data => {
             const el = document.getElementById('noShowCount');
             if (el) el.textContent = data.count;
         }).catch(() => {});
@@ -693,7 +689,7 @@
     function loadNoShows(q) {
         noShowSpinner.classList.remove('d-none');
         noShowWrapper.classList.add('d-none');
-        fetch(`/Home/GetNoShowList?q=${encodeURIComponent(q || '')}`)
+        fetch(`/Dashboard/GetNoShowList?q=${encodeURIComponent(q || '')}`)
             .then(r => r.json())
             .then(data => {
                 _lastNoShows = data;
@@ -747,7 +743,7 @@
     function loadPitVolunteers(q) {
         pitSpinner.classList.remove('d-none');
         pitList.classList.add('d-none');
-        fetch(`/Home/GetPitVolunteers?q=${encodeURIComponent(q || '')}`)
+        fetch(`/Dashboard/GetPitVolunteers?q=${encodeURIComponent(q || '')}`)
             .then(r => r.json())
             .then(data => { pitSpinner.classList.add('d-none'); renderPitList(data, q || ''); })
             .catch(() => {
@@ -1427,7 +1423,7 @@
 
     function moveVolunteer(volunteerId, targetLocation) {
         disabledAlarmVolunteers.delete(volunteerId); // nulstil per-frivillig alarm ved flytning
-        postJson('/Home/MoveVolunteer', { volunteerId, targetLocation })
+        postJson('/Dashboard/MoveVolunteer', { volunteerId, targetLocation })
             .then(res => {
                 if (res.success) {
                     clearPitSearch();
@@ -1555,7 +1551,7 @@
     }
 
     function syncPitAlarm() {
-        return fetch('/DashboardSetting/Get?key=PitAlarmMinutes')
+        return fetch('/Dashboard/GetSetting?key=PitAlarmMinutes')
             .then(r => r.json())
             .then(data => {
                 const val = parseInt(data.value);
@@ -1572,7 +1568,7 @@
     document.getElementById('savePitAlarmBtn').addEventListener('click', () => {
         const val = parseInt(pitAlarmInput.value);
         pitAlarmMinutes = (!isNaN(val) && val > 0) ? val : null;
-        postJson('/DashboardSetting/Set', { key: 'PitAlarmMinutes', value: pitAlarmMinutes?.toString() ?? '' })
+        postJson('/Dashboard/SetSetting', { key: 'PitAlarmMinutes', value: pitAlarmMinutes?.toString() ?? '' })
             .catch(() => {});
         bootstrap.Modal.getInstance(pitAlarmModal).hide();
         updateGearIcon();
@@ -1582,7 +1578,7 @@
     document.getElementById('clearPitAlarmBtn').addEventListener('click', () => {
         pitAlarmMinutes = null;
         pitAlarmInput.value = '';
-        postJson('/DashboardSetting/Set', { key: 'PitAlarmMinutes', value: '' })
+        postJson('/Dashboard/SetSetting', { key: 'PitAlarmMinutes', value: '' })
             .catch(() => {});
         bootstrap.Modal.getInstance(pitAlarmModal).hide();
         updateGearIcon();
@@ -1612,7 +1608,7 @@
         if (document.hidden) return; // tab er ikke synlig
 
         try {
-            const res  = await fetch('/Home/StateHash');
+            const res  = await fetch('/Dashboard/StateHash');
             const data = await res.json();
             const hash = data.hash;
 
@@ -1649,7 +1645,7 @@
     }
 
     // Sæt hash ved første load så vi ikke refresher unødvendigt med det samme
-    fetch('/Home/StateHash').then(r => r.json()).then(d => { _lastStateHash = d.hash; }).catch(() => {});
+    fetch('/Dashboard/StateHash').then(r => r.json()).then(d => { _lastStateHash = d.hash; }).catch(() => {});
 
     setInterval(backgroundRefresh, 3 * 1000);
 })();
@@ -1665,7 +1661,7 @@
     const video      = document.getElementById('qrPitVideo');
     const canvas     = document.getElementById('qrPitCanvas');
     const ctx        = canvas.getContext('2d', { willReadFrequently: true });
-    const scanUrl    = '@Url.Action("QrScanPit", "Home")';
+    const scanUrl    = '@Url.Action("QrScanPit", "Dashboard")';
     const csrfToken  = document.querySelector('meta[name="RequestVerificationToken"]').content;
 
     let active    = false;
@@ -1727,9 +1723,9 @@
         else        startScanner();
     });
 
-    const prefGetUrl  = '@Url.Action("Get", "UserCameraPreference")';
-    const prefSaveUrl = '@Url.Action("Save", "UserCameraPreference")';
-    const prefClrUrl  = '@Url.Action("Clear", "UserCameraPreference")';
+    const prefGetUrl  = '@Url.Action("GetCameraPreference", "Dashboard")';
+    const prefSaveUrl = '@Url.Action("SaveCameraPreference", "Dashboard")';
+    const prefClrUrl  = '@Url.Action("ClearCameraPreference", "Dashboard")';
 
     function buildFingerprint(devices) {
         return devices

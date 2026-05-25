@@ -11,6 +11,10 @@
 *.sln.docstates
 .env
 
+# Ignore all folders starting with a dot (hidden folders)
+.*/
+**/.*/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

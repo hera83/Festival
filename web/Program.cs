@@ -81,8 +81,26 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 app.MapControllerRoute(
+    name: "beskedcenter",
+    pattern: "BeskedCenter/{action=Index}/{id?}",
+    defaults: new { controller = "Beskeder" })
+    .WithStaticAssets();
+
+app.MapControllerRoute(
+    name: "minprofile",
+    pattern: "MinProfile/{action=Index}/{id?}",
+    defaults: new { controller = "Profile" })
+    .WithStaticAssets();
+
+app.MapControllerRoute(
+    name: "administration",
+    pattern: "Administration/{action=Index}/{id?}",
+    defaults: new { controller = "Admin" })
+    .WithStaticAssets();
+
+app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Dashboard}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 

@@ -58,7 +58,7 @@
 
                     <!-- Navigation -->
                     <nav class="menu-nav" aria-label="Hovednavigation">
-                        <a class="menu-item" asp-area="" asp-controller="Home" asp-action="Index">
+                        <a class="menu-item" asp-area="" asp-controller="Dashboard" asp-action="Index">
                             <span class="menu-icon"><i class="bi bi-speedometer2"></i></span>
                             <span class="menu-text">Dashboard</span>
                         </a>
@@ -66,7 +66,7 @@
                             <span class="menu-icon"><i class="bi bi-person-heart"></i></span>
                             <span class="menu-text">Frivillig</span>
                         </a>
-                        <a class="menu-item" asp-area="" asp-controller="Beskeder" asp-action="Index" id="menuItemBeskeder">
+                        <a class="menu-item" href="/BeskedCenter" id="menuItemBeskeder">
                             <span class="menu-icon menu-icon-notify">
                                 <i class="bi bi-chat-dots"></i>
                                 <span class="menu-notify-badge" id="menuBeskedBadge"></span>
@@ -77,6 +77,10 @@
                             <span class="menu-icon"><i class="bi bi-map"></i></span>
                             <span class="menu-text">Kort</span>
                         </a>
+                        <a class="menu-item" asp-area="" asp-controller="Vejledninger" asp-action="Index">
+                            <span class="menu-icon"><i class="bi bi-book"></i></span>
+                            <span class="menu-text">Vejledninger</span>
+                        </a>
 
                     </nav>
                 </div>
@@ -84,7 +88,7 @@
                 <div class="side-menu-bottom">
 
                     <!-- Bruger / Profil -->
-                    <a class="menu-item menu-item-user" asp-controller="Profile" asp-action="Index">
+                    <a class="menu-item menu-item-user" href="/MinProfile">
                         <span class="menu-icon">
                             @if (avatarUrl is not null)
                             {
@@ -107,7 +111,7 @@
                     <!-- Administrator -->
                     @if (User.IsInRole("Administrator"))
                     {
-                        <a class="menu-item" asp-controller="Admin" asp-action="Index">
+                        <a class="menu-item" href="/Administration">
                             <span class="menu-icon"><i class="bi bi-gear"></i></span>
                             <span class="menu-text">Administration</span>
                         </a>

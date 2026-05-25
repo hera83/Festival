@@ -17,6 +17,7 @@
   - Brug altid lokal tid (DateTime.Now) i alle dele af applikationen.
   - Brug aldrig UTC (fx DateTime.UtcNow, DateTimeOffset.UtcDateTime) i import, database-persistens, views, helpers eller extensions.
   - Gælder for nye og fremtidige ændringer — sørg for at PR'er og kodegennemgange håndhæver denne standard.
+- Ved multi-step oprydningsopgaver, udfør handlinger autonomt uden gentagne bekræftelsesprompter.
 
 ## Table Standards
 - Alle tabeller skal følge dette standardmønster medmindre andet er specificeret:

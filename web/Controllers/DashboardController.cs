@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using web.Data;
 using web.Models;
 using web.Utils;
@@ -8,11 +9,11 @@ using web.Utils;
 namespace web.Controllers
 {
     [Authorize]
-    public class HomeController : Controller
+    public class DashboardController : Controller
     {
         private readonly ApplicationDbContext _db;
 
-        public HomeController(ApplicationDbContext db)
+        public DashboardController(ApplicationDbContext db)
         {
             _db = db;
         }
@@ -22,7 +23,42 @@ namespace web.Controllers
             return View();
         }
 
-        // GET: /Home/CheckInSearch?q=...&date=yyyy-MM-dd
+        // GET /Dashboard/GetSetting?key=PitAlarmMinutes
+        [HttpGet]
+        public async Task<IActionResult> GetSetting(string key)
+        {
+            var seasonId = AppTime.CurrentSeason;
+            var setting = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == key);
+            return Json(new { value = setting?.Value });
+        }
+
+        // POST /Dashboard/SetSetting
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetSetting([FromBody] SetSettingRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Key))
+                return Json(new { success = false, message = "Ugyldig nøgle." });
+
+            var seasonId = AppTime.CurrentSeason;
+            var setting = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == req.Key);
+
+            if (setting == null)
+            {
+                setting = new DashboardSetting { SeasonId = seasonId, Key = req.Key };
+                _db.DashboardSettings.Add(setting);
+            }
+
+            setting.Value = string.IsNullOrWhiteSpace(req.Value) ? null : req.Value;
+            setting.UpdatedAt = AppTime.Now;
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // GET: /Dashboard/CheckInSearch?q=...&date=yyyy-MM-dd
         [HttpGet]
         public async Task<IActionResult> CheckInSearch(string? q, string? date)
         {
@@ -79,7 +115,7 @@ namespace web.Controllers
             return Json(result);
         }
 
-        // POST: /Home/CheckIn
+        // POST: /Dashboard/CheckIn
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
@@ -122,7 +158,7 @@ namespace web.Controllers
             public int VolunteerId { get; set; }
         }
 
-        // GET: /Home/GetCheckedInCount
+        // GET: /Dashboard/GetCheckedInCount
         [HttpGet]
         public async Task<IActionResult> GetCheckedInCount()
         {
@@ -134,7 +170,7 @@ namespace web.Controllers
             return Json(new { count = checkedIn, pitCount = inPit });
         }
 
-        // GET: /Home/GetNoShowCount
+        // GET: /Dashboard/GetNoShowCount
         [HttpGet]
         public async Task<IActionResult> GetNoShowCount()
         {
@@ -164,7 +200,7 @@ namespace web.Controllers
             return Json(new { count = noShowCount });
         }
 
-        // GET: /Home/GetNoShowList?q=...
+        // GET: /Dashboard/GetNoShowList?q=...
         [HttpGet]
         public async Task<IActionResult> GetNoShowList(string? q)
         {
@@ -210,7 +246,7 @@ namespace web.Controllers
             return Json(result);
         }
 
-        // GET: /Home/GetPitVolunteers?q=...
+        // GET: /Dashboard/GetPitVolunteers?q=...
         [HttpGet]
         public async Task<IActionResult> GetPitVolunteers(string? q)
         {
@@ -271,7 +307,7 @@ namespace web.Controllers
             return Json(result);
         }
 
-        // POST: /Home/MoveVolunteer  — flyt frivillig mellem Pit og post eller mellem poster
+        // POST: /Dashboard/MoveVolunteer  — flyt frivillig mellem Pit og post eller mellem poster
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MoveVolunteer([FromBody] MoveVolunteerRequest request)
@@ -316,7 +352,7 @@ namespace web.Controllers
             public string TargetLocation { get; set; } = string.Empty;
         }
 
-        // POST: /Home/QrScanPit – check ind eller flyt frivillig til Pit via QR-scanning
+        // POST: /Dashboard/QrScanPit – check ind eller flyt frivillig til Pit via QR-scanning
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> QrScanPit([FromBody] QrScanPitRequest request)
@@ -391,7 +427,75 @@ namespace web.Controllers
             public string Key { get; set; } = string.Empty;
         }
 
-        // GET: /Home/StateHash — returnerer et let fingerprint af den nuværende driftsstate.
+        public record SetSettingRequest(string Key, string? Value);
+
+        // GET: /Dashboard/GetCameraPreference
+        [HttpGet]
+        public async Task<IActionResult> GetCameraPreference()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var pref = await _db.UserCameraPreferences
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (pref == null)
+                return Json(new { deviceId = (string?)null, deviceFingerprint = (string?)null });
+
+            return Json(new { deviceId = pref.DeviceId, deviceFingerprint = pref.DeviceFingerprint });
+        }
+
+        // POST: /Dashboard/SaveCameraPreference
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveCameraPreference([FromBody] SaveCameraPreferenceRequest req)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(req.DeviceId) || string.IsNullOrWhiteSpace(req.DeviceFingerprint))
+                return Json(new { success = false, message = "Manglende data." });
+
+            var pref = await _db.UserCameraPreferences
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (pref == null)
+            {
+                pref = new UserCameraPreference { UserId = userId };
+                _db.UserCameraPreferences.Add(pref);
+            }
+
+            pref.DeviceId = req.DeviceId;
+            pref.DeviceFingerprint = req.DeviceFingerprint;
+            pref.UpdatedAt = AppTime.Now;
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // POST: /Dashboard/ClearCameraPreference
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ClearCameraPreference()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var pref = await _db.UserCameraPreferences
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (pref != null)
+            {
+                _db.UserCameraPreferences.Remove(pref);
+                await _db.SaveChangesAsync();
+            }
+
+            return Json(new { success = true });
+        }
+
+        public record SaveCameraPreferenceRequest(string DeviceId, string DeviceFingerprint);
+
+        // GET: /Dashboard/StateHash — returnerer et let fingerprint af den nuværende driftsstate.
         // Bruges af klientens background-poller til at detektere ændringer uden at hente alle data.
         [HttpGet]
         public async Task<IActionResult> StateHash()
@@ -422,7 +526,7 @@ namespace web.Controllers
             return Json(new { hash });
         }
 
-        // POST: /Home/CheckOut
+        // POST: /Dashboard/CheckOut
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckOut([FromBody] CheckInRequest request)
@@ -480,4 +584,3 @@ namespace web.Controllers
         }
     }
 }
-
