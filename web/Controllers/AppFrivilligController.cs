@@ -281,7 +281,7 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
         // Gem installationstidspunkt første gang, og opdater altid enhedsnavn
         if (meta.AppInstalledAt == null)
             meta.AppInstalledAt = AppTime.Now;
-        var parsedDevice = ParseDeviceName(Request.Headers.UserAgent.ToString());
+        var parsedDevice = Request.Headers.UserAgent.ToString(); // ParseDeviceName(Request.Headers.UserAgent.ToString());
         meta.AppDeviceName = parsedDevice;
         meta.UpdatedAt = AppTime.Now;
         await db.SaveChangesAsync();
