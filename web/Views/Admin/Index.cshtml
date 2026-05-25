@@ -49,6 +49,16 @@
             <i class="bi bi-geo-alt me-2"></i>Kortsteder
         </button>
     </li>
+    @* System Logs – højrejusteret *@
+    <li class="nav-item ms-auto" role="presentation">
+        <button class="nav-link @(activeTab == "systemlogs" ? "active" : "")"
+                id="tab-systemlogs"
+                data-tab="systemlogs"
+                type="button" role="tab"
+                style="color: var(--clr-text-muted);">
+            <i class="bi bi-journal-text me-2"></i>System Logs
+        </button>
+    </li>
 </ul>
 
 @* ── Tab indhold ── *@
@@ -70,6 +80,7 @@
             statistik: '@Url.Action("StatistikPartial", "Admin")',
             qrscanner: '@Url.Action("QrScannerPartial", "Admin")',
             kortsteder: '@Url.Action("KortStederPartial", "Admin")',
+            systemlogs: '@Url.Action("SystemLogsPartial", "Admin")',
         };
 
         const pane    = document.getElementById('tabPane');

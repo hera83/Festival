@@ -5,6 +5,7 @@ using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
@@ -1183,5 +1184,120 @@ public class AdminController : Controller
             TempData["Success"] = $"Stedet '{poi.Name}' blev slettet.";
         }
         return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+    }
+
+    // ── System Logs ──────────────────────────────────────────────
+    public IActionResult SystemLogsPartial() => PartialView("_SystemLogsPartial", new SystemLogsViewModel { PageSize = 10 });
+
+    [HttpGet]
+    public async Task<IActionResult> SystemLogsSearch(
+        string q          = "",
+        string level      = "",
+        string dateFrom   = "",
+        string dateTo     = "",
+        bool   onlyErrors = false,
+        int    page       = 1,
+        int    pageSize   = 10)
+    {
+        if (pageSize < 1) pageSize = 25;
+        if (page < 1)     page     = 1;
+
+        var logDbPath = Path.Combine(
+            HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().ContentRootPath,
+            "App_dbs", "festival_logs.db");
+
+        var whereClauses = new List<string>();
+        var parameters   = new List<SqliteParameter>();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            whereClauses.Add("(RenderedMessage LIKE @q OR Exception LIKE @q OR Properties LIKE @q)");
+            parameters.Add(new SqliteParameter("@q", $"%{q.Trim()}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(level))
+        {
+            whereClauses.Add("Level = @level");
+            parameters.Add(new SqliteParameter("@level", level));
+        }
+
+        if (onlyErrors)
+        {
+            whereClauses.Add("(Level = 'Error' OR Level = 'Fatal' OR Exception IS NOT NULL AND Exception != '')");
+        }
+
+        if (!string.IsNullOrWhiteSpace(dateFrom) &&
+            DateTime.TryParse(dateFrom, out var df))
+        {
+            whereClauses.Add("Timestamp >= @dateFrom");
+            parameters.Add(new SqliteParameter("@dateFrom", df.ToString("yyyy-MM-dd")));
+        }
+
+        if (!string.IsNullOrWhiteSpace(dateTo) &&
+            DateTime.TryParse(dateTo, out var dt))
+        {
+            whereClauses.Add("Timestamp < @dateTo");
+            parameters.Add(new SqliteParameter("@dateTo", dt.AddDays(1).ToString("yyyy-MM-dd")));
+        }
+
+        var whereStr = whereClauses.Count > 0
+            ? "WHERE " + string.Join(" AND ", whereClauses)
+            : "";
+
+        int totalCount = 0;
+        var rows = new List<SystemLogEntry>();
+
+        await using var conn = new SqliteConnection($"Data Source={logDbPath}");
+        await conn.OpenAsync();
+
+        // Count
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"SELECT COUNT(*) FROM Logs {whereStr}";
+            foreach (var p in parameters) cmd.Parameters.Add(new SqliteParameter(p.ParameterName, p.Value));
+            totalCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+        }
+
+        int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        if (page > totalPages && totalPages > 0) page = totalPages;
+        int offset = (page - 1) * pageSize;
+
+        // Rows
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"SELECT Id, Timestamp, Level, RenderedMessage, Exception, Properties FROM Logs {whereStr} ORDER BY Id DESC LIMIT @limit OFFSET @offset";
+            foreach (var p in parameters) cmd.Parameters.Add(new SqliteParameter(p.ParameterName, p.Value));
+            cmd.Parameters.Add(new SqliteParameter("@limit",  pageSize));
+            cmd.Parameters.Add(new SqliteParameter("@offset", offset));
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                rows.Add(new SystemLogEntry
+                {
+                    Id              = reader.GetInt64(0),
+                    Timestamp       = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                    Level           = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    RenderedMessage = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                    Exception       = reader.IsDBNull(4) ? null : reader.GetString(4),
+                    Properties      = reader.IsDBNull(5) ? null : reader.GetString(5),
+                });
+            }
+        }
+
+        var vm = new SystemLogsViewModel
+        {
+            Rows       = rows,
+            Q          = q,
+            Level      = level,
+            DateFrom   = dateFrom,
+            DateTo     = dateTo,
+            OnlyErrors = onlyErrors,
+            Page       = page,
+            PageSize   = pageSize,
+            TotalCount = totalCount,
+        };
+
+        return PartialView("_SystemLogsSearch", vm);
     }
 }

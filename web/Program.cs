@@ -15,7 +15,7 @@ var logDbPath = Path.Combine(dbDirectory, "festival_logs.db");
 builder.Host.UseSerilog((context, loggerConfiguration) =>
     loggerConfiguration
         .ReadFrom.Configuration(context.Configuration)
-        .WriteTo.SQLite(logDbPath));
+        .WriteTo.SQLite(logDbPath, rollOver: false));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

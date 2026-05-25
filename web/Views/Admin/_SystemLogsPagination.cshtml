@@ -1,0 +1,80 @@
+@model web.Models.SystemLogsViewModel
+
+@{
+    var cp = Model.Page;
+    var tp = Model.TotalPages;
+    var prev = cp - 1;
+    var next = cp + 1;
+
+    var shown = new System.Collections.Generic.SortedSet<int> { 1, Math.Max(1, tp) };
+    for (var i = Math.Max(1, cp - 1); i <= Math.Min(Math.Max(1, tp), cp + 1); i++) shown.Add(i);
+}
+
+<div id="sl-pagination-inner" class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
+    @* Venstre: interval-tekst *@
+    <span style="color: var(--clr-text-muted); font-size: 0.85rem;">
+        @if (Model.TotalCount == 0)
+        {
+            <span>Ingen resultater</span>
+        }
+        else
+        {
+            <span>@Model.RangeFrom–@Model.RangeTo af @Model.TotalCount</span>
+        }
+    </span>
+
+    @* Højre: pr-side + sidevælger *@
+    <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+            <span>Pr. side</span>
+            <select id="sl-page-size" class="form-select form-select-sm"
+                    style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text); font-size: 0.85rem;">
+                @foreach (var size in new[] { 10, 25, 50, 100 })
+                {
+                    <option value="@size" selected="@(Model.PageSize == size ? "selected" : null)">@size</option>
+                }
+            </select>
+        </div>
+
+        <nav aria-label="Log-sidenavigation">
+            <ul class="pagination pagination-sm mb-0">
+                @* Forrige *@
+                <li class="page-item @(cp == 1 ? "disabled" : "")">
+                    <button class="page-link" data-sl-page="@prev" @(cp == 1 ? "disabled" : "")
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                </li>
+
+                @{
+                    int? lastShown = null;
+                    foreach (var p in shown)
+                    {
+                        if (lastShown.HasValue && p - lastShown.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">…</span>
+                            </li>
+                        }
+                        <li class="page-item @(p == cp ? "active" : "")">
+                            <button class="page-link" data-sl-page="@p"
+                                    style="@(p == cp
+                                        ? "background: var(--clr-brand); border-color: var(--clr-brand); color: #fff;"
+                                        : "background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);"
+                                    )">@p</button>
+                        </li>
+                        lastShown = p;
+                    }
+                }
+
+                @* Næste *@
+                <li class="page-item @(cp >= tp ? "disabled" : "")">
+                    <button class="page-link" data-sl-page="@next" @(cp >= tp ? "disabled" : "")
+                            style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>

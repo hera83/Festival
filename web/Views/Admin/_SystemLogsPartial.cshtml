@@ -1,0 +1,181 @@
+@model web.Models.SystemLogsViewModel
+
+@* ── Søgebar + filtre ── *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="d-flex align-items-center gap-2">
+        <div class="input-group input-group-sm" style="width: 220px;">
+            <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+                <i class="bi bi-search"></i>
+            </span>
+            <input type="text" id="sl-q" class="form-control form-control-sm"
+                   placeholder="Søg besked, exception…"
+                   style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+                   autocomplete="off" value="@Model.Q" />
+        </div>
+
+        <select id="sl-level" class="form-select form-select-sm" style="width: auto; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);">
+            <option value=""            selected="@(Model.Level==""?"selected":null)">Alle niveauer</option>
+            <option value="Fatal"       selected="@(Model.Level=="Fatal"?"selected":null)">Fatal</option>
+            <option value="Error"       selected="@(Model.Level=="Error"?"selected":null)">Error</option>
+            <option value="Warning"     selected="@(Model.Level=="Warning"?"selected":null)">Warning</option>
+            <option value="Information" selected="@(Model.Level=="Information"?"selected":null)">Information</option>
+            <option value="Debug"       selected="@(Model.Level=="Debug"?"selected":null)">Debug</option>
+            <option value="Verbose"     selected="@(Model.Level=="Verbose"?"selected":null)">Verbose</option>
+        </select>
+
+        <input type="date" id="sl-datefrom" class="form-control form-control-sm"
+               style="width: 145px; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               title="Fra dato" value="@Model.DateFrom" />
+
+        <input type="date" id="sl-dateto" class="form-control form-control-sm"
+               style="width: 145px; background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               title="Til dato" value="@Model.DateTo" />
+
+        <div class="form-check mb-0 ms-1">
+            <input class="form-check-input" type="checkbox" id="sl-onlyerrors" @(Model.OnlyErrors ? "checked" : "") />
+            <label class="form-check-label small" for="sl-onlyerrors" style="color: var(--clr-text-muted); white-space: nowrap;">Kun fejl</label>
+        </div>
+
+        <button id="sl-clear" class="btn btn-sm btn-secondary" style="white-space: nowrap;">
+            <i class="bi bi-x-lg me-1"></i>Ryd
+        </button>
+    </div>
+</div>
+
+@* ── Tabel-kort ── *@
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-journal-text me-2"></i>System Logs (<span id="sl-count">@Model.TotalCount</span>)</span>
+        <div id="sl-spinner" class="d-none">
+            <div class="spinner-border spinner-border-sm" style="color: var(--clr-brand);" role="status">
+                <span class="visually-hidden">Indlæser…</span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" id="sl-table-wrap">
+            @await Html.PartialAsync("_SystemLogsTable", Model)
+        </div>
+    </div>
+</div>
+
+@* ── Paginering ── *@
+<div id="sl-pagination-bar" class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+    @await Html.PartialAsync("_SystemLogsPagination", Model)
+</div>
+
+@* ── Detail modal ── *@
+<div class="modal fade" id="sl-detail-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-journal-text me-2" style="color: var(--clr-info);"></i>Log-detaljer
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small mb-1" style="color: var(--clr-text-muted);">Besked</p>
+                <pre id="sl-modal-msg" class="p-2 rounded mb-3" style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; word-break: break-all; font-size: .8rem; color: var(--clr-text);"></pre>
+                <p class="small mb-1" style="color: var(--clr-text-muted);">Exception</p>
+                <pre id="sl-modal-exc" class="p-2 rounded mb-3" style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; word-break: break-all; font-size: .8rem; color: var(--clr-alarm, #e74c3c);"></pre>
+                <p class="small mb-1" style="color: var(--clr-text-muted);">Properties</p>
+                <pre id="sl-modal-prop" class="p-2 rounded" style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; word-break: break-all; font-size: .8rem; color: var(--clr-text);"></pre>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var debounceTimer;
+    var currentPage = @Model.Page;
+    var currentSize = @(Model.PageSize > 0 ? Model.PageSize : 10);
+
+    function getParams(page, size) {
+        return new URLSearchParams({
+            q:          document.getElementById('sl-q').value,
+            level:      document.getElementById('sl-level').value,
+            dateFrom:   document.getElementById('sl-datefrom').value,
+            dateTo:     document.getElementById('sl-dateto').value,
+            onlyErrors: document.getElementById('sl-onlyerrors').checked,
+            page:       page || currentPage,
+            pageSize:   size || currentSize,
+        });
+    }
+
+    async function load(page, size) {
+        currentPage = page || currentPage;
+        currentSize = size || currentSize;
+        var spinner = document.getElementById('sl-spinner');
+        var wrap    = document.getElementById('sl-table-wrap');
+        var pagBar  = document.getElementById('sl-pagination-bar');
+        var countEl = document.getElementById('sl-count');
+        spinner.classList.remove('d-none');
+        wrap.style.opacity = '0.4';
+        try {
+            var res    = await fetch('@Url.Action("SystemLogsSearch","Admin")?' + getParams(currentPage, currentSize));
+            var html   = await res.text();
+            var parser = new DOMParser();
+            var doc    = parser.parseFromString(html, 'text/html');
+            var tbl    = doc.getElementById('sl-table-inner');
+            var pag    = doc.getElementById('sl-pagination-inner');
+            var cnt    = doc.getElementById('sl-count-value');
+            if (tbl)    wrap.innerHTML    = tbl.outerHTML;
+            if (pag)    pagBar.innerHTML  = pag.outerHTML;
+            if (cnt)    countEl.textContent = cnt.textContent;
+            attachEvents();
+        } finally {
+            spinner.classList.add('d-none');
+            wrap.style.opacity = '1';
+        }
+    }
+
+    function attachEvents() {
+        document.querySelectorAll('[data-sl-page]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!this.disabled) load(parseInt(this.dataset.slPage), currentSize);
+            });
+        });
+        var sizeSelect = document.getElementById('sl-page-size');
+        if (sizeSelect) {
+            sizeSelect.addEventListener('change', function () {
+                currentSize = parseInt(this.value);
+                load(1, currentSize);
+            });
+        }
+        document.querySelectorAll('[data-sl-detail]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.getElementById('sl-modal-msg').textContent  = this.dataset.slMessage    || '';
+                document.getElementById('sl-modal-exc').textContent  = this.dataset.slException  || '(ingen)';
+                document.getElementById('sl-modal-prop').textContent = this.dataset.slProperties || '(ingen)';
+                new bootstrap.Modal(document.getElementById('sl-detail-modal')).show();
+            });
+        });
+    }
+
+    document.getElementById('sl-q').addEventListener('keyup', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () { load(1); }, 350);
+    });
+    document.getElementById('sl-level').addEventListener('change',     function () { load(1); });
+    document.getElementById('sl-datefrom').addEventListener('change',  function () { load(1); });
+    document.getElementById('sl-dateto').addEventListener('change',    function () { load(1); });
+    document.getElementById('sl-onlyerrors').addEventListener('change', function () { load(1); });
+    document.getElementById('sl-clear').addEventListener('click', function () {
+        document.getElementById('sl-q').value             = '';
+        document.getElementById('sl-level').value         = '';
+        document.getElementById('sl-datefrom').value      = '';
+        document.getElementById('sl-dateto').value        = '';
+        document.getElementById('sl-onlyerrors').checked  = false;
+        load(1);
+    });
+
+    attachEvents();
+})();
+</script>

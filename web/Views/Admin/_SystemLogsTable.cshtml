@@ -1,0 +1,86 @@
+@model web.Models.SystemLogsViewModel
+
+@{
+    string LevelBadge(string lvl) => lvl switch {
+        "Fatal"       => "badge-alarm",
+        "Error"       => "badge-alarm",
+        "Warning"     => "badge-warn",
+        "Information" => "badge-info",
+        _             => "badge bg-secondary"
+    };
+    string LevelIcon(string lvl) => lvl switch {
+        "Fatal"       => "bi-x-octagon-fill",
+        "Error"       => "bi-exclamation-circle-fill",
+        "Warning"     => "bi-exclamation-triangle-fill",
+        "Information" => "bi-info-circle-fill",
+        _             => "bi-bug"
+    };
+    string FmtTs(string ts) {
+        if (DateTime.TryParse(ts, out var d))
+            return d.ToString("dd-MM-yyyy HH:mm:ss");
+        return ts;
+    }
+    string Trunc(string s, int n) => s?.Length > n ? s[..n] + "…" : (s ?? "");
+}
+
+@* Hidden count value used by JS to update header *@
+<span id="sl-count-value" class="d-none">@Model.TotalCount</span>
+
+<div id="sl-table-inner">
+    <table class="table table-hover mb-0" style="color: var(--clr-text);">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--clr-border);">
+                <th class="ps-3" style="width: 155px;">Tidspunkt</th>
+                <th style="width: 115px;">Niveau</th>
+                <th>Besked</th>
+                <th class="pe-3 text-end" style="width: 60px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Rows.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center py-5" style="color: var(--clr-text-muted);">
+                        <i class="bi bi-journal-x fs-4 d-block mb-1"></i>
+                        Ingen log-entries fundet
+                    </td>
+                </tr>
+            }
+            @foreach (var row in Model.Rows)
+            {
+                var borderStyle = row.Level is "Error" or "Fatal"
+                    ? "border-bottom: 1px solid var(--clr-border); border-left: 3px solid var(--clr-alarm);"
+                    : "border-bottom: 1px solid var(--clr-border);";
+                <tr style="@borderStyle">
+                    <td class="ps-3 align-middle small" style="color: var(--clr-text-muted); white-space: nowrap;">
+                        @FmtTs(row.Timestamp)
+                    </td>
+                    <td class="align-middle">
+                        <span class="badge @LevelBadge(row.Level)">
+                            <i class="bi @LevelIcon(row.Level) me-1"></i>@row.Level
+                        </span>
+                    </td>
+                    <td class="align-middle small" style="max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        @if (!string.IsNullOrWhiteSpace(row.Exception))
+                        {
+                            <i class="bi bi-exclamation-triangle-fill me-1" style="color: var(--clr-alarm);"></i>
+                        }
+                        @Trunc(row.RenderedMessage, 180)
+                    </td>
+                    <td class="pe-3 align-middle text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-secondary"
+                                    data-sl-detail="1"
+                                    data-sl-message="@System.Net.WebUtility.HtmlEncode(row.RenderedMessage)"
+                                    data-sl-exception="@System.Net.WebUtility.HtmlEncode(row.Exception ?? "")"
+                                    data-sl-properties="@System.Net.WebUtility.HtmlEncode(row.Properties ?? "")"
+                                    title="Vis detaljer">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div></div>
