@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="MailKit" Version="4.12.1" />
+    <PackageReference Include="Markdig" Version="1.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
@@ -22,7 +23,7 @@
 
   <ItemGroup>
     <Folder Include="App_dbs\" />
-    <Folder Include="App_files\" />
+    <Folder Include="App_files\Vejledninger\" />
     <Folder Include="Migrations\" />
   </ItemGroup>
 

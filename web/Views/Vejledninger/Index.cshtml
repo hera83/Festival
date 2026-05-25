@@ -1,8 +1,131 @@
 @{
-    ViewData["Title"] = "Vejledninger";
+    var markdownHtml = ViewBag.MarkdownHtml as string ?? string.Empty;
+    var pdfFiles = ViewBag.PdfFiles as List<string> ?? new List<string>();
 }
 
 <div class="page-header">
     <h1><i class="bi bi-book me-2" style="color: var(--clr-brand);"></i>Vejledninger</h1>
     <p class="mb-0">Vejledninger og instruktioner til festivalen</p>
 </div>
+
+<ul class="nav nav-tabs mb-3" id="vejledningerTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="systembeskrivelse-tab" data-bs-toggle="tab"
+                data-bs-target="#systembeskrivelse" type="button" role="tab">
+            <i class="bi bi-file-text me-1"></i>Systembeskrivelse
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pdf-tab" data-bs-toggle="tab"
+                data-bs-target="#pdfdokumenter" type="button" role="tab">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF Dokumenter
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="vejledningerTabContent">
+
+    @* Tab 1: Systembeskrivelse MD *@
+    <div class="tab-pane fade show active" id="systembeskrivelse" role="tabpanel">
+        <div class="card">
+            <div class="card-body markdown-body">
+                @if (!string.IsNullOrEmpty(markdownHtml))
+                {
+                    @Html.Raw(markdownHtml)
+                }
+                else
+                {
+                    <p class="text-muted"><i class="bi bi-exclamation-circle me-1"></i>Systembeskrivelse ikke fundet.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* Tab 2: PDF filer *@
+    <div class="tab-pane fade" id="pdfdokumenter" role="tabpanel">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-file-earmark-pdf" style="color: var(--clr-brand);"></i>
+                <span>PDF Dokumenter <span class="text-muted fw-normal">(@pdfFiles.Count)</span></span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0" style="color: var(--clr-text);">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-file-earmark-pdf me-1"></i>Filnavn</th>
+                            <th style="width: 100px;" class="text-end">Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (pdfFiles.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="2" class="text-center py-4" style="color: var(--clr-text-muted);">
+                                    <i class="bi bi-folder-x me-1"></i>Ingen PDF filer fundet
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var pdf in pdfFiles)
+                            {
+                                <tr>
+                                    <td class="align-middle">
+                                        <i class="bi bi-file-earmark-pdf me-2" style="color: var(--clr-alarm);"></i>
+                                        @pdf
+                                    </td>
+                                    <td class="text-end align-middle">
+                                        <div class="d-flex gap-2 justify-content-end">
+                                            <button class="btn btn-sm btn-secondary"
+                                                    onclick="openPdf('@Html.Raw(Uri.EscapeDataString(pdf))', '@Html.Raw(pdf.Replace("'", "\\'"))')">
+                                                <i class="bi bi-eye"></i> Åbn
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* PDF Viewer Modal *@
+<div class="modal fade" id="pdfViewerModal" tabindex="-1" aria-labelledby="pdfViewerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 90vw;">
+        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); height: 90vh;">
+            <div class="modal-header" style="border-color: rgba(255,255,255,0.1);">
+                <h5 class="modal-title" id="pdfViewerModalLabel">
+                    <i class="bi bi-file-earmark-pdf me-2" style="color: var(--clr-alarm);"></i>
+                    <span id="pdfModalTitle"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="flex: 1; overflow: hidden;">
+                <iframe id="pdfIframe" src="" style="width:100%; height:100%; min-height: calc(90vh - 130px); border: none;"></iframe>
+            </div>
+            <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openPdf(encodedFileName, displayName) {
+            document.getElementById('pdfModalTitle').textContent = displayName;
+            document.getElementById('pdfIframe').src = '/Vejledninger/GetPdf?fileName=' + encodedFileName;
+            var modal = new bootstrap.Modal(document.getElementById('pdfViewerModal'));
+            modal.show();
+        }
+
+        document.getElementById('pdfViewerModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('pdfIframe').src = '';
+        });
+    </script>
+}
