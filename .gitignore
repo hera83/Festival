@@ -373,3 +373,4 @@ web/App_dbs/**
 # Data files
 web/App_data/**
 /web/appsettings.Development.json
+/web/App_files/DataProtection-Keys/key-4645b921-d17f-4be3-a98c-865df8c05e2c.xml
