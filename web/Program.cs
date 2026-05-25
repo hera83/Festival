@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -11,6 +12,12 @@ var dbDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_dbs");
 Directory.CreateDirectory(dbDirectory);
 var dbPath = Path.Combine(dbDirectory, "festival.db");
 var logDbPath = Path.Combine(dbDirectory, "festival_logs.db");
+
+var keysDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_files", "DataProtection-Keys");
+Directory.CreateDirectory(keysDirectory);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+    .SetApplicationName("FestivalVagtstyring");
 
 builder.Host.UseSerilog((context, loggerConfiguration) =>
     loggerConfiguration

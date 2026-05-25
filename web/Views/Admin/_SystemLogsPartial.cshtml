@@ -75,11 +75,26 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="small mb-1" style="color: var(--clr-text-muted);">Besked</p>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <p class="small mb-0" style="color: var(--clr-text-muted);">Besked</p>
+                    <button type="button" class="btn btn-sm btn-secondary sl-copy-btn" data-sl-target="sl-modal-msg" title="Kopiér besked">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
                 <pre id="sl-modal-msg" class="p-2 rounded mb-3" style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; word-break: break-all; font-size: .8rem; color: var(--clr-text);"></pre>
-                <p class="small mb-1" style="color: var(--clr-text-muted);">Exception</p>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <p class="small mb-0" style="color: var(--clr-text-muted);">Exception</p>
+                    <button type="button" class="btn btn-sm btn-secondary sl-copy-btn" data-sl-target="sl-modal-exc" title="Kopiér exception">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
                 <pre id="sl-modal-exc" class="p-2 rounded mb-3" style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; word-break: break-all; font-size: .8rem; color: var(--clr-alarm, #e74c3c);"></pre>
-                <p class="small mb-1" style="color: var(--clr-text-muted);">Properties</p>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <p class="small mb-0" style="color: var(--clr-text-muted);">Properties</p>
+                    <button type="button" class="btn btn-sm btn-secondary sl-copy-btn" data-sl-target="sl-modal-prop" title="Kopiér properties">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
                 <pre id="sl-modal-prop" class="p-2 rounded" style="background: var(--clr-bg); border: 1px solid var(--clr-border); white-space: pre-wrap; word-break: break-all; font-size: .8rem; color: var(--clr-text);"></pre>
             </div>
             <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
@@ -155,6 +170,17 @@
                 document.getElementById('sl-modal-exc').textContent  = this.dataset.slException  || '(ingen)';
                 document.getElementById('sl-modal-prop').textContent = this.dataset.slProperties || '(ingen)';
                 new bootstrap.Modal(document.getElementById('sl-detail-modal')).show();
+            });
+        });
+        document.querySelectorAll('.sl-copy-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var targetId = this.dataset.slTarget;
+                var text = document.getElementById(targetId).textContent;
+                navigator.clipboard.writeText(text).then(function () {
+                    var icon = btn.querySelector('i');
+                    icon.classList.replace('bi-clipboard', 'bi-clipboard-check');
+                    setTimeout(function () { icon.classList.replace('bi-clipboard-check', 'bi-clipboard'); }, 1500);
+                });
             });
         });
     }
