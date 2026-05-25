@@ -19,8 +19,6 @@ services:
       Email__Imap__Password: ${EMAIL_IMAP_PASSWORD}
     volumes:
       - festival_app_dbs:/app/App_dbs
-      - festival_app_files:/app/App_files
 
 volumes:
   festival_app_dbs:
-  festival_app_files:

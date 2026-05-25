@@ -10,7 +10,7 @@ RUN dotnet publish "web.csproj" -c Release -o /app/publish /p:UseAppHost=false
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-RUN mkdir -p /app/App_dbs /app/App_files
+RUN mkdir -p /app/App_dbs
 
 COPY --from=build /app/publish .
 
