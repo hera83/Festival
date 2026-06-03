@@ -13,20 +13,29 @@
                         <i class="bi bi-table me-2" style="color: var(--clr-brand);"></i>Import preview
                     </h6>
                     <div class="small" style="color: var(--clr-text-muted);">
-                        @Model.FileName · @Model.TotalCount rækker · @Model.ValidCount ok · @Model.ErrorCount med fejl
+                        @Model.FileName · <span id="volunteerPreviewTotalCount">@Model.TotalCount</span> rækker · <span id="volunteerPreviewValidCount">@Model.ValidCount</span> ok · <span id="volunteerPreviewErrorCount">@Model.ErrorCount</span> med fejl
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
             <div class="modal-body" style="background: var(--clr-surface);">
                 <div class="d-flex flex-column align-items-start gap-2 mb-3">
-                    <div class="btn-group btn-group-sm w-auto" role="group" aria-label="Filtrér rækker">
-                        <button type="button" class="btn btn-outline-secondary active" data-preview-filter="all">
-                            <i class="bi bi-grid-3x3-gap me-1"></i>Vis alle
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" data-preview-filter="errors">
-                            <i class="bi bi-exclamation-triangle me-1"></i>Vis fejl
-                        </button>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="btn-group btn-group-sm w-auto" role="group" aria-label="Filtrér rækker">
+                            <button type="button" class="btn btn-outline-secondary active" data-preview-filter="all">
+                                <i class="bi bi-grid-3x3-gap me-1"></i>Vis alle
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-preview-filter="errors">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Vis fejl
+                            </button>
+                        </div>
+
+                        <div class="form-check form-switch mb-0 volunteer-preview-behov-switch">
+                            <input class="form-check-input" type="checkbox" id="includeBehovInDataset">
+                            <label class="form-check-label" for="includeBehovInDataset" style="color: var(--clr-text);">
+                                Behov er med i dataset
+                            </label>
+                        </div>
                     </div>
 
                     <div class="input-group input-group-sm" style="max-width: 360px; width: 100%;">
@@ -79,7 +88,12 @@
                                         row.ShiftName ?? string.Empty,
                                         string.Join(" ", row.Errors)
                                     }).ToLowerInvariant();
-                                    <tr class="@rowClass" data-has-errors="@(row.HasErrors ? "true" : "false")" data-search="@searchText" style="border-bottom: 1px solid var(--clr-border);">
+                                    <tr class="@rowClass"
+                                        data-has-errors="@(row.HasErrors ? "true" : "false")"
+                                        data-is-behov-candidate="@(row.IsBehovCandidate ? "true" : "false")"
+                                        data-errors="@string.Join("||", row.Errors.Select(e => e.Replace("|", " ")))"
+                                        data-search="@searchText"
+                                        style="border-bottom: 1px solid var(--clr-border);">
                                         <td class="ps-3">@row.RowNumber</td>
                                         <td>@row.Key</td>
                                         <td>@row.Name</td>
@@ -88,7 +102,7 @@
                                         <td>@(row.Start?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
                                         <td>@(row.End?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
                                         <td>@row.ShiftName</td>
-                                        <td>
+                                        <td data-status-cell>
                                             @if (row.HasErrors)
                                             {
                                                 var errorList = string.Join("\n", row.Errors);
@@ -187,6 +201,27 @@
 .import-error-tooltip .tooltip-arrow::before {
     border-left-color: var(--clr-alarm, #e53e3e) !important;
 }
+
+.volunteer-preview-behov-switch .form-check-input {
+    border-color: rgba(232, 93, 46, .55);
+    background-color: var(--clr-bg);
+    box-shadow: 0 0 0 .12rem rgba(232, 93, 46, .18);
+}
+
+.volunteer-preview-behov-switch .form-check-input:not(:checked):hover {
+    border-color: rgba(232, 93, 46, .75);
+    box-shadow: 0 0 0 .14rem rgba(232, 93, 46, .24);
+}
+
+.volunteer-preview-behov-switch .form-check-input:checked {
+    background-color: var(--clr-brand);
+    border-color: var(--clr-brand);
+}
+
+.volunteer-preview-behov-switch .form-check-input:focus {
+    border-color: var(--clr-brand);
+    box-shadow: 0 0 0 .25rem rgba(232, 93, 46, .25);
+}
 </style>
 
 <script>
@@ -209,19 +244,86 @@
     const paginationList = modal.querySelector('#volunteerPreviewPaginationList');
     const paginationInfo = modal.querySelector('#volunteerPreviewPaginationInfo');
     const confirmImportBtn = modal.querySelector('#confirmVolunteerImportBtn');
+    const includeBehovCheckbox = modal.querySelector('#includeBehovInDataset');
+    const totalCountEl = modal.querySelector('#volunteerPreviewTotalCount');
+    const validCountEl = modal.querySelector('#volunteerPreviewValidCount');
+    const errorCountEl = modal.querySelector('#volunteerPreviewErrorCount');
     const importForm = document.getElementById('volunteerImportForm');
     const importAction = importForm ? importForm.dataset.importAction : null;
     const rows = Array.from(modal.querySelectorAll('.preview-row'));
     const emptyRow = modal.querySelector('#volunteerPreviewEmptyRow');
     const totalRows = rows.length;
-    const totalErrorRows = rows.filter(row => row.dataset.hasErrors === 'true').length;
     const state = { filter: 'all', q: '', page: 1, pageSize: 10 };
     let debounceTimer;
+
+    function getErrors(row) {
+        const raw = row.dataset.errors || '';
+        return raw ? raw.split('||').map(x => x.trim()).filter(Boolean) : [];
+    }
+
+    function getEffectiveErrors(row) {
+        const errors = getErrors(row);
+        const isBehovCandidate = row.dataset.isBehovCandidate === 'true';
+        const includeBehov = includeBehovCheckbox && includeBehovCheckbox.checked;
+        if (!isBehovCandidate || !includeBehov) return errors;
+
+        return errors.filter(err =>
+            err !== 'Key er påkrævet.' &&
+            err !== 'Navn er påkrævet.' &&
+            err !== 'Email er ugyldig.' &&
+            err !== 'Telefonnummer er ikke et gyldigt dansk nummer.'
+        );
+    }
+
+    function hasEffectiveErrors(row) {
+        return getEffectiveErrors(row).length > 0;
+    }
+
+    function renderStatusCell(row) {
+        const statusCell = row.querySelector('[data-status-cell]');
+        if (!statusCell) return;
+
+        const errors = getEffectiveErrors(row);
+        const isBehovCandidate = row.dataset.isBehovCandidate === 'true';
+        const includeBehov = includeBehovCheckbox && includeBehovCheckbox.checked;
+
+        if (errors.length > 0) {
+            const errorList = errors.join('\n').replace(/"/g, '&quot;');
+            statusCell.innerHTML = '<span class="badge badge-alarm" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-custom-class="import-error-tooltip" title="' + errorList + '" style="cursor: help;"><i class="bi bi-x-circle me-1"></i>Fejl (' + errors.length + ')</span>';
+            row.dataset.hasEffectiveErrors = 'true';
+            return;
+        }
+
+        if (isBehovCandidate && includeBehov) {
+            statusCell.innerHTML = '<span class="badge badge-info"><i class="bi bi-bullseye me-1"></i>Behov input</span>';
+            row.dataset.hasEffectiveErrors = 'false';
+            return;
+        }
+
+        statusCell.innerHTML = '<span class="badge badge-ok"><i class="bi bi-check-lg me-1"></i>OK</span>';
+        row.dataset.hasEffectiveErrors = 'false';
+    }
+
+    function updateRowStatusesAndCounts() {
+        rows.forEach(renderStatusCell);
+
+        const errorCount = rows.filter(hasEffectiveErrors).length;
+        const validCount = totalRows - errorCount;
+
+        if (errorCountEl) errorCountEl.textContent = String(errorCount);
+        if (validCountEl) validCountEl.textContent = String(validCount);
+        if (totalCountEl) totalCountEl.textContent = String(totalRows);
+
+        if (confirmImportBtn) {
+            confirmImportBtn.dataset.hasErrors = errorCount > 0 ? 'true' : 'false';
+            confirmImportBtn.disabled = errorCount > 0;
+        }
+    }
 
     function getFilteredRows() {
         return rows.filter(row => {
             const search = (row.dataset.search || '').toLowerCase();
-            const hasErrors = row.dataset.hasErrors === 'true';
+            const hasErrors = hasEffectiveErrors(row);
 
             if (state.filter === 'errors' && !hasErrors) return false;
             if (state.q && !search.includes(state.q)) return false;
@@ -289,8 +391,11 @@
     }
 
     function render() {
+        updateRowStatusesAndCounts();
+
         const filteredRows = getFilteredRows();
         const totalCount = filteredRows.length;
+        const totalErrorRows = rows.filter(hasEffectiveErrors).length;
         const totalPages = totalCount > 0 ? Math.ceil(totalCount / state.pageSize) : 1;
         if (state.page > totalPages) state.page = totalPages;
 
@@ -355,13 +460,21 @@
         });
     }
 
+    if (includeBehovCheckbox) {
+        includeBehovCheckbox.addEventListener('change', function () {
+            state.page = 1;
+            render();
+        });
+    }
+
     if (confirmImportBtn && importForm && importAction) {
-        confirmImportBtn.disabled = confirmImportBtn.dataset.hasErrors === 'true';
+        confirmImportBtn.disabled = rows.filter(hasEffectiveErrors).length > 0;
 
         confirmImportBtn.addEventListener('click', async function () {
             if (confirmImportBtn.disabled) return;
 
             const formData = new FormData(importForm);
+            formData.set('includeBehovInDataset', includeBehovCheckbox && includeBehovCheckbox.checked ? 'true' : 'false');
             confirmImportBtn.disabled = true;
 
             try {

@@ -56,6 +56,7 @@ builder.Services
 
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IImapService, ImapService>();
+builder.Services.AddHostedService<web.Services.ScheduledMoveService>();
 
 var app = builder.Build();
 

@@ -466,22 +466,56 @@ public class AdminController : Controller
     {
         var seasonId = AppTime.CurrentSeason;
 
-        var locationLogs = await _db.VolunteerLocationLogs.Where(l => l.SeasonId == seasonId).ToListAsync();
-        _db.VolunteerLocationLogs.RemoveRange(locationLogs);
+        await using var tx = await _db.Database.BeginTransactionAsync();
 
-        var checkIns = await _db.VolunteerCheckIns.Where(c => c.SeasonId == seasonId).ToListAsync();
-        _db.VolunteerCheckIns.RemoveRange(checkIns);
+        await _db.VolunteerLocationLogs
+            .Where(l => l.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
 
-        var shifts = await _db.Shifts.Where(s => s.SeasonId == seasonId).ToListAsync();
-        _db.Shifts.RemoveRange(shifts);
+        await _db.VolunteerCheckIns
+            .Where(c => c.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
 
-        var shiftTypes = await _db.ShiftTypes.Where(st => st.SeasonId == seasonId).ToListAsync();
-        _db.ShiftTypes.RemoveRange(shiftTypes);
+        await _db.Shifts
+            .Where(s => s.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
 
-        var volunteers = await _db.Volunteers.Where(v => v.SeasonId == seasonId).ToListAsync();
-        _db.Volunteers.RemoveRange(volunteers);
+        await _db.Messages
+            .Where(m => m.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
 
-        await _db.SaveChangesAsync();
+        await _db.VolunteerGpsLogs
+            .Where(g => g.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
+
+        await _db.VolunteerMetas
+            .Where(vm => _db.Volunteers
+                .Where(v => v.SeasonId == seasonId)
+                .Select(v => v.Id)
+                .Contains(vm.VolunteerId))
+            .ExecuteDeleteAsync();
+
+        await _db.ShiftTypes
+            .Where(st => st.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
+
+        await _db.Volunteers
+            .Where(v => v.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
+
+        await _db.Posts
+            .Where(p => p.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
+
+        await _db.DashboardSettings
+            .Where(d => d.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
+
+        await _db.MapLocations
+            .Where(m => m.SeasonId == seasonId)
+            .ExecuteDeleteAsync();
+
+        await tx.CommitAsync();
 
         TempData["Success"] = $"Dataset for sæson {seasonId} er blevet slettet.";
         return RedirectToAction("Index", new { tab = "importeksport" });
@@ -500,34 +534,44 @@ public class AdminController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ImportVolunteerData(IFormFile? file)
+    public async Task<IActionResult> ImportVolunteerData(IFormFile? file, bool includeBehovInDataset = false)
     {
         var (error, vm) = BuildVolunteerImportPreview(file);
         if (error != null)
             return BadRequest(new { success = false, message = error });
 
-        if (vm!.ErrorCount > 0)
+        var validRows = vm!.Rows
+            .Where(r => !GetEffectiveErrors(r, includeBehovInDataset).Any())
+            .ToList();
+
+        if (validRows.Count != vm.Rows.Count)
             return BadRequest(new { success = false, message = "Import kan ikke gennemføres, fordi filen indeholder fejl." });
 
-        var validRows = vm.Rows.Where(r => !r.HasErrors).ToList();
         if (validRows.Count == 0)
             return BadRequest(new { success = false, message = "Der er ingen gyldige rækker at importere." });
 
         var now = AppTime.Now;
         var currentSeasonId = AppTime.CurrentSeason;
         var seasonIds = new List<int> { currentSeasonId };
-        var keys = validRows.Select(r => r.Key).Distinct().ToList();
+        var volunteerRows = validRows.Where(r => !r.IsBehovCandidate).ToList();
+        var keys = volunteerRows
+            .Select(r => r.Key)
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Distinct()
+            .ToList();
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
-        var existingVolunteers = await _db.Volunteers
-            .Where(v => seasonIds.Contains(v.SeasonId) && keys.Contains(v.Key))
-            .ToListAsync();
+        var existingVolunteers = keys.Count == 0
+            ? []
+            : await _db.Volunteers
+                .Where(v => seasonIds.Contains(v.SeasonId) && keys.Contains(v.Key))
+                .ToListAsync();
 
         var volunteerMap = existingVolunteers.ToDictionary(v => (v.SeasonId, v.Key), v => v);
         var existingVolunteerIdsToReset = new HashSet<int>();
 
-        foreach (var group in validRows.GroupBy(r => (SeasonId: currentSeasonId, r.Key)))
+        foreach (var group in volunteerRows.GroupBy(r => (SeasonId: currentSeasonId, r.Key)))
         {
             var source = group.First();
             if (volunteerMap.TryGetValue(group.Key, out var existing))
@@ -606,10 +650,27 @@ public class AdminController : Controller
             shiftTypeMap[key] = shiftType;
         }
 
+        if (includeBehovInDataset)
+        {
+            var requiredCountByShift = validRows
+                .GroupBy(r => new ShiftTypeImportKey(
+                    currentSeasonId,
+                    string.IsNullOrWhiteSpace(r.ShiftName) ? DefaultShiftName : r.ShiftName.Trim(),
+                    r.Start!.Value,
+                    r.End!.Value))
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (var kvp in requiredCountByShift)
+            {
+                if (shiftTypeMap.TryGetValue(kvp.Key, out var shiftType))
+                    shiftType.RequiredCount = kvp.Value;
+            }
+        }
+
         await _db.SaveChangesAsync();
 
-        var shiftsToInsert = new List<Shift>(validRows.Count);
-        foreach (var row in validRows)
+        var shiftsToInsert = new List<Shift>(volunteerRows.Count);
+        foreach (var row in volunteerRows)
         {
             var seasonId = currentSeasonId;
             var shiftName = string.IsNullOrWhiteSpace(row.ShiftName) ? DefaultShiftName : row.ShiftName.Trim();
@@ -629,7 +690,9 @@ public class AdminController : Controller
         await _db.SaveChangesAsync();
 
         var unusedShiftTypes = await _db.ShiftTypes
-            .Where(st => seasonIds.Contains(st.SeasonId) && !_db.Shifts.Any(s => s.ShiftTypeId == st.Id))
+            .Where(st => seasonIds.Contains(st.SeasonId)
+                         && st.RequiredCount == 0
+                         && !_db.Shifts.Any(s => s.ShiftTypeId == st.Id))
             .ToListAsync();
 
         if (unusedShiftTypes.Count > 0)
@@ -643,8 +706,8 @@ public class AdminController : Controller
         return Json(new
         {
             success = true,
-            message = $"Import gennemført: {validRows.Count} vagter, {validRows.Select(r => r.Key).Distinct().Count()} frivillige.",
-            importedShiftCount = validRows.Count
+            message = $"Import gennemført: {volunteerRows.Count} tilmeldinger, {volunteerRows.Select(r => r.Key).Distinct().Count()} frivillige.",
+            importedShiftCount = volunteerRows.Count
         });
     }
 
@@ -747,7 +810,8 @@ public class AdminController : Controller
                 PhoneNumber = string.IsNullOrWhiteSpace(phone) ? null : phone,
                 Start = start,
                 End = end,
-                ShiftName = string.IsNullOrWhiteSpace(shiftNameRaw) ? DefaultShiftName : shiftNameRaw
+                ShiftName = string.IsNullOrWhiteSpace(shiftNameRaw) ? DefaultShiftName : shiftNameRaw,
+                IsBehovCandidate = string.IsNullOrWhiteSpace(name)
             };
 
             if (string.IsNullOrWhiteSpace(previewRow.Key)) previewRow.Errors.Add("Key er påkrævet.");
@@ -771,6 +835,19 @@ public class AdminController : Controller
             FileName = file.FileName,
             Rows = rows
         });
+    }
+
+    private static IReadOnlyList<string> GetEffectiveErrors(VolunteerImportPreviewRowViewModel row, bool includeBehovInDataset)
+    {
+        if (!includeBehovInDataset || !row.IsBehovCandidate)
+            return row.Errors;
+
+        return row.Errors
+            .Where(error => !string.Equals(error, "Key er påkrævet.", StringComparison.Ordinal)
+                            && !string.Equals(error, "Navn er påkrævet.", StringComparison.Ordinal)
+                            && !string.Equals(error, "Email er ugyldig.", StringComparison.Ordinal)
+                            && !string.Equals(error, "Telefonnummer er ikke et gyldigt dansk nummer.", StringComparison.Ordinal))
+            .ToList();
     }
 
     private readonly record struct ShiftTypeImportKey(int SeasonId, string ShiftName, DateTime Start, DateTime End);

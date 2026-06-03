@@ -1,3 +1,122 @@
+<style>
+/* ── Dashboard: post-kort ─────────────────────────────────────── */
+.post-card {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.6rem 0.65rem 0.5rem;
+    cursor: grab;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+    user-select: none;
+}
+.post-card:hover {
+    border-color: var(--clr-brand);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+.post-card.dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+}
+.post-card.alarm-firing {
+    border-color: var(--clr-alarm);
+    box-shadow: 0 0 0 1px var(--clr-alarm);
+}
+
+/* ── Volunteer chip inde i post ───────────────────────────────── */
+.volunteer-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    background: var(--clr-bg);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-sm, 6px);
+    padding: 4px 6px 4px 5px;
+    font-size: 0.82rem;
+    color: var(--clr-text);
+    cursor: grab;
+    transition: border-color 0.12s, background 0.12s;
+    user-select: none;
+    min-width: 0;
+}
+.volunteer-chip:hover {
+    background: var(--clr-brand-dim);
+    border-color: var(--clr-brand);
+}
+.volunteer-chip.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+/* ── Frivillig-række i pitten ─────────────────────────────────── */
+.pit-volunteer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid transparent;
+    cursor: grab;
+    transition: background 0.12s, border-color 0.12s;
+    user-select: none;
+}
+.pit-volunteer-row:hover {
+    background: var(--clr-brand-dim);
+    border-color: var(--clr-border);
+}
+.pit-volunteer-row.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+/* ── Drop-zone highlights ─────────────────────────────────────── */
+/* Kolonne-drop-zone: modtager poster */
+.drop-zone-active {
+    background: rgba(210, 100, 40, 0.08) !important;
+    outline: 2px dashed var(--clr-brand) !important;
+    outline-offset: -3px;
+    border-radius: var(--radius-md, 8px);
+}
+
+/* Post volunteer-zone: modtager frivillige */
+.post-drop-zone-active {
+    background: rgba(210, 100, 40, 0.12) !important;
+    outline: 2px dashed var(--clr-brand) !important;
+    outline-offset: -2px;
+    border-radius: var(--radius-sm, 6px);
+}
+
+/* Pit drop-zone: samme som kolonne */
+#pitList.drop-zone-active {
+    background: rgba(210, 100, 40, 0.08) !important;
+    outline: 2px dashed var(--clr-brand) !important;
+    outline-offset: -3px;
+}
+
+/* ── Alarm-badge ──────────────────────────────────────────────── */
+.alarm-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: var(--clr-alarm-bg, rgba(220,60,40,0.15));
+    color: var(--clr-alarm, #e05a3a);
+    border: 1px solid var(--clr-alarm, #e05a3a);
+}
+
+/* ── Reorder insert-indikator (linje der viser hvori kortet lander) */
+.post-insert-indicator {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--clr-brand);
+    margin: 1px 0;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+</style>
+
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div class="page-header mb-0" style="border-bottom:none; padding-bottom:0;">
         <h1><i class="bi bi-speedometer2 me-2" style="color: var(--clr-brand);"></i>Dashboard</h1>
@@ -392,7 +511,7 @@
 </div>
 
 <!-- Slet Post Bekræft Modal -->
-<div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
+<div class="modal fade" id="deletePostModal"
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
             <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
@@ -423,8 +542,55 @@
     </div>
 </div>
 
+<!-- Fremtidig flyt Modal -->
+<div class="modal fade" id="futureMoveModal" tabindex="-1" aria-labelledby="futureMoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+                <h5 class="modal-title" id="futureMoveModalLabel" style="font-size:0.95rem;color:#e6edf3;">
+                    <i class="bi bi-clock-history me-2" style="color:var(--clr-brand);"></i>Fremtidig flyt
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="futureMoveVolunteerId">
+                <p id="futureMoveVolunteerName" class="mb-3" style="font-weight:600;color:#e6edf3;"></p>
+
+                <div id="futureMoveExistingAlert" class="d-none mb-3 p-2" style="background:var(--clr-warn-bg);border:1px solid var(--clr-warn);border-radius:var(--radius-md);font-size:0.8rem;color:var(--clr-warn);">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <span id="futureMoveExistingText"></span>
+                    <button type="button" id="futureMoveCancel" class="btn btn-sm ms-2" style="background:none;border:1px solid var(--clr-warn);color:var(--clr-warn);font-size:0.75rem;padding:0.1rem 0.4rem;">
+                        <i class="bi bi-x-lg me-1"></i>Annullér
+                    </button>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Flyt til</label>
+                    <select id="futureMoveTarget" class="form-select"
+                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
+                        <option value="Pit">Pitten</option>
+                    </select>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Om (minutter)</label>
+                    <input type="number" id="futureMoveMinutes" class="form-control" placeholder="fx 30" min="1" max="9999"
+                           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
+                    <div class="mt-1" style="font-size:0.75rem;color:var(--clr-text-muted);">Flytningen udføres automatisk efter det angivne antal minutter.</div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="futureMoveConfirmBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
+                    <i class="bi bi-clock-history me-1"></i>Planlæg flytning
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-<style>
     .card-clickable { transition: outline 0.15s, box-shadow 0.15s; }
     .card-clickable:hover { outline: 2px solid var(--clr-brand); box-shadow: 0 0 0 4px var(--clr-brand-dim); }
 
@@ -740,23 +906,31 @@
         pitSearchTimer = setTimeout(() => loadPitVolunteers(pitSearchInput.value), 250);
     });
 
-    function loadPitVolunteers(q) {
-        pitSpinner.classList.remove('d-none');
-        pitList.classList.add('d-none');
+    function loadPitVolunteers(q, silent = false) {
+        if (silent && _autoRefreshPaused) return; // drag er i gang – drop opdateringen
+        if (!silent) {
+            pitSpinner.classList.remove('d-none');
+            pitList.classList.add('d-none');
+        }
         fetch(`/Dashboard/GetPitVolunteers?q=${encodeURIComponent(q || '')}`)
             .then(r => r.json())
-            .then(data => { pitSpinner.classList.add('d-none'); renderPitList(data, q || ''); })
+            .then(data => {
+                if (silent && _autoRefreshPaused) return; // drag startede mens fetch kørte
+                if (!silent) pitSpinner.classList.add('d-none');
+                renderPitList(data, q || '');
+            })
             .catch(() => {
-                pitSpinner.classList.add('d-none');
-                pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</div>';
-                pitList.classList.remove('d-none');
+                if (!silent) {
+                    pitSpinner.classList.add('d-none');
+                    pitList.innerHTML = '<div class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</div>';
+                    pitList.classList.remove('d-none');
+                }
             });
     }
     window.loadPitVolunteers = loadPitVolunteers;
 
     function renderPitList(volunteers, q) {
         pitList.classList.remove('d-none');
-        pitList.innerHTML = '';
         const hasQuery = q && q.trim() !== '';
 
         // Filtrer post-chips baseret på søgningen
@@ -800,6 +974,9 @@
             if (!aFiring && bFiring) return 1;
             return a.name.localeCompare(b.name);
         });
+
+        // Byg ny DOM
+        pitList.innerHTML = '';
 
         // Vis pit-frivillige
         sorted.forEach(v => {
@@ -875,43 +1052,29 @@
     }
 
     // -- Poster ----------------------------------------------------------------
-    function loadAllPosts() {
-        fetch('/Post/GetAll').then(r => r.json()).then(renderAllPosts).catch(() => {});
+    function loadAllPosts(silent = false) {
+        fetch('/Post/GetAll').then(r => r.json()).then(posts => {
+            if (silent && _autoRefreshPaused) return; // drag er i gang – drop opdateringen
+            renderAllPosts(posts);
+        }).catch(() => {});
     }
 
     function renderAllPosts(posts) {
         _lastPosts = posts;
-        // Ryd alle 5 kolonner
+        // Ryd alle 5 kolonner og rebuild synkront (ingen visuel blink da JS er single-threaded)
         for (let c = 1; c <= 5; c++) {
             const col = document.getElementById(`col${c}Posts`);
             if (col) col.innerHTML = '';
         }
-        // Render poster
         posts.forEach(p => renderPost(p));
-        // Setup drop-zones for kolonner
         for (let c = 1; c <= 5; c++) {
             setupColumnDropZone(document.getElementById(`col${c}Posts`));
-        }
-
-        // Opdater stat-kort
-        const now = Date.now();
-        let alarmCount = 0;
-        if (alarmsEnabled) {
-            posts.forEach(p => {
-                if (!p.alarmAfterMinutes) return;
-                (p.volunteers || []).forEach(v => {
-                    if (disabledAlarmVolunteers.has(v.volunteerId)) return;
-                            const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
-                    if (ms >= p.alarmAfterMinutes * 60 * 1000) alarmCount++;
-                });
-            });
         }
 
         const postsEl = document.getElementById('activePostsCount');
         if (postsEl) postsEl.textContent = posts.length;
 
         updateAlarmCounter();
-
         updateCollapseAllBtn(posts);
     }
 
@@ -1001,7 +1164,7 @@
                     </div>
                 </div>
             </div>
-            <div class="post-volunteer-zone d-flex flex-wrap gap-1" data-post-name="${escHtml(p.name)}" style="min-height:${isCollapsed ? '0' : '28px'};${isCollapsed ? 'display:none!important;' : ''}">
+            <div class="post-volunteer-zone d-flex flex-column gap-1" data-post-name="${escHtml(p.name)}" style="min-height:${isCollapsed ? '0' : '32px'};padding-top:${isCollapsed ? '0' : '4px'};${isCollapsed ? 'display:none!important;' : ''}">
                 ${(p.volunteers || []).map(v => volunteerChipHtml(v, p.name, p.alarmAfterMinutes)).join('')}
             </div>
             ${isCollapsed ? `<div class="post-collapsed-summary" style="font-size:0.75rem;color:var(--clr-text-muted);padding-top:0.1rem;">
@@ -1068,26 +1231,26 @@
             }
         }
         const alarmMuted = disabledAlarmVolunteers.has(v.volunteerId);
-        return `<span class="volunteer-chip" draggable="true" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}" style="display:flex;align-items:center;gap:4px;position:relative;">
-            <span style="width:20px;height:20px;border-radius:50%;background:var(--clr-brand-dim);display:flex;align-items:center;justify-content:center;color:var(--clr-brand);font-weight:700;font-size:0.65rem;flex-shrink:0;">
+        return `<span class="volunteer-chip" draggable="true" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}">
+            <span style="width:20px;height:20px;border-radius:50%;background:var(--clr-brand-dim);display:inline-flex;align-items:center;justify-content:center;color:var(--clr-brand);font-weight:700;font-size:0.65rem;flex-shrink:0;">
                 ${escHtml(v.name).charAt(0).toUpperCase()}
             </span>
             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
             ${alarmIcon}
             ${alarmMuted ? `<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.65rem;" title="Alarm deaktiveret"></i>` : ''}
             <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(postName)}" draggable="false"
-                style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.8rem;cursor:pointer;flex-shrink:0;line-height:1;"
-                >
+                style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.8rem;cursor:pointer;flex-shrink:0;line-height:1;">
                 <i class="bi bi-three-dots-vertical"></i>
             </button>
         </span>`;
     }
 
     // -- Frivillig kontekstmenu ------------------------------------------------
-    let _volMenuOpen = null; // reference til åben dropdown
+    let _volMenuOpen = null;
+    let _volMenuAbort = null; // AbortController til "klik udenfor"-lytteren
 
     function openVolunteerMenu(btn) {
-        // Luk eksisterende menu
+        // Luk eksisterende menu (og afbryd evt. åben lytter)
         closeVolunteerMenu();
 
         const volunteerId = parseInt(btn.dataset.vid);
@@ -1096,61 +1259,104 @@
         const isMuted = disabledAlarmVolunteers.has(volunteerId);
         const rect = btn.getBoundingClientRect();
 
-        // Byg post-submenu items (Pit øverst, derefter alle poster)
-        const pitItem = `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="Pit"><i class="bi bi-arrow-left-circle me-2" style="color:var(--clr-brand);"></i>Pitten</a></li>`;
-        const postItems = _lastPosts.map(p =>
-            `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="${escHtml(p.name)}"><i class="bi bi-geo-alt me-2"></i>${escHtml(p.name)}</a></li>`
-        ).join('');
-
         const menu = document.createElement('div');
         menu.id = 'vol-ctx-menu';
         menu.dataset.vid = volunteerId;
         menu.dataset.vname = name;
-        menu.style.cssText = `position:fixed;z-index:9999;min-width:200px;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);padding:4px 0;font-size:0.85rem;`;
-        menu.innerHTML = `
-            <div style="padding:6px 12px 4px;font-size:0.75rem;color:var(--clr-text-muted);border-bottom:1px solid var(--clr-border);margin-bottom:2px;">${escHtml(name)}</div>
-            <li class="dropdown-item-submenu" style="list-style:none;position:relative;">
-                <a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="vol-submenu-toggle">
-                    <span><i class="bi bi-arrow-left-right me-2" style="color:var(--clr-brand);"></i>Flyt til funktion</span>
-                    <i class="bi bi-chevron-right" style="font-size:0.7rem;color:var(--clr-text-muted);"></i>
-                </a>
-                <div class="vol-submenu" style="display:none;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.5);padding:4px 0;margin-top:2px;margin-left:8px;margin-right:8px;">
-                    <ul style="list-style:none;margin:0;padding:0;">${pitItem}${postItems ? '<li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>' + postItems : ''}</ul>
-                </div>
-            </li>
-            <li style="list-style:none;"><a class="dropdown-item" href="#" id="vol-alarm-toggle">
-                <i class="bi ${isMuted ? 'bi-bell' : 'bi-bell-slash'} me-2" style="color:${isMuted ? 'var(--clr-ok)' : 'var(--clr-warn)'};"></i>${isMuted ? 'Aktiver alarm' : 'Deaktiver alarm'}
-            </a></li>
-            <li style="list-style:none;"><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>
-            <li style="list-style:none;"><a class="dropdown-item" href="#" id="vol-checkout-btn">
-                <i class="bi bi-box-arrow-right me-2" style="color:var(--clr-alarm);"></i>Check ud
-            </a></li>`;
+        menu.style.cssText = `position:fixed;z-index:9999;width:220px;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);font-size:0.85rem;overflow:hidden;`;
 
+        // -- Panel 1: Hovedmenu --
+        const panel1 = document.createElement('div');
+        panel1.id = 'vol-menu-panel1';
+        panel1.innerHTML = `
+            <div style="padding:6px 12px 5px;font-size:0.75rem;color:var(--clr-text-muted);border-bottom:1px solid var(--clr-border);">${escHtml(name)}</div>
+            <ul style="list-style:none;margin:0;padding:4px 0;">
+                <li><a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="vol-goto-post-panel">
+                    <span><i class="bi bi-geo-alt me-2" style="color:var(--clr-brand);"></i>Flyt til post</span>
+                    <i class="bi bi-chevron-right" style="font-size:0.7rem;color:var(--clr-text-muted);"></i>
+                </a></li>
+                <li><a class="dropdown-item" href="#" id="vol-alarm-toggle">
+                    <i class="bi ${isMuted ? 'bi-bell' : 'bi-bell-slash'} me-2" style="color:${isMuted ? 'var(--clr-ok)' : 'var(--clr-warn)'};"></i>${isMuted ? 'Aktiver alarm' : 'Deaktiver alarm'}
+                </a></li>
+                <li><a class="dropdown-item" href="#" id="vol-futuremove-btn">
+                    <i class="bi bi-clock-history me-2" style="color:var(--clr-info);"></i>Fremtidig flyt
+                </a></li>
+                <li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>
+                <li><a class="dropdown-item" href="#" id="vol-checkout-btn">
+                    <i class="bi bi-box-arrow-right me-2" style="color:var(--clr-alarm);"></i>Check ud
+                </a></li>
+            </ul>`;
+
+        // -- Panel 2: Vælg post --
+        const panel2 = document.createElement('div');
+        panel2.id = 'vol-menu-panel2';
+        panel2.style.display = 'none';
+        const pitItem = `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="Pit"><i class="bi bi-arrow-left-circle me-2" style="color:var(--clr-brand);"></i>Pitten</a></li>`;
+        const postItems = _lastPosts.map(p =>
+            `<li><a class="dropdown-item vol-move-item" href="#" data-vid="${volunteerId}" data-vtarget="${escHtml(p.name)}"><i class="bi bi-signpost-2 me-2" style="color:var(--clr-text-muted);"></i>${escHtml(p.name)}</a></li>`
+        ).join('');
+        panel2.innerHTML = `
+            <div style="display:flex;align-items:center;gap:6px;padding:5px 8px 5px;border-bottom:1px solid var(--clr-border);">
+                <button id="vol-back-btn" style="background:none;border:none;padding:2px 4px;color:var(--clr-text-muted);cursor:pointer;font-size:0.9rem;line-height:1;border-radius:4px;" title="Tilbage">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <span style="font-size:0.75rem;color:var(--clr-text-muted);">Flyt til post</span>
+            </div>
+            <ul style="list-style:none;margin:0;padding:4px 0;max-height:220px;overflow-y:auto;">
+                ${pitItem}
+                ${postItems ? '<li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>' + postItems : ''}
+            </ul>`;
+
+        menu.appendChild(panel1);
+        menu.appendChild(panel2);
         document.body.appendChild(menu);
 
-        // Bind events via JS (ingen inline onclick med strings)
-        menu.querySelector('#vol-submenu-toggle').addEventListener('click', (e) => {
+        // Events panel 1
+        panel1.querySelector('#vol-goto-post-panel').addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
-            toggleVolSubmenu(e.currentTarget);
+            panel1.style.display = 'none';
+            panel2.style.display = 'block';
+            // Juster menuposition hvis den er ved at gå ud af skærmen
+            const r = menu.getBoundingClientRect();
+            if (r.bottom > window.innerHeight - 8) {
+                menu.style.top = Math.max(8, window.innerHeight - menu.offsetHeight - 8) + 'px';
+            }
         });
-        menu.querySelectorAll('.vol-move-item').forEach(a => {
+        panel1.querySelector('#vol-alarm-toggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            volMenuToggleAlarm(parseInt(menu.dataset.vid));
+        });
+        panel1.querySelector('#vol-futuremove-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            closeVolunteerMenu();
+            openFutureMoveModal(parseInt(menu.dataset.vid), menu.dataset.vname);
+        });
+        panel1.querySelector('#vol-checkout-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            volMenuCheckOut(parseInt(menu.dataset.vid), menu.dataset.vname);
+        });
+
+        // Events panel 2
+        panel2.querySelector('#vol-back-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            panel2.style.display = 'none';
+            panel1.style.display = 'block';
+            // Sæt menuen tilbage til normal størrelse
+            const r = menu.getBoundingClientRect();
+            if (r.bottom > window.innerHeight - 8) {
+                menu.style.top = Math.max(8, window.innerHeight - menu.offsetHeight - 8) + 'px';
+            }
+        });
+        panel2.querySelectorAll('.vol-move-item').forEach(a => {
             a.addEventListener('click', (e) => {
                 e.preventDefault();
                 volMenuMove(parseInt(a.dataset.vid), a.dataset.vtarget);
             });
         });
-        menu.querySelector('#vol-alarm-toggle').addEventListener('click', (e) => {
-            e.preventDefault();
-            volMenuToggleAlarm(parseInt(menu.dataset.vid));
-        });
-        menu.querySelector('#vol-checkout-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            volMenuCheckOut(parseInt(menu.dataset.vid), menu.dataset.vname);
-        });
 
         // Positioner menuen
-        const menuW = 210;
-        const menuH = 180;
+        const menuW = 220;
+        const menuH = 190;
         let top = rect.bottom + 4;
         let left = rect.right - menuW;
         if (left < 4) left = 4;
@@ -1160,25 +1366,16 @@
 
         _volMenuOpen = menu;
 
-        // Luk ved klik udenfor
-        setTimeout(() => document.addEventListener('click', closeVolunteerMenu, { once: true }), 10);
+        // Luk ved klik udenfor – brug AbortController så lytteren kan fjernes præcist
+        _volMenuAbort = new AbortController();
+        setTimeout(() => {
+            document.addEventListener('click', closeVolunteerMenu, { signal: _volMenuAbort.signal });
+        }, 10);
     }
 
     function closeVolunteerMenu() {
+        if (_volMenuAbort) { _volMenuAbort.abort(); _volMenuAbort = null; }
         if (_volMenuOpen) { _volMenuOpen.remove(); _volMenuOpen = null; }
-    }
-
-    function toggleVolSubmenu(el) {
-        const sub = el.closest('li').querySelector('.vol-submenu');
-        if (!sub) return;
-        sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
-        // Tilpas menuens højde dynamisk
-        if (_volMenuOpen) {
-            const rect2 = _volMenuOpen.getBoundingClientRect();
-            if (rect2.bottom > window.innerHeight - 8) {
-                _volMenuOpen.style.top = Math.max(8, window.innerHeight - _volMenuOpen.offsetHeight - 8) + 'px';
-            }
-        }
     }
 
     function volMenuMove(volunteerId, targetLocation) {
@@ -1208,6 +1405,85 @@
         const fakeBtn = { disabled: false, innerHTML: '' };
         doCheckOut(volunteerId, name, fakeBtn);
     }
+
+    // -- Fremtidig flyt --------------------------------------------------------
+    let _futureMoveCurrentId = null;
+
+    function openFutureMoveModal(volunteerId, name) {
+        _futureMoveCurrentId = null;
+        document.getElementById('futureMoveVolunteerId').value = volunteerId;
+        document.getElementById('futureMoveVolunteerName').textContent = name;
+        document.getElementById('futureMoveMinutes').value = '';
+        document.getElementById('futureMoveExistingAlert').classList.add('d-none');
+
+        // Byg destination-dropdown
+        const sel = document.getElementById('futureMoveTarget');
+        sel.innerHTML = '<option value="Pit">Pitten</option>';
+        _lastPosts.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name;
+            sel.appendChild(opt);
+        });
+
+        // Tjek om der allerede er en planlagt flytning
+        fetch(`/Dashboard/GetScheduledMove?volunteerId=${volunteerId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.hasPending) {
+                    _futureMoveCurrentId = data.id;
+                    const alertEl = document.getElementById('futureMoveExistingAlert');
+                    alertEl.classList.remove('d-none');
+                    document.getElementById('futureMoveExistingText').textContent =
+                        `Planlagt flytning til "${data.targetLocation}" om ca. ${data.minsLeft} min. Ny planlægning erstatter denne.`;
+                }
+            }).catch(() => {});
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('futureMoveModal')).show();
+    }
+
+    document.getElementById('futureMoveCancel').addEventListener('click', () => {
+        if (!_futureMoveCurrentId) return;
+        postJson('/Dashboard/CancelScheduledMove', { moveId: _futureMoveCurrentId })
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message, 'info');
+                    _futureMoveCurrentId = null;
+                    document.getElementById('futureMoveExistingAlert').classList.add('d-none');
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            }).catch(() => showToast('Noget gik galt.', 'error'));
+    });
+
+    document.getElementById('futureMoveConfirmBtn').addEventListener('click', () => {
+        const volunteerId = parseInt(document.getElementById('futureMoveVolunteerId').value);
+        const targetLocation = document.getElementById('futureMoveTarget').value;
+        const minsVal = document.getElementById('futureMoveMinutes').value.trim();
+        const delayMinutes = minsVal ? parseInt(minsVal) : 0;
+
+        if (!delayMinutes || delayMinutes < 1) { showToast('Angiv antal minutter (mindst 1).', 'warning'); return; }
+
+        const btn = document.getElementById('futureMoveConfirmBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        postJson('/Dashboard/ScheduleFutureMove', { volunteerId, targetLocation, delayMinutes })
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-clock-history me-1"></i>Planlæg flytning';
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('futureMoveModal')).hide();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            }).catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-clock-history me-1"></i>Planlæg flytning';
+                showToast('Noget gik galt. Prøv igen.', 'error');
+            });
+    });
 
     // -- Opret Post ------------------------------------------------------------
     document.getElementById('createPostBtn').addEventListener('click', () => {
@@ -1347,12 +1623,13 @@
     function onDragEnd() {
         this.classList.remove('dragging');
         dragPayload = null;
-        // Fjern alle drop-zone highlights
+        // Fjern alle drop-zone highlights og insert-indikatorer
         document.querySelectorAll('.drop-zone-active').forEach(el => el.classList.remove('drop-zone-active'));
         document.querySelectorAll('.post-drop-zone-active').forEach(el => el.classList.remove('post-drop-zone-active'));
+        document.querySelectorAll('.post-insert-indicator').forEach(el => el.remove());
     }
 
-    // Drop-zone: pit-listen (frivillige kan droppes her ? flyttes til Pit)
+    // Drop-zone: pit-listen (frivillige kan droppes her → flyttes til Pit)
     let _pitDropZoneAbort = null;
     function setupPitDropZone() {
         if (_pitDropZoneAbort) _pitDropZoneAbort.abort();
@@ -1373,26 +1650,70 @@
         }, sig);
     }
 
-    // Drop-zone: kolonne (poster kan droppes her)
+    // Hjælper: find insert-position og opdater indikator-linje i kolonne
+    function _getInsertTarget(colEl, clientY) {
+        // Returnerer { beforeCard } hvor beforeCard er det kort man skal indsætte FØR
+        // (null = indsæt sidst)
+        const cards = [...colEl.querySelectorAll('.post-card:not(.dragging)')];
+        for (const card of cards) {
+            const box = card.getBoundingClientRect();
+            if (clientY < box.top + box.height / 2) return { beforeCard: card };
+        }
+        return { beforeCard: null };
+    }
+
+    function _showInsertIndicator(colEl, clientY) {
+        // Fjern gammel indikator
+        colEl.querySelectorAll('.post-insert-indicator').forEach(el => el.remove());
+        const { beforeCard } = _getInsertTarget(colEl, clientY);
+        const indicator = document.createElement('div');
+        indicator.className = 'post-insert-indicator';
+        if (beforeCard) {
+            colEl.insertBefore(indicator, beforeCard);
+        } else {
+            colEl.appendChild(indicator);
+        }
+    }
+
+    // Drop-zone: kolonne (poster kan droppes her – både flytte til anden kolonne og reorder inden i kolonne)
     const _colDropZoneAborts = {};
     function setupColumnDropZone(colEl) {
         const key = colEl.id || colEl.dataset.column;
         if (_colDropZoneAborts[key]) _colDropZoneAborts[key].abort();
         _colDropZoneAborts[key] = new AbortController();
         const sig = { signal: _colDropZoneAborts[key].signal };
+
         colEl.addEventListener('dragover', e => {
             if (dragPayload?.type !== 'post') return;
             e.preventDefault();
             colEl.classList.add('drop-zone-active');
+            _showInsertIndicator(colEl, e.clientY);
         }, sig);
-        colEl.addEventListener('dragleave', () => colEl.classList.remove('drop-zone-active'), sig);
+
+        colEl.addEventListener('dragleave', e => {
+            // Kun fjern highlight hvis musen forlader hele kolonnen (ikke blot et child-element)
+            if (colEl.contains(e.relatedTarget)) return;
+            colEl.classList.remove('drop-zone-active');
+            colEl.querySelectorAll('.post-insert-indicator').forEach(el => el.remove());
+        }, sig);
+
         colEl.addEventListener('drop', e => {
             e.preventDefault();
             colEl.classList.remove('drop-zone-active');
+            colEl.querySelectorAll('.post-insert-indicator').forEach(el => el.remove());
             if (!dragPayload || dragPayload.type !== 'post') return;
+
             const newCol = parseInt(colEl.dataset.column);
-            if (dragPayload.element.dataset.column == newCol) return;
-            movePost(dragPayload.id, newCol);
+            const draggedCard = dragPayload.element;
+            const { beforeCard } = _getInsertTarget(colEl, e.clientY);
+
+            if (draggedCard.dataset.column != newCol) {
+                // Flytte til anden kolonne – beregn sortOrder ud fra insert-position
+                movePostToColumn(dragPayload.id, newCol, beforeCard);
+            } else {
+                // Reorder inden for samme kolonne
+                reorderPostInColumn(dragPayload.id, colEl, beforeCard);
+            }
         }, sig);
     }
 
@@ -1413,6 +1734,62 @@
             if (dragPayload.fromLocation === postName) return;
             moveVolunteer(dragPayload.id, postName);
         });
+    }
+
+    function movePostToColumn(postId, newColumnIndex, beforeCard) {
+        const colEl = document.getElementById(`col${newColumnIndex}Posts`);
+
+        // Byg ny rækkefølge for målkolonnen: eksisterende kort + det draggede indsat på insert-position
+        const existingCards = [...colEl.querySelectorAll('.post-card')]; // der er ingen .dragging her da kortet er i en anden kolonne
+        const insertIdx = beforeCard ? existingCards.indexOf(beforeCard) : existingCards.length;
+
+        // Vi kender ikke det draggede korts DOM-element i målkolonnen endnu –
+        // brug et midlertidigt id-array til at beregne rækkefølgen
+        const existingIds = existingCards.map(c => parseInt(c.dataset.postId));
+        existingIds.splice(insertIdx, 0, postId);
+
+        // Kald UpdateColumn for selve kolonneskiftet og Reorder for den endelige rækkefølge
+        postJson('/Post/UpdateColumn', { postId, columnIndex: newColumnIndex })
+            .then(res => {
+                if (!res.success) { showToast(res.message, 'warning'); loadAllPosts(); return; }
+                // Renummerer hele målkolonnen inkl. det nye kort
+                const items = existingIds.map((id, i) => ({ postId: id, sortOrder: i }));
+                return postJson('/Post/Reorder', { items });
+            })
+            .then(res => {
+                if (res && !res.success) showToast(res.message, 'warning');
+                clearPitSearch();
+                loadAllPosts();
+            })
+            .catch(() => { showToast('Noget gik galt.', 'error'); loadAllPosts(); });
+    }
+
+    function reorderPostInColumn(postId, colEl, beforeCard) {
+        // Byg ny rækkefølge: alle kort i kolonnen ekskl. det der trækkes, indsæt det på ny position
+        const allCards = [...colEl.querySelectorAll('.post-card')];
+        const dragged = allCards.find(c => parseInt(c.dataset.postId) === postId);
+        if (!dragged) return;
+
+        // Fjern det draggede kort fra listen og indsæt på ny position
+        const remaining = allCards.filter(c => c !== dragged);
+        const insertIdx = beforeCard ? remaining.indexOf(beforeCard) : remaining.length;
+        remaining.splice(insertIdx, 0, dragged);
+
+        // Tildel nye SortOrder-værdier
+        const items = remaining.map((c, i) => ({ postId: parseInt(c.dataset.postId), sortOrder: i }));
+
+        // Optimistisk DOM-opdatering så det føles øjeblikkeligt
+        remaining.forEach(c => colEl.appendChild(c));
+
+        postJson('/Post/Reorder', { items })
+            .then(res => { if (!res.success) { showToast(res.message, 'warning'); loadAllPosts(); } else {
+                // Opdater _lastPosts sortOrder lokalt
+                items.forEach(item => {
+                    const p = _lastPosts.find(x => x.id === item.postId);
+                    if (p) p.sortOrder = item.sortOrder;
+                });
+            }})
+            .catch(() => { showToast('Noget gik galt.', 'error'); loadAllPosts(); });
     }
 
     function movePost(postId, newColumnIndex) {
@@ -1616,14 +1993,12 @@
 
             _lastStateHash = hash;
 
-            // Opdater alt – men bevar pit-søgefeltet hvis det er i brug
+            // Soft-opdatering: ingen spinner, ingen blink – kun ændrede elementer bygges om
             const pitQ = pitSearchInput.value;
-            syncPitAlarm().then(() => loadPitVolunteers(pitQ));
-            loadAllPosts();
+            syncPitAlarm().then(() => loadPitVolunteers(pitQ, true));
+            loadAllPosts(true);
             updateCheckedInCount();
-            updateNoShowCount();
-
-            // Diskret prik der viser at siden er synkroniseret
+            updateNoShowCount();            // Diskret prik der viser at siden er synkroniseret
             showSyncDot();
         } catch {
             // Netværksfejl – ignorer stille
@@ -1647,7 +2022,7 @@
     // Sæt hash ved første load så vi ikke refresher unødvendigt med det samme
     fetch('/Dashboard/StateHash').then(r => r.json()).then(d => { _lastStateHash = d.hash; }).catch(() => {});
 
-    setInterval(backgroundRefresh, 3 * 1000);
+    setInterval(backgroundRefresh, 1000);
 })();
 </script>
 

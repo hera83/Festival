@@ -128,7 +128,7 @@ public class PostController : Controller
             .MaxAsync(p => (int?)p.SortOrder) ?? -1;
 
         post.ColumnIndex = req.ColumnIndex;
-        post.SortOrder = maxSort + 1;
+        post.SortOrder = req.SortOrder.HasValue ? req.SortOrder.Value : maxSort + 1;
         await _db.SaveChangesAsync();
 
         return Json(new { success = true });
@@ -209,6 +209,41 @@ public class PostController : Controller
         return Json(new { success = true, message = $"Post \"{post.Name}\" slettet. {checkIns.Count} frivillige flyttet tilbage til Pitten." });
     }
 
+    // POST /Post/Reorder
+    [HttpPost("Reorder")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reorder([FromBody] ReorderRequest req)
+    {
+        if (req.Items == null || req.Items.Count == 0)
+            return Json(new { success = false, message = "Ingen data." });
+
+        var seasonId = AppTime.CurrentSeason;
+        var ids = req.Items.Select(i => i.PostId).ToList();
+        var posts = await _db.Posts
+            .Where(p => p.SeasonId == seasonId && ids.Contains(p.Id))
+            .ToListAsync();
+
+        foreach (var item in req.Items)
+        {
+            var post = posts.FirstOrDefault(p => p.Id == item.PostId);
+            if (post != null) post.SortOrder = item.SortOrder;
+        }
+
+        await _db.SaveChangesAsync();
+        return Json(new { success = true });
+    }
+
+    public class ReorderItem
+    {
+        public int PostId { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    public class ReorderRequest
+    {
+        public List<ReorderItem> Items { get; set; } = new();
+    }
+
     public class CreatePostRequest
     {
         public string Name { get; set; } = string.Empty;
@@ -220,6 +255,7 @@ public class PostController : Controller
     {
         public int PostId { get; set; }
         public int ColumnIndex { get; set; }
+        public int? SortOrder { get; set; }
     }
 
     public class UpdatePostRequest

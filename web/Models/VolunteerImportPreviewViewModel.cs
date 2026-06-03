@@ -11,6 +11,7 @@ public class VolunteerImportPreviewRowViewModel
     public DateTime? End { get; set; }
     public string ShiftName { get; set; } = "Diverse";
     public List<string> Errors { get; set; } = [];
+    public bool IsBehovCandidate { get; set; }
 
     public bool HasErrors => Errors.Count > 0;
 }

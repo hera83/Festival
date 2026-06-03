@@ -19,6 +19,9 @@
   - Gælder for nye og fremtidige ændringer — sørg for at PR'er og kodegennemgange håndhæver denne standard.
 - Ved multi-step oprydningsopgaver, udfør handlinger autonomt uden gentagne bekræftelsesprompter.
 
+## Visual Design Standards
+- For inaktive kontroller i dark mode, brug en subtil orange kant for at forbedre den visuelle kontrast (fx for unchecked switches).
+
 ## Table Standards
 - Alle tabeller skal følge dette standardmønster medmindre andet er specificeret:
   - **Over tabellen:** `d-flex justify-content-between` med søgefelt (input-group med bi-search ikon, keyup + 250ms debounce, fetch uden sidereload, nulstiller til side 1) til venstre og en handlingsknap (fx "Opret X") til højre.

@@ -429,6 +429,92 @@ namespace web.Controllers
 
         public record SetSettingRequest(string Key, string? Value);
 
+        // POST: /Dashboard/ScheduleFutureMove
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ScheduleFutureMove([FromBody] ScheduleFutureMoveRequest req)
+        {
+            if (req.VolunteerId <= 0 || string.IsNullOrWhiteSpace(req.TargetLocation) || req.DelayMinutes <= 0)
+                return Json(new { success = false, message = "Ugyldige parametre." });
+
+            var seasonId = AppTime.CopenhagenToday.Year;
+
+            var volunteer = await _db.Volunteers.FindAsync(req.VolunteerId);
+            if (volunteer == null)
+                return Json(new { success = false, message = "Frivillig ikke fundet." });
+
+            var checkIn = await _db.VolunteerCheckIns
+                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == req.VolunteerId && c.CheckedOutAt == null);
+            if (checkIn == null)
+                return Json(new { success = false, message = $"{volunteer.Name} er ikke checket ind." });
+
+            // Annullér eventuel eksisterende planlagt flytning
+            var existing = await _db.ScheduledMoves
+                .Where(m => m.VolunteerId == req.VolunteerId && !m.IsCancelled && m.ExecutedAt == null)
+                .ToListAsync();
+            existing.ForEach(m => m.IsCancelled = true);
+
+            var now = AppTime.Now;
+            var scheduled = new ScheduledMove
+            {
+                SeasonId = seasonId,
+                VolunteerId = req.VolunteerId,
+                TargetLocation = req.TargetLocation.Trim(),
+                ScheduledAt = now.AddMinutes(req.DelayMinutes),
+                CreatedByUser = User.Identity?.Name ?? "Ukendt",
+                CreatedAt = now
+            };
+            _db.ScheduledMoves.Add(scheduled);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"{volunteer.Name} flyttes til \"{req.TargetLocation}\" om {req.DelayMinutes} min.", scheduledAt = scheduled.ScheduledAt });
+        }
+
+        public class ScheduleFutureMoveRequest
+        {
+            public int VolunteerId { get; set; }
+            public string TargetLocation { get; set; } = string.Empty;
+            public int DelayMinutes { get; set; }
+        }
+
+        // GET: /Dashboard/GetScheduledMove?volunteerId=...
+        [HttpGet]
+        public async Task<IActionResult> GetScheduledMove(int volunteerId)
+        {
+            var pending = await _db.ScheduledMoves
+                .Where(m => m.VolunteerId == volunteerId && !m.IsCancelled && m.ExecutedAt == null)
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (pending == null)
+                return Json(new { hasPending = false });
+
+            var minsLeft = (int)Math.Ceiling((pending.ScheduledAt - AppTime.Now).TotalMinutes);
+            return Json(new { hasPending = true, id = pending.Id, targetLocation = pending.TargetLocation, scheduledAt = pending.ScheduledAt, minsLeft });
+        }
+
+        // POST: /Dashboard/CancelScheduledMove
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelScheduledMove([FromBody] CancelScheduledMoveRequest req)
+        {
+            var move = await _db.ScheduledMoves.FindAsync(req.MoveId);
+            if (move == null)
+                return Json(new { success = false, message = "Planlagt flytning ikke fundet." });
+
+            if (move.IsCancelled || move.ExecutedAt != null)
+                return Json(new { success = false, message = "Flytningen er allerede udført eller annulleret." });
+
+            move.IsCancelled = true;
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, message = "Planlagt flytning annulleret." });
+        }
+
+        public class CancelScheduledMoveRequest
+        {
+            public int MoveId { get; set; }
+        }
+
         // GET: /Dashboard/GetCameraPreference
         [HttpGet]
         public async Task<IActionResult> GetCameraPreference()

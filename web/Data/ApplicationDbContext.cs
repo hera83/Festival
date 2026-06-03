@@ -22,6 +22,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MessageReply> MessageReplies => Set<MessageReply>();
     public DbSet<VolunteerGpsLog> VolunteerGpsLogs => Set<VolunteerGpsLog>();
     public DbSet<MapLocation> MapLocations => Set<MapLocation>();
+    public DbSet<ScheduledMove> ScheduledMoves => Set<ScheduledMove>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
