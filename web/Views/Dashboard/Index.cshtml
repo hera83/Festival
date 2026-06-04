@@ -511,7 +511,7 @@
 </div>
 
 <!-- Slet Post Bekræft Modal -->
-<div class="modal fade" id="deletePostModal"
+<div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
             <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
@@ -591,6 +591,7 @@
 </div>
 
 @section Scripts {
+<style>
     .card-clickable { transition: outline 0.15s, box-shadow 0.15s; }
     .card-clickable:hover { outline: 2px solid var(--clr-brand); box-shadow: 0 0 0 4px var(--clr-brand-dim); }
 
@@ -684,6 +685,9 @@
     let searchTimer = null;
     let pitSearchTimer = null;
     let dragPayload = null; // { type: 'volunteer'|'post', id, fromLocation, element }
+    let _autoRefreshPaused = false; // sættes true under drag/drop
+    let _lastStateHash = null;
+    let _knownAlarmState = new Map(); // postId → Set<volunteerId> der p.t. viser alarm
 
     // -- DOM refs -------------------------------------------------------------
     const modal        = document.getElementById('checkInModal');
@@ -1061,6 +1065,7 @@
 
     function renderAllPosts(posts) {
         _lastPosts = posts;
+        _knownAlarmState.clear(); // nulstil alarmtilstand så tickeren re-evaluerer
         // Ryd alle 5 kolonner og rebuild synkront (ingen visuel blink da JS er single-threaded)
         for (let c = 1; c <= 5; c++) {
             const col = document.getElementById(`col${c}Posts`);
@@ -1541,6 +1546,7 @@
                     showToast(res.message, 'success');
                     bootstrap.Modal.getInstance(document.getElementById('editPostModal')).hide();
                     clearPitSearch();
+                    _lastStateHash = null; // tving næste poll til at hente friske data
                     loadAllPosts();
                 } else {
                     showToast(res.message, 'warning');
@@ -1968,12 +1974,53 @@
     syncPitAlarm().then(() => loadPitVolunteers(''));
     loadAllPosts();
 
+    // -- Klient-side alarm-ticker ----------------------------------------------
+    // Kører hvert 10. sekund og re-renderer kun de post-cards hvis alarmstatus
+    // er skiftet (ny frivillig går over tærsklen) – ingen netværkskald, ingen blink.
+
+    function alarmTick() {
+        if (_autoRefreshPaused || document.hidden || !alarmsEnabled || !_lastPosts.length) return;
+        const now = Date.now();
+        let counterDirty = false;
+
+        _lastPosts.forEach(p => {
+            if (!p.alarmAfterMinutes) return;
+            const thresh = p.alarmAfterMinutes * 60 * 1000;
+            const prev   = _knownAlarmState.get(p.id) || new Set();
+            const curr   = new Set();
+
+            (p.volunteers || []).forEach(v => {
+                if (disabledAlarmVolunteers.has(v.volunteerId)) return;
+                const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
+                if (ms >= thresh) curr.add(v.volunteerId);
+            });
+
+            // Sammenlign sæt – er der kommet nye eller forsvundet alarmer?
+            const changed = curr.size !== prev.size ||
+                [...curr].some(id => !prev.has(id)) ||
+                [...prev].some(id => !curr.has(id));
+
+            if (changed) {
+                _knownAlarmState.set(p.id, curr);
+                // Re-render kun dette post-card (DOM-op kun for ændrede)
+                const existing = document.querySelector(`[data-post-id="${p.id}"]`);
+                if (existing) {
+                    existing.remove();
+                    renderPost(p);
+                }
+                counterDirty = true;
+            }
+        });
+
+        if (counterDirty) updateAlarmCounter();
+    }
+
+    setInterval(alarmTick, 10_000);
+
     // -- Background auto-refresh -----------------------------------------------
-    // Poller et let "state hash" endpoint hvert 3. sekund.
+    // Poller et let "state hash" endpoint hvert sekund.
     // Kun hvis hash'en er ændret OG brugeren ikke er i gang med noget,
     // hentes de faktiske data og UI opdateres stille og roligt.
-    let _lastStateHash = null;
-    let _autoRefreshPaused = false; // sættes true under drag/drop
 
     // Lyt på drag-events for at pause refresh under drag
     document.addEventListener('dragstart', () => { _autoRefreshPaused = true; });
@@ -2026,233 +2073,28 @@
 })();
 </script>
 
-@* -- QR Pit-scanner: skjult kamera -- *@
-<video id="qrPitVideo" autoplay playsinline muted style="display:none;position:fixed;bottom:12px;right:12px;width:1px;height:1px;opacity:0;pointer-events:none;"></video>
-<canvas id="qrPitCanvas" style="display:none;"></canvas>
-
+@* -- QR Pit-scanner: dashboard-knap kobler sig til den globale scanner i _Layout -- *@
 <script>
 (function () {
-    const btn        = document.getElementById('qrPitScanBtn');
-    const video      = document.getElementById('qrPitVideo');
-    const canvas     = document.getElementById('qrPitCanvas');
-    const ctx        = canvas.getContext('2d', { willReadFrequently: true });
-    const scanUrl    = '@Url.Action("QrScanPit", "Dashboard")';
-    const csrfToken  = document.querySelector('meta[name="RequestVerificationToken"]').content;
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById('qrPitScanBtn');
+        if (!btn) return;
 
-    let active    = false;
-    let stream    = null;
-    let rafId     = null;
-    let lastKey   = null;
-    let cooldown  = false;
+        // Knappens klik delegerer til den globale scanner
+        btn.addEventListener('click', function () {
+            if (typeof window.toggleQrScanner === 'function') window.toggleQrScanner();
+        });
 
-    // -- Audio -----------------------------------------------------
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep(type) {
-        const seqs = {
-            success:     [{ f: 880, d: 0.12 }, { f: 1320, d: 0.18 }],
-            error:       [{ f: 440, d: 0.08 }, { f: 280,  d: 0.30 }],
-            alreadyinpit:[{ f: 600, d: 0.06 }, { f: 400,  d: 0.06 }, { f: 280, d: 0.20 }],
-        };
-        let t = audioCtx.currentTime + 0.05;
-        for (const n of (seqs[type] || seqs.error)) {
-            const osc = audioCtx.createOscillator();
-            const g   = audioCtx.createGain();
-            osc.connect(g); g.connect(audioCtx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(n.f, t);
-            g.gain.setValueAtTime(0.35, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + n.d);
-            osc.start(t); osc.stop(t + n.d);
-            t += n.d + 0.04;
+        // Synkronisér knappens udseende med den aktuelle scannertilstand
+        // (den globale scanner sætter selv knappens style via updateUI() – men vi
+        //  kalder det igen her for at sikre korrekt visning efter DOMContentLoaded)
+        if (typeof window.isQrScannerActive === 'function' && window.isQrScannerActive()) {
+            btn.style.background  = 'var(--clr-brand)';
+            btn.style.color       = '#fff';
+            btn.style.borderColor = 'var(--clr-brand)';
+            btn.title             = 'QR Scanner – sluk';
         }
-    }
-
-    // -- Toast -----------------------------------------------------
-    function showQrToast(message, type) {
-        // type: 'success' | 'warning' | 'error'
-        const colorMap = { success: 'var(--clr-ok)', warning: 'var(--clr-brand)', error: 'var(--clr-alarm)' };
-        const iconMap  = { success: 'bi-check-circle-fill', warning: 'bi-exclamation-triangle-fill', error: 'bi-x-circle-fill' };
-        const color    = colorMap[type] || colorMap.warning;
-        const icon     = iconMap[type]  || iconMap.warning;
-
-        const el = document.createElement('div');
-        el.style.cssText = `position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;
-            background:var(--clr-surface);border:1px solid ${color};border-left:4px solid ${color};
-            color:var(--clr-text);padding:.65rem 1.1rem;border-radius:8px;font-size:.88rem;
-            display:flex;align-items:center;gap:.5rem;box-shadow:0 4px 16px rgba(0,0,0,.4);
-            min-width:260px;max-width:420px;`;
-        el.innerHTML = `<i class="bi ${icon}" style="color:${color};font-size:1rem;flex-shrink:0;"></i><span>${message}</span>`;
-        document.body.appendChild(el);
-
-        // Fade ud efter 10 sek
-        setTimeout(() => {
-            el.style.transition = 'opacity .5s';
-            el.style.opacity = '0';
-            setTimeout(() => el.remove(), 500);
-        }, 10000);
-    }
-
-    // -- Knap tænd/sluk -------------------------------------------
-    btn.addEventListener('click', () => {
-        if (active) stopScanner();
-        else        startScanner();
     });
-
-    const prefGetUrl  = '@Url.Action("GetCameraPreference", "Dashboard")';
-    const prefSaveUrl = '@Url.Action("SaveCameraPreference", "Dashboard")';
-    const prefClrUrl  = '@Url.Action("ClearCameraPreference", "Dashboard")';
-
-    function buildFingerprint(devices) {
-        return devices
-            .filter(d => d.kind === 'videoinput')
-            .map(d => d.deviceId)
-            .sort()
-            .join(',');
-    }
-
-    async function loadCamPref() {
-        try {
-            const res = await fetch(prefGetUrl);
-            if (res.ok) return await res.json();
-        } catch { /* ignorer */ }
-        return { deviceId: null, deviceFingerprint: null };
-    }
-
-    async function startScanner() {
-        // Tillad kamera så enumerateDevices returnerer labels
-        let devices = [];
-        try {
-            const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
-            tmp.getTracks().forEach(t => t.stop());
-            devices = await navigator.mediaDevices.enumerateDevices();
-        } catch { /* ignorer */ }
-
-        const currentFp = buildFingerprint(devices);
-        const pref = await loadCamPref();
-
-        let videoConstraints;
-        if (pref.deviceId && pref.deviceFingerprint === currentFp) {
-            videoConstraints = { deviceId: { exact: pref.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } };
-        } else {
-            if (pref.deviceFingerprint && pref.deviceFingerprint !== currentFp) {
-                // Anden enhed – slet gammel indstilling stille
-                try {
-                    await fetch(prefClrUrl, { method: 'POST', headers: { 'RequestVerificationToken': csrfToken } });
-                } catch { /* ignorer */ }
-            }
-            videoConstraints = { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } };
-        }
-
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-        } catch {
-            try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
-            catch { showQrToast('Kamera ikke tilgængeligt', 'error'); return; }
-        }
-        video.srcObject = stream;
-        await video.play();
-        active = true;
-        lastKey = null;
-        workerBusy = false;
-        lastScanTime = 0;
-        btn.style.background   = 'var(--clr-brand)';
-        btn.style.color        = '#fff';
-        btn.style.borderColor  = 'var(--clr-brand)';
-        btn.title              = 'QR Scanner – sluk';
-        rafId = requestAnimationFrame(tick);
-    }
-
-    function stopScanner() {
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        if (rafId)  cancelAnimationFrame(rafId);
-        stream = null; rafId = null; active = false; lastKey = null; workerBusy = false;
-        btn.style.background  = 'var(--clr-bg)';
-        btn.style.color       = 'var(--clr-text-muted)';
-        btn.style.borderColor = 'var(--clr-border)';
-        btn.title             = 'QR Scanner – tænd';
-    }
-
-    const SCAN_W  = 640; // nedskaleret scanopløsning – QR kræver ikke fuld HD
-    const SCAN_H  = 480;
-    let workerBusy = false;
-
-    // -- Web Worker ------------------------------------------------
-    const worker = new Worker('/js/qr-worker.js');
-    worker.onmessage = function (e) {
-        workerBusy = false;
-        if (!active || cooldown) return;
-        const key = e.data;
-        if (key && key !== lastKey) {
-            lastKey = key;
-            handleScan(key);
-        }
-    };
-
-    // -- Scan-loop (throttled til ~8fps) ---------------------------
-    let lastScanTime = 0;
-    function tick(now) {
-        if (active) rafId = requestAnimationFrame(tick);
-        if (workerBusy || cooldown) return;
-        if (now - lastScanTime < 125) return; // ~8 fps
-        lastScanTime = now;
-
-        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-        canvas.width  = SCAN_W;
-        canvas.height = SCAN_H;
-        // Kontrast-boost hjælper mod overeksponerede skærme
-        ctx.filter = 'contrast(1.5) brightness(1.05) saturate(0)';
-        ctx.drawImage(video, 0, 0, SCAN_W, SCAN_H);
-        ctx.filter = 'none';
-        const imgData = ctx.getImageData(0, 0, SCAN_W, SCAN_H);
-
-        workerBusy = true;
-        worker.postMessage({ data: imgData.data, width: SCAN_W, height: SCAN_H }, [imgData.data.buffer]);
-    }
-
-    // -- Opslag ----------------------------------------------------
-    async function handleScan(key) {
-        cooldown = true;
-        setTimeout(() => { cooldown = false; lastKey = null; }, 3500);
-
-        try {
-            const res  = await fetch(scanUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': csrfToken },
-                body: JSON.stringify({ key })
-            });
-            const data = await res.json();
-
-            switch (data.result) {
-                case 'checkedin':
-                    playBeep('success');
-                    showQrToast(data.message, 'success');
-                    if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
-                    if (typeof loadAllPosts === 'function') loadAllPosts();
-                    if (typeof updateCheckedInCount === 'function') updateCheckedInCount();
-                    break;
-                case 'moved':
-                    playBeep('success');
-                    showQrToast(data.message, 'success');
-                    // Fjern chippen øjeblikkeligt fra alle poster i DOM
-                    document.querySelectorAll(`[data-volunteer-id="${data.volunteerId}"]`)
-                        .forEach(el => el.remove());
-                    if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
-                    if (typeof loadAllPosts === 'function') loadAllPosts();
-                    break;
-                case 'alreadyinpit':
-                    playBeep('alreadyinpit');
-                    showQrToast(data.message, 'warning');
-                    break;
-                default:
-                    playBeep('error');
-                    showQrToast(data.message || 'Ukendt fejl', 'error');
-            }
-        } catch {
-            playBeep('error');
-            showQrToast('Netværksfejl – kunne ikke kontakte server', 'error');
-        }
-    }
 })();
 </script>
 }

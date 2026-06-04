@@ -599,14 +599,18 @@ namespace web.Controllers
 
             var postCount = await _db.Posts.CountAsync(p => p.SeasonId == seasonId);
 
-            // Inkluder en checksum af posternes positioner så flytning af poster også detekteres
-            var postPositionHash = await _db.Posts
+            // Inkluder positioner, navne og alarmindstillinger så enhver post-ændring detekteres
+            var posts = await _db.Posts
                 .Where(p => p.SeasonId == seasonId)
-                .Select(p => p.Id * 31 + p.ColumnIndex * 7 + p.SortOrder)
-                .SumAsync(x => (long)x);
+                .Select(p => new { p.Id, p.ColumnIndex, p.SortOrder, p.Name, p.AlarmAfterMinutes })
+                .ToListAsync();
+
+            var postPositionHash = posts.Sum(p => (long)(p.Id * 31 + p.ColumnIndex * 7 + p.SortOrder));
+            var postMetaHash = posts.Aggregate(0, (acc, p) =>
+                HashCode.Combine(acc, p.Name, p.AlarmAfterMinutes ?? 0));
 
             // Enkel deterministisk hash – billig at beregne
-            var raw = $"{checkInCount}|{lastLogTick?.Ticks ?? 0}|{postCount}|{postPositionHash}";
+            var raw = $"{checkInCount}|{lastLogTick?.Ticks ?? 0}|{postCount}|{postPositionHash}|{postMetaHash}";
             var hash = raw.GetHashCode().ToString("X8");
 
             return Json(new { hash });

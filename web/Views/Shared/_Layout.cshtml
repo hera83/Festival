@@ -128,7 +128,7 @@
                 </div>
             </aside>
 
-            <main role="main" class="app-content">
+            <main role="main" class="app-content" id="app-content">
                 @RenderBody()
             </main>
         </div>
@@ -241,8 +241,456 @@
             window.refreshBeskedMenuIndicator = refreshBeskedMenuIndicator;
         });
     </script>
-    @await RenderSectionAsync("Scripts", required: false)
+    <div id="page-scripts">
+        @await RenderSectionAsync("Scripts", required: false)
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        @* ── Global QR Pit-scanner – overlever sidenavigation ── *@
+        <video id="qrPitVideo" autoplay playsinline muted
+               style="display:none;position:fixed;bottom:12px;right:12px;width:1px;height:1px;opacity:0;pointer-events:none;"></video>
+        <canvas id="qrPitCanvas" style="display:none;"></canvas>
+
+        @* Flydende indikator – synlig på sider uden dashboard-knap *@
+        <button id="qrGlobalIndicator" type="button"
+                title="QR Scanner aktiv – klik for at slukke"
+                style="display:none;position:fixed;bottom:18px;right:18px;z-index:8500;
+                       background:var(--clr-brand);color:#fff;border:none;border-radius:50%;
+                       width:42px;height:42px;font-size:1.1rem;cursor:pointer;
+                       box-shadow:0 2px 10px rgba(0,0,0,.45);align-items:center;justify-content:center;">
+            <i class="bi bi-qr-code-scan"></i>
+        </button>
+
+        <script>
+        (function () {
+            // ── Konstanter ────────────────────────────────────────────────
+            const STORAGE_KEY = 'qrScannerActive';
+            const scanUrl     = '@Url.Action("QrScanPit",           "Dashboard")';
+            const prefGetUrl  = '@Url.Action("GetCameraPreference",  "Dashboard")';
+            const prefSaveUrl = '@Url.Action("SaveCameraPreference", "Dashboard")';
+            const prefClrUrl  = '@Url.Action("ClearCameraPreference","Dashboard")';
+
+            const video   = document.getElementById('qrPitVideo');
+            const canvas  = document.getElementById('qrPitCanvas');
+            const ctx     = canvas.getContext('2d', { willReadFrequently: true });
+            const indicator = document.getElementById('qrGlobalIndicator');
+
+            let active      = false;
+            let stream      = null;
+            let rafId       = null;
+            let lastKey     = null;
+            let cooldown    = false;
+            let workerBusy  = false;
+            let lastScanTime = 0;
+
+            // ── Audio ─────────────────────────────────────────────────────
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            function playBeep(type) {
+                const seqs = {
+                    success:      [{ f: 880, d: 0.12 }, { f: 1320, d: 0.18 }],
+                    error:        [{ f: 440, d: 0.08 }, { f: 280,  d: 0.30 }],
+                    alreadyinpit: [{ f: 600, d: 0.06 }, { f: 400,  d: 0.06 }, { f: 280, d: 0.20 }],
+                };
+                let t = audioCtx.currentTime + 0.05;
+                for (const n of (seqs[type] || seqs.error)) {
+                    const osc = audioCtx.createOscillator();
+                    const g   = audioCtx.createGain();
+                    osc.connect(g); g.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(n.f, t);
+                    g.gain.setValueAtTime(0.35, t);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + n.d);
+                    osc.start(t); osc.stop(t + n.d);
+                    t += n.d + 0.04;
+                }
+            }
+
+            // ── Toast ─────────────────────────────────────────────────────
+            function showQrToast(message, type) {
+                const colorMap = { success: 'var(--clr-ok)', warning: 'var(--clr-brand)', error: 'var(--clr-alarm)' };
+                const iconMap  = { success: 'bi-check-circle-fill', warning: 'bi-exclamation-triangle-fill', error: 'bi-x-circle-fill' };
+                const color    = colorMap[type] || colorMap.warning;
+                const icon     = iconMap[type]  || iconMap.warning;
+
+                const el = document.createElement('div');
+                el.style.cssText = `position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;
+                    background:var(--clr-surface);border:1px solid ${color};border-left:4px solid ${color};
+                    color:var(--clr-text);padding:.65rem 1.1rem;border-radius:8px;font-size:.88rem;
+                    display:flex;align-items:center;gap:.5rem;box-shadow:0 4px 16px rgba(0,0,0,.4);
+                    min-width:260px;max-width:420px;`;
+                el.innerHTML = `<i class="bi ${icon}" style="color:${color};font-size:1rem;flex-shrink:0;"></i><span>${message}</span>`;
+                document.body.appendChild(el);
+                setTimeout(() => {
+                    el.style.transition = 'opacity .5s';
+                    el.style.opacity = '0';
+                    setTimeout(() => el.remove(), 500);
+                }, 10000);
+            }
+
+            // ── Kamera-præference ─────────────────────────────────────────
+            function buildFingerprint(devices) {
+                return devices.filter(d => d.kind === 'videoinput').map(d => d.deviceId).sort().join(',');
+            }
+            async function loadCamPref() {
+                try {
+                    const res = await fetch(prefGetUrl);
+                    if (res.ok) return await res.json();
+                } catch { /* ignorer */ }
+                return { deviceId: null, deviceFingerprint: null };
+            }
+
+            // ── Web Worker ────────────────────────────────────────────────
+            const worker = new Worker('/js/qr-worker.js');
+            worker.onmessage = function (e) {
+                workerBusy = false;
+                if (!active || cooldown) return;
+                const key = e.data;
+                if (key && key !== lastKey) {
+                    lastKey = key;
+                    handleScan(key);
+                }
+            };
+
+            // ── Scan-loop (~8 fps) ────────────────────────────────────────
+            const SCAN_W = 640;
+            const SCAN_H = 480;
+            function tick(now) {
+                if (active) rafId = requestAnimationFrame(tick);
+                if (workerBusy || cooldown) return;
+                if (now - lastScanTime < 125) return;
+                lastScanTime = now;
+                if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+                canvas.width  = SCAN_W;
+                canvas.height = SCAN_H;
+                ctx.filter = 'contrast(1.5) brightness(1.05) saturate(0)';
+                ctx.drawImage(video, 0, 0, SCAN_W, SCAN_H);
+                ctx.filter = 'none';
+                const imgData = ctx.getImageData(0, 0, SCAN_W, SCAN_H);
+                workerBusy = true;
+                worker.postMessage({ data: imgData.data, width: SCAN_W, height: SCAN_H }, [imgData.data.buffer]);
+            }
+
+            // ── Opslag ────────────────────────────────────────────────────
+            async function handleScan(key) {
+                cooldown = true;
+                setTimeout(() => { cooldown = false; lastKey = null; }, 3500);
+                const csrfToken = document.querySelector('meta[name="RequestVerificationToken"]').content;
+                try {
+                    const res  = await fetch(scanUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': csrfToken },
+                        body: JSON.stringify({ key })
+                    });
+                    const data = await res.json();
+                    switch (data.result) {
+                        case 'checkedin':
+                            playBeep('success');
+                            showQrToast(data.message, 'success');
+                            if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
+                            if (typeof loadAllPosts === 'function') loadAllPosts();
+                            if (typeof updateCheckedInCount === 'function') updateCheckedInCount();
+                            break;
+                        case 'moved':
+                            playBeep('success');
+                            showQrToast(data.message, 'success');
+                            document.querySelectorAll(`[data-volunteer-id="${data.volunteerId}"]`).forEach(el => el.remove());
+                            if (typeof loadPitVolunteers === 'function') loadPitVolunteers('');
+                            if (typeof loadAllPosts === 'function') loadAllPosts();
+                            break;
+                        case 'alreadyinpit':
+                            playBeep('alreadyinpit');
+                            showQrToast(data.message, 'warning');
+                            break;
+                        default:
+                            playBeep('error');
+                            showQrToast(data.message || 'Ukendt fejl', 'error');
+                    }
+                } catch {
+                    playBeep('error');
+                    showQrToast('Netværksfejl – kunne ikke kontakte server', 'error');
+                }
+            }
+
+            // ── Start / Stop ──────────────────────────────────────────────
+            async function startScanner() {
+                let devices = [];
+                try {
+                    const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+                    tmp.getTracks().forEach(t => t.stop());
+                    devices = await navigator.mediaDevices.enumerateDevices();
+                } catch { /* ignorer */ }
+
+                const currentFp = buildFingerprint(devices);
+                const pref = await loadCamPref();
+
+                let videoConstraints;
+                if (pref.deviceId && pref.deviceFingerprint === currentFp) {
+                    videoConstraints = { deviceId: { exact: pref.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } };
+                } else {
+                    if (pref.deviceFingerprint && pref.deviceFingerprint !== currentFp) {
+                        const csrfToken = document.querySelector('meta[name="RequestVerificationToken"]').content;
+                        try { await fetch(prefClrUrl, { method: 'POST', headers: { 'RequestVerificationToken': csrfToken } }); }
+                        catch { /* ignorer */ }
+                    }
+                    videoConstraints = { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } };
+                }
+
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+                } catch {
+                    try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
+                    catch { showQrToast('Kamera ikke tilgængeligt', 'error'); return; }
+                }
+                video.srcObject = stream;
+                await video.play();
+                active = true;
+                lastKey = null;
+                workerBusy = false;
+                lastScanTime = 0;
+                sessionStorage.setItem(STORAGE_KEY, '1');
+                updateUI();
+                rafId = requestAnimationFrame(tick);
+            }
+
+            function stopScanner() {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                if (rafId)  cancelAnimationFrame(rafId);
+                stream = null; rafId = null; active = false; lastKey = null; workerBusy = false;
+                sessionStorage.removeItem(STORAGE_KEY);
+                updateUI();
+            }
+
+            // ── UI-synkronisering ─────────────────────────────────────────
+            function updateUI() {
+                // Dashboard-knap (kun til stede på dashboard-siden)
+                const btn = document.getElementById('qrPitScanBtn');
+                if (btn) {
+                    if (active) {
+                        btn.style.background  = 'var(--clr-brand)';
+                        btn.style.color       = '#fff';
+                        btn.style.borderColor = 'var(--clr-brand)';
+                        btn.title             = 'QR Scanner – sluk';
+                    } else {
+                        btn.style.background  = 'var(--clr-bg)';
+                        btn.style.color       = 'var(--clr-text-muted)';
+                        btn.style.borderColor = 'var(--clr-border)';
+                        btn.title             = 'QR Scanner – tænd';
+                    }
+                }
+                // Flydende indikator – vis kun på sider uden dashboard-knappen
+                if (!btn) {
+                    indicator.style.display = active ? 'flex' : 'none';
+                } else {
+                    indicator.style.display = 'none';
+                }
+            }
+
+            // ── Globale API ───────────────────────────────────────────────
+            window.toggleQrScanner  = function () { if (active) stopScanner(); else startScanner(); };
+            window.isQrScannerActive = function () { return active; };
+            window._qrUpdateUI       = updateUI;
+
+            // ── Flydende indikator – klik slukker ─────────────────────────
+            indicator.addEventListener('click', () => stopScanner());
+
+            // ── Gendan tilstand ved sideindlæsning ────────────────────────
+            document.addEventListener('DOMContentLoaded', function () {
+                if (sessionStorage.getItem(STORAGE_KEY) === '1') {
+                    startScanner();
+                } else {
+                    updateUI();
+                }
+            });
+        })();
+        </script>
+
+        <script>
+        // ── SPA-navigation: swapper kun #app-content så kameraet aldrig stoppes ──
+        (function () {
+            // Tracker side-specifikke intervals/timeouts så de kan ryddes ved navigation
+            let _pageIntervals = [];
+            let _pageTimeouts  = [];
+            const _origSetInterval = window.setInterval;
+            const _origSetTimeout  = window.setTimeout;
+            const _origClearInterval = window.clearInterval;
+            const _origClearTimeout  = window.clearTimeout;
+
+            function clearPageTimers() {
+                _pageIntervals.forEach(id => _origClearInterval(id));
+                _pageTimeouts.forEach(id  => _origClearTimeout(id));
+                _pageIntervals = [];
+                _pageTimeouts  = [];
+            }
+
+            // Kan ikke patche window.setInterval/setTimeout globalt pga. strict IIFE –
+            // vi sætter dem som properties, der kan overskrives af page-scripts under udførelse
+            function patchTimers() {
+                window.setInterval = function (fn, delay, ...args) {
+                    const id = _origSetInterval(fn, delay, ...args);
+                    _pageIntervals.push(id);
+                    return id;
+                };
+                window.setTimeout = function (fn, delay, ...args) {
+                    const id = _origSetTimeout(fn, delay, ...args);
+                    _pageTimeouts.push(id);
+                    return id;
+                };
+            }
+            function unpatchTimers() {
+                window.setInterval = _origSetInterval;
+                window.setTimeout  = _origSetTimeout;
+            }
+
+            // Patcher DOMContentLoaded så page-scripts' DOMContentLoaded-callbacks
+            // kører straks (DOM er allerede klar efter innerHTML-swap)
+            let _domListeners = [];
+            const _origAddEventListener = document.addEventListener.bind(document);
+            function patchDOMReady() {
+                document.addEventListener = function (type, fn, opts) {
+                    if (type === 'DOMContentLoaded') {
+                        _domListeners.push(fn);
+                    } else {
+                        _origAddEventListener(type, fn, opts);
+                    }
+                };
+            }
+            function unpatchDOMReady() {
+                document.addEventListener = _origAddEventListener;
+            }
+            function flushDOMListeners() {
+                const list = _domListeners.slice();
+                _domListeners = [];
+                list.forEach(fn => { try { fn(); } catch(e) { console.error('[SPA] DOMContentLoaded cb error', e); } });
+            }
+
+            // Udfør scripts fra en DOM-node (genskaber <script> så browseren evaluerer dem)
+            function runScripts(container) {
+                container.querySelectorAll('script').forEach(old => {
+                    if (old.src) return; // eksterne scripts springes over (allerede loadet i <head>)
+                    const s = document.createElement('script');
+                    s.textContent = old.textContent;
+                    old.parentNode.replaceChild(s, old);
+                });
+            }
+
+            // Opdatér aktiv menu-markering
+            function updateActiveMenu(url) {
+                document.querySelectorAll('.side-menu .menu-item').forEach(a => {
+                    a.classList.remove('active');
+                    if (a.tagName === 'A') {
+                        const href = a.getAttribute('href');
+                        if (href && url.startsWith(href) && href !== '/') {
+                            a.classList.add('active');
+                        }
+                    }
+                });
+            }
+
+            // Navigér til url uden fuld side-reload
+            async function navigate(url) {
+                try {
+                    const res = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest-SPA' }
+                    });
+                    if (!res.ok || res.redirected) {
+                        // Fejl eller redirect (fx login) – tag fuld navigation
+                        window.location.href = url;
+                        return;
+                    }
+
+                    const html = await res.text();
+                    const parser = new DOMParser();
+                    const doc    = parser.parseFromString(html, 'text/html');
+
+                    const newContent = doc.getElementById('app-content');
+                    const newScripts = doc.getElementById('page-scripts');
+
+                    if (!newContent) {
+                        // Siden bruger ikke vores layout (fx login) – fuld navigation
+                        window.location.href = url;
+                        return;
+                    }
+
+                    // Opdater title
+                    if (doc.title) document.title = doc.title;
+
+                    // Opdater CSRF-token hvis siden har et nyt
+                    const newToken = doc.querySelector('meta[name="RequestVerificationToken"]');
+                    const curToken = document.querySelector('meta[name="RequestVerificationToken"]');
+                    if (newToken && curToken) curToken.content = newToken.content;
+
+                    // Ryd side-specifikke timere fra forrige side
+                    clearPageTimers();
+
+                    // Patch timers + DOMContentLoaded FØR vi kører de nye scripts
+                    patchTimers();
+                    patchDOMReady();
+
+                    // Swap indhold
+                    const main = document.getElementById('app-content');
+                    main.innerHTML = newContent.innerHTML;
+
+                    // Swap page-scripts
+                    const ps = document.getElementById('page-scripts');
+                    if (ps && newScripts) {
+                        ps.innerHTML = newScripts.innerHTML;
+                        runScripts(ps);
+                    }
+
+                    // Kald patchede DOMContentLoaded callbacks
+                    flushDOMListeners();
+
+                    // Unpatch
+                    unpatchTimers();
+                    unpatchDOMReady();
+
+                    // Synkronisér QR-knap
+                    if (typeof window._qrUpdateUI === 'function') window._qrUpdateUI();
+
+                    // Opdatér browser-historik og menu
+                    history.pushState({ spa: true }, '', url);
+                    updateActiveMenu(url);
+
+                    // Scroll til top
+                    main.scrollTop = 0;
+
+                } catch (err) {
+                    console.warn('[SPA] navigation fejl, falder tilbage til fuld load', err);
+                    window.location.href = url;
+                }
+            }
+
+            // Håndtér browser Back/Forward
+            window.addEventListener('popstate', function (e) {
+                if (e.state && e.state.spa) navigate(location.pathname + location.search);
+            });
+
+            // Markér initial state i history
+            history.replaceState({ spa: true }, '', location.pathname + location.search);
+
+            // Opfang klik på sidebar-links
+            document.addEventListener('click', function (e) {
+                const link = e.target.closest('.side-menu a[href]');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                // Lad eksterne links, ankre og ikke-GET-links gå igennem normalt
+                if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('//')) return;
+                // Lad login/logout-forms gå igennem
+                if (link.closest('form')) return;
+
+                e.preventDefault();
+                if (location.pathname + location.search === href) return; // allerede her
+                navigate(href);
+            });
+
+            // Sæt aktiv menu ved første indlæsning
+            updateActiveMenu(location.pathname);
+        })();
+        </script>
+    }
 </body>
 </html>
