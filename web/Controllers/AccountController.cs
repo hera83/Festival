@@ -121,7 +121,7 @@ public class AccountController(SignInManager<AppUser> signInManager, UserManager
         }
 
         await signInManager.SignInAsync(user, isPersistent: false);
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction("Index", "Dashboard");
     }
 
     [Authorize]
