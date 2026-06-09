@@ -3,13 +3,13 @@
 <form id="createTaskForm">
     @Html.AntiForgeryToken()
     <input type="hidden" name="MessageId" value="@Model.MessageId" />
-    <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+    <div class="modal-header">
         <h6 class="modal-title mb-0">
             <i class="bi bi-check2-square me-2" style="color: var(--clr-brand);"></i>Opret opgave
         </h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
     </div>
-    <div class="modal-body" style="background: var(--clr-surface);">
+    <div class="modal-body">
         <div class="mb-3">
             <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Titel <span style="color:var(--clr-alarm);">*</span></label>
             <input type="text" name="Title" class="form-control form-control-sm"
@@ -28,11 +28,11 @@
                    style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" />
         </div>
     </div>
-    <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+    <div class="modal-footer">
         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
             <i class="bi bi-x-lg me-1"></i>Annuller
         </button>
-        <button type="submit" id="createTaskSubmit" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+        <button type="submit" id="createTaskSubmit" class="btn btn-sm btn-primary">
             <i class="bi bi-check2-square me-1"></i>Opret
         </button>
     </div>

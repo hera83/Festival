@@ -232,8 +232,8 @@
 @* ── Rediger bruger modal ── *@
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0" id="editUserModalLabel">
                     <i class="bi bi-pencil-square me-2" style="color: var(--clr-info);"></i>Rediger bruger
                 </h6>
@@ -241,7 +241,7 @@
             </div>
             <form asp-action="EditUser" asp-controller="Admin" method="post">
                 @Html.AntiForgeryToken()
-                <div class="modal-body" style="background: var(--clr-surface);">
+                <div class="modal-body">
                     <input type="hidden" id="editUserId" name="Id" />
 
                     <div class="mb-3">
@@ -295,11 +295,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Annuller
                     </button>
-                    <button type="submit" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+                    <button type="submit" class="btn btn-sm btn-primary">
                         <i class="bi bi-floppy me-1"></i>Gem
                     </button>
                 </div>
@@ -311,26 +311,26 @@
 @* ── Slet bruger bekræftelsesmodal ── *@
 <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0" id="deleteUserModalLabel">
                     <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet bruger
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
-            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+            <div class="modal-body text-center py-4">
                 <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
                 <p class="mb-1">Er du sikker på du vil slette</p>
                 <p class="fw-semibold mb-0" id="deleteUserName"></p>
             </div>
-            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+            <div class="modal-footer justify-content-center">
                 <form asp-action="DeleteUser" asp-controller="Admin" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="deleteUserId" name="userId" />
                     <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Annuller
                     </button>
-                    <button type="submit" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                    <button type="submit" class="btn btn-sm btn-danger">
                         <i class="bi bi-trash3 me-1"></i>Slet
                     </button>
                 </form>
@@ -342,8 +342,8 @@
 @* ── Opret bruger modal ── *@
 <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0" id="createUserModalLabel">
                     <i class="bi bi-person-plus me-2" style="color: var(--clr-brand);"></i>Opret bruger
                 </h6>
@@ -351,7 +351,7 @@
             </div>
             <form asp-action="CreateUser" asp-controller="Admin" method="post">
                 @Html.AntiForgeryToken()
-                <div class="modal-body" style="background: var(--clr-surface);">
+                <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small" style="color: var(--clr-text-muted);">
                             <i class="bi bi-person me-1"></i>Visningsnavn
@@ -402,11 +402,11 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Annuller
                     </button>
-                    <button type="submit" class="btn btn-sm" style="background: var(--clr-brand); color: #fff; border: none;">
+                    <button type="submit" class="btn btn-sm btn-primary">
                         <i class="bi bi-person-check me-1"></i>Opret
                     </button>
                 </div>

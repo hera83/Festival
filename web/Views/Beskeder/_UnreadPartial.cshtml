@@ -3,7 +3,7 @@
 @* Opret besked modal *@
 <div class="modal fade" id="createMsgModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+        <div class="modal-content">
             <div id="createMsgModalBody">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -16,7 +16,7 @@
 @* Detalje-modal *@
 <div class="modal fade" id="detailMsgModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+        <div class="modal-content">
             <div id="detailMsgModalBody">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -29,7 +29,7 @@
 @* Opret opgave modal *@
 <div class="modal fade" id="createTaskModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+        <div class="modal-content">
             <div id="createTaskModalBody">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -42,20 +42,20 @@
 @* Slet-modal *@
 <div class="modal fade" id="deleteMsgModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet besked</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
-            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+            <div class="modal-body text-center py-4">
                 <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
                 <p class="mb-0">Er du sikker på du vil slette denne besked?</p>
             </div>
-            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+            <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="deleteMsgConfirm" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                <button type="button" id="deleteMsgConfirm" class="btn btn-sm btn-danger">
                     <i class="bi bi-trash3 me-1"></i>Slet
                 </button>
             </div>

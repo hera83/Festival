@@ -6,8 +6,8 @@
 
 <div class="modal fade" id="volunteerImportPreviewModal" tabindex="-1" aria-labelledby="volunteerImportPreviewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 1600px; width: min(1600px, calc(100vw - 2rem));">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <div>
                     <h6 class="modal-title mb-1" id="volunteerImportPreviewModalLabel">
                         <i class="bi bi-table me-2" style="color: var(--clr-brand);"></i>Import preview
@@ -18,7 +18,7 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
-            <div class="modal-body" style="background: var(--clr-surface);">
+            <div class="modal-body">
                 <div class="d-flex flex-column align-items-start gap-2 mb-3">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <div class="btn-group btn-group-sm w-auto" role="group" aria-label="Filtrér rækker">
@@ -169,15 +169,14 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Luk
                 </button>
                 <button type="button"
                         id="confirmVolunteerImportBtn"
-                        class="btn btn-sm"
+                        class="btn btn-sm btn-primary"
                         data-has-errors="@(Model.ErrorCount > 0 ? "true" : "false")"
-                        style="background: var(--clr-brand); color: #fff; border: none;"
                         @(Model.ErrorCount > 0 ? "disabled" : null)>
                     <i class="bi bi-upload me-1"></i>Import
                 </button>

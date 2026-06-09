@@ -56,7 +56,7 @@ public class AccountController(SignInManager<AppUser> signInManager, UserManager
                 return Redirect(returnUrl);
             }
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Index", "Dashboard");
         }
 
         ModelState.AddModelError(string.Empty, "Forkert login.");

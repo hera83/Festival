@@ -25,7 +25,7 @@
 @* Modal — indhold hentes dynamisk *@
 <div class="modal fade" id="createVolModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+        <div class="modal-content">
             <div id="createVolModalBody">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -38,7 +38,7 @@
 @* Rediger-modal *@
 <div class="modal fade" id="editVolModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); color: var(--clr-text); border-color: var(--clr-border);">
+        <div class="modal-content">
             <div id="editVolModalBody">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -51,24 +51,24 @@
 @* Slet-modal *@
 <div class="modal fade" id="deleteVolModal" tabindex="-1" aria-labelledby="deleteVolModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0" id="deleteVolModalLabel">
                     <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet frivillig
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
-            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+            <div class="modal-body text-center py-4">
                 <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
                 <p class="mb-1">Er du sikker på du vil slette</p>
                 <p class="fw-semibold mb-1" id="deleteVolName"></p>
                 <p class="small mb-0" style="color: var(--clr-text-muted);">Alle tilknyttede vagter slettes også.</p>
             </div>
-            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+            <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="deleteVolConfirm" class="btn btn-sm" style="background: var(--clr-alarm); color: #fff; border: none;">
+                <button type="button" id="deleteVolConfirm" class="btn btn-sm btn-danger">
                     <i class="bi bi-trash3 me-1"></i>Slet
                 </button>
             </div>
@@ -79,14 +79,14 @@
 @* QR-kode modal *@
 <div class="modal fade" id="qrVolModal" tabindex="-1" aria-labelledby="qrVolModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0" id="qrVolModalLabel">
                     <i class="bi bi-qr-code me-2" style="color: var(--clr-brand);"></i>QR-kode
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
-            <div class="modal-body text-center py-4" style="background: var(--clr-surface);">
+            <div class="modal-body text-center py-4">
                 <p class="fw-semibold mb-0" id="qrVolName" style="font-size:1.05rem;"></p>
                 <p class="mb-3 small" style="color: var(--clr-text-muted);">Nøgle: <span id="qrVolKey" class="fw-semibold" style="color: var(--clr-text);"></span></p>
                 <div class="d-inline-block p-3 rounded-3" style="background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.35);">
@@ -94,7 +94,7 @@
                 </div>
                 <p class="mt-3 mb-0 small" style="color:var(--clr-text-muted);">Hold kamera i passende afstand og vent på autofokus</p>
             </div>
-            <div class="modal-footer justify-content-center" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+            <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-sm btn-secondary" id="qrDownloadBtn">
                     <i class="bi bi-download me-1"></i>Gem
                 </button>

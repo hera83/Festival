@@ -130,7 +130,7 @@
                     <i class="bi bi-person-check" style="color:var(--clr-ok);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="checkedInCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:var(--clr-text);" id="checkedInCount">—</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Checkede ind</div>
                 </div>
             </div>
@@ -141,7 +141,7 @@
                     <i class="bi bi-person-x" style="color:var(--clr-warn);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="noShowCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:var(--clr-text);" id="noShowCount">—</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Udeblivelser</div>
                 </div>
             </div>
@@ -152,7 +152,7 @@
                     <i class="bi bi-people" style="color:var(--clr-info);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="pitCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:var(--clr-text);" id="pitCount">—</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">I pitten</div>
                 </div>
             </div>
@@ -163,7 +163,7 @@
                     <i class="bi bi-geo-alt" style="color:var(--clr-brand);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activePostsCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:var(--clr-text);" id="activePostsCount">—</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive poster</div>
                 </div>
             </div>
@@ -174,7 +174,7 @@
                     <i class="bi bi-bell" style="color:var(--clr-alarm);font-size:0.9rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:#e6edf3;" id="activeAlarmsCount">—</div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:var(--clr-text);" id="activeAlarmsCount">—</div>
                     <div style="font-size:0.75rem;color:var(--clr-text-muted);">Aktive alarmer</div>
                 </div>
             </div>
@@ -268,8 +268,8 @@
 <!-- Check-in Modal -->
 <div class="modal fade" id="checkInModal" tabindex="-1" aria-labelledby="checkInModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="checkInModalLabel">
                     <i class="bi bi-person-check me-2" style="color:var(--clr-ok);"></i>Check-in
                 </h5>
@@ -317,7 +317,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Luk
                 </button>
@@ -329,8 +329,8 @@
 <!-- Udeblivelser Modal -->
 <div class="modal fade" id="noShowModal" tabindex="-1" aria-labelledby="noShowModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="noShowModalLabel">
                     <i class="bi bi-person-x me-2" style="color:var(--clr-warn);"></i>Udeblivelser
                 </h5>
@@ -380,7 +380,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <span id="noShowFooterCount" style="font-size:0.8rem;color:var(--clr-text-muted);margin-right:auto;"></span>
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Luk
@@ -393,9 +393,9 @@
 <!-- Pit Alarm Modal -->
 <div class="modal fade" id="pitAlarmModal" tabindex="-1" aria-labelledby="pitAlarmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
-                <h5 class="modal-title" id="pitAlarmModalLabel" style="font-size:0.95rem;color:#e6edf3;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pitAlarmModalLabel" style="font-size:0.95rem;color:var(--clr-text);">
                     <i class="bi bi-gear me-2" style="color:var(--clr-brand);"></i>Pit indstillinger
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
@@ -410,7 +410,7 @@
                     Frivillige der har stået i pitten længere end dette vil blive vist øverst med en alarm.
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <button type="button" id="clearPitAlarmBtn" class="btn btn-sm"
                         style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);">
                     <i class="bi bi-x-lg me-1"></i>Ryd alarm
@@ -427,8 +427,8 @@
 <!-- Opret Post Modal -->
 <div class="modal fade" id="createPostModal" tabindex="-1" aria-labelledby="createPostModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="createPostModalLabel">
                     <i class="bi bi-signpost-2 me-2" style="color:var(--clr-brand);"></i>Opret post
                 </h5>
@@ -460,11 +460,11 @@
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="createPostBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
+                <button type="button" id="createPostBtn" class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-lg me-1"></i>Opret
                 </button>
             </div>
@@ -475,8 +475,8 @@
 <!-- Rediger Post Modal -->
 <div class="modal fade" id="editPostModal" tabindex="-1" aria-labelledby="editPostModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="editPostModalLabel">
                     <i class="bi bi-pencil me-2" style="color:var(--clr-info);"></i>Rediger post
                 </h5>
@@ -498,11 +498,11 @@
                            style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);">
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="saveEditPostBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
+                <button type="button" id="saveEditPostBtn" class="btn btn-sm btn-primary">
                     <i class="bi bi-floppy me-1"></i>Gem
                 </button>
             </div>
@@ -513,8 +513,8 @@
 <!-- Slet Post Bekræft Modal -->
 <div class="modal fade" id="deletePostModal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="deletePostModalLabel">
                     <i class="bi bi-trash3 me-2" style="color:var(--clr-alarm);"></i>Slet post
                 </h5>
@@ -523,18 +523,18 @@
             <div class="modal-body">
                 <input type="hidden" id="deletePostId">
                 <p class="mb-2" style="color:var(--clr-text);font-size:0.88rem;">
-                    Er du sikker på at du vil slette posten <strong id="deletePostName" style="color:#e6edf3;"></strong>?
+                    Er du sikker på at du vil slette posten <strong id="deletePostName" style="color:var(--clr-text);"></strong>?
                 </p>
                 <div id="deletePostWarning" class="d-none p-2" style="background:var(--clr-warn-bg);border:1px solid var(--clr-warn);border-radius:var(--radius-md);font-size:0.8rem;color:var(--clr-warn);">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
                     <span id="deletePostVolunteerCount"></span> frivillig(e) på posten flyttes automatisk tilbage til Pitten.
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="confirmDeletePostBtn" class="btn btn-sm" style="background:var(--clr-alarm);color:#fff;border:none;">
+                <button type="button" id="confirmDeletePostBtn" class="btn btn-sm btn-danger">
                     <i class="bi bi-trash3 me-1"></i>Slet
                 </button>
             </div>
@@ -545,16 +545,16 @@
 <!-- Fremtidig flyt Modal -->
 <div class="modal fade" id="futureMoveModal" tabindex="-1" aria-labelledby="futureMoveModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background:var(--clr-surface);border:1px solid var(--clr-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--clr-border);">
-                <h5 class="modal-title" id="futureMoveModalLabel" style="font-size:0.95rem;color:#e6edf3;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="futureMoveModalLabel" style="font-size:0.95rem;color:var(--clr-text);">
                     <i class="bi bi-clock-history me-2" style="color:var(--clr-brand);"></i>Fremtidig flyt
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="futureMoveVolunteerId">
-                <p id="futureMoveVolunteerName" class="mb-3" style="font-weight:600;color:#e6edf3;"></p>
+                <p id="futureMoveVolunteerName" class="mb-3" style="font-weight:600;color:var(--clr-text);"></p>
 
                 <div id="futureMoveExistingAlert" class="d-none mb-3 p-2" style="background:var(--clr-warn-bg);border:1px solid var(--clr-warn);border-radius:var(--radius-md);font-size:0.8rem;color:var(--clr-warn);">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
@@ -578,11 +578,11 @@
                     <div class="mt-1" style="font-size:0.75rem;color:var(--clr-text-muted);">Flytningen udføres automatisk efter det angivne antal minutter.</div>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--clr-border);">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
-                <button type="button" id="futureMoveConfirmBtn" class="btn btn-sm" style="background:var(--clr-brand);color:#fff;border:none;">
+                <button type="button" id="futureMoveConfirmBtn" class="btn btn-sm btn-primary">
                     <i class="bi bi-clock-history me-1"></i>Planlæg flytning
                 </button>
             </div>
@@ -617,7 +617,7 @@
         cursor: grab;
         user-select: none;
         font-size: 0.78rem;
-        color: #e6edf3;
+        color: var(--clr-text);
         width: 100%;
         box-sizing: border-box;
     }
@@ -997,7 +997,7 @@
                 <div style="width:26px;height:26px;border-radius:50%;background:${firing ? 'var(--clr-alarm-bg)' : 'var(--clr-brand-dim)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${firing ? 'var(--clr-alarm)' : 'var(--clr-brand)'};font-weight:700;font-size:0.75rem;">
                     ${escHtml(v.name).charAt(0).toUpperCase()}
                 </div>
-                <span style="font-size:0.875rem;color:#e6edf3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+                <span style="font-size:0.875rem;color:var(--clr-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
                 ${firing ? '<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.75rem;" title="Over alarmtid"></i>' : ''}
                 ${alarmMuted ? '<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.7rem;" title="Alarm deaktiveret"></i>' : ''}
                 <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="Pit" draggable="false"
@@ -1024,7 +1024,7 @@
                     <div style="width:26px;height:26px;border-radius:50%;background:var(--clr-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--clr-text-muted);font-weight:700;font-size:0.75rem;border:1px solid var(--clr-border);">
                         ${escHtml(v.name).charAt(0).toUpperCase()}
                     </div>
-                    <span style="font-size:0.875rem;color:#e6edf3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+                    <span style="font-size:0.875rem;color:var(--clr-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
                     <span style="font-size:0.7rem;color:var(--clr-text-muted);white-space:nowrap;">${escHtml(v.currentLocation)}</span>
                     <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(v.currentLocation)}" draggable="false"
                         style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
@@ -1100,7 +1100,7 @@
         }
         const total = postAlarmCount + _pitAlarmCount;
         alarmsEl.textContent = total;
-        alarmsEl.style.color = total > 0 ? 'var(--clr-alarm)' : '#e6edf3';
+        alarmsEl.style.color = total > 0 ? 'var(--clr-alarm)' : 'var(--clr-text)';
     }
 
     function renderPost(p) {
@@ -1133,7 +1133,7 @@
 
         card.innerHTML = `
             <div class="d-flex align-items-center justify-content-between mb-1">
-                <div class="d-flex align-items-center gap-1" style="font-size:0.82rem;font-weight:600;color:#e6edf3;flex:1;min-width:0;cursor:pointer;" data-collapse-toggle>
+                <div class="d-flex align-items-center gap-1" style="font-size:0.82rem;font-weight:600;color:var(--clr-text);flex:1;min-width:0;cursor:pointer;" data-collapse-toggle>
                     <i class="bi bi-signpost-2" style="color:var(--clr-brand);font-size:0.78rem;"></i>
                     <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.name)}</span>
                     ${alarmBadge}
@@ -1224,7 +1224,19 @@
         });
 
         if (alarmFiring) card.classList.add('alarm-firing');
-        col.appendChild(card);
+
+        // Indsæt i korrekt rækkefølge baseret på _lastPosts-sorteringen,
+        // så re-renderede kort (fx ved alarmtick) ikke hopper til bunden.
+        const postsInCol = _lastPosts.filter(x => x.columnIndex === p.columnIndex);
+        const myIdx = postsInCol.findIndex(x => x.id === p.id);
+        const nextPost = postsInCol[myIdx + 1];
+        if (nextPost) {
+            const nextCard = col.querySelector(`[data-post-id="${nextPost.id}"]`);
+            if (nextCard) col.insertBefore(card, nextCard);
+            else col.appendChild(card);
+        } else {
+            col.appendChild(card);
+        }
     }
 
     function volunteerChipHtml(v, postName, alarmAfterMinutes) {

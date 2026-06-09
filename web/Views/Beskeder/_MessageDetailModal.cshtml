@@ -4,7 +4,7 @@
     var downloadUrl = Url.Action("DownloadAttachment", "Beskeder");
     var replyUrl    = Url.Action("ReplyMessage", "Beskeder");
     var token       = Html.AntiForgeryToken();
-}<div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+}<div class="modal-header">
     <div>
         <h6 class="modal-title mb-0">
             <i class="bi bi-envelope-open me-2" style="color: var(--clr-brand);"></i>@msg.Subject
@@ -16,7 +16,7 @@
     </div>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
 </div>
-<div class="modal-body" style="background: var(--clr-surface);">
+<div class="modal-body">
 
     @* ── Originale besked ── *@
     <div class="mb-3">
@@ -212,17 +212,15 @@
                       style="background: var(--clr-bg); border: 1px solid var(--clr-border);
                              color: var(--clr-text); resize: vertical; font-size:0.9rem;"></textarea>
             <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-sm"
-                        style="background: var(--clr-brand); color:#fff; border:none;">
+                <button type="submit" class="btn btn-sm btn-primary">
                     <i class="bi bi-send me-1"></i>Send
                 </button>
             </div>
         </form>
     </div>
 </div>
-<div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
-    <button type="button" class="btn btn-sm detail-create-task-btn" data-message-id="@msg.Id"
-            style="background: var(--clr-warn); color:#fff; border:none;">
+<div class="modal-footer">
+    <button type="button" class="btn btn-sm btn-warning detail-create-task-btn" data-message-id="@msg.Id">
         <i class="bi bi-check2-square me-1"></i>Opret
     </button>
     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
@@ -232,14 +230,14 @@
 
 <div class="modal fade" id="messageMediaPreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border); color: var(--clr-text);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--clr-border); background: var(--clr-bg);">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h6 class="modal-title mb-0" id="messageMediaPreviewTitle">
                     <i class="bi bi-arrows-fullscreen me-2" style="color: var(--clr-brand);"></i>Vedhæftning
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
-            <div class="modal-body p-2 p-md-3" style="background: var(--clr-surface);">
+            <div class="modal-body p-2 p-md-3">
                 <div class="rounded-3 d-flex align-items-center justify-content-center"
                      style="min-height: 55vh; background: var(--clr-bg); border: 1px solid var(--clr-border);">
                     <img id="messageMediaPreviewImage" alt="Preview" style="display:none;max-width:100%;max-height:75vh;object-fit:contain;" />
@@ -248,12 +246,11 @@
                     </video>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top: 1px solid var(--clr-border); background: var(--clr-bg);">
+            <div class="modal-footer">
                 <a id="messageMediaPreviewDownload"
-                   class="btn btn-sm"
+                   class="btn btn-sm btn-info"
                    href="#"
-                   download
-                   style="background: var(--clr-info); color:#fff; border:none;">
+                   download>
                     <i class="bi bi-download me-1"></i>Download
                 </a>
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">

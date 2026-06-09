@@ -566,14 +566,50 @@
                 list.forEach(fn => { try { fn(); } catch(e) { console.error('[SPA] DOMContentLoaded cb error', e); } });
             }
 
-            // Udfør scripts fra en DOM-node (genskaber <script> så browseren evaluerer dem)
-            function runScripts(container) {
-                container.querySelectorAll('script').forEach(old => {
-                    if (old.src) return; // eksterne scripts springes over (allerede loadet i <head>)
-                    const s = document.createElement('script');
-                    s.textContent = old.textContent;
-                    old.parentNode.replaceChild(s, old);
+            // Udfør scripts fra en DOM-node (genskaber <script> så browseren evaluerer dem).
+            // Returnerer et Promise – externe scripts indlæses sekventielt FØR inline-kode køres.
+            // _loadedExternalSrcs sporer URLs der faktisk er indlæst i denne session.
+            const _loadedExternalSrcs = new Set(
+                [...document.head.querySelectorAll('script[src]')].map(s => s.src)
+            );
+            const _loadedExternalCss = new Set(
+                [...document.head.querySelectorAll('link[rel="stylesheet"][href]')].map(l => l.href)
+            );
+            async function runScripts(container) {
+                // Flyt <link rel="stylesheet"> permanent til <head> så de ikke forsvinder ved næste swap
+                container.querySelectorAll('link[rel="stylesheet"][href]').forEach(old => {
+                    const abs = new URL(old.href, location.href).href;
+                    if (!_loadedExternalCss.has(abs)) {
+                        _loadedExternalCss.add(abs);
+                        const l = document.createElement('link');
+                        l.rel  = 'stylesheet';
+                        l.href = abs;
+                        document.head.appendChild(l);
+                    }
+                    old.remove();
                 });
+
+                const nodes = [...container.querySelectorAll('script')];
+                for (const old of nodes) {
+                    if (old.src) {
+                        // Normaliser URL til absolut så sammenligning er stabil
+                        const abs = new URL(old.src, location.href).href;
+                        if (!_loadedExternalSrcs.has(abs)) {
+                            _loadedExternalSrcs.add(abs);
+                            await new Promise(resolve => {
+                                const s = document.createElement('script');
+                                s.src     = abs;
+                                s.onload  = resolve;
+                                s.onerror = resolve; // fortsæt selv ved fejl så siden ikke hænger
+                                document.head.appendChild(s);
+                            });
+                        }
+                    } else {
+                        const s = document.createElement('script');
+                        s.textContent = old.textContent;
+                        old.parentNode.replaceChild(s, old);
+                    }
+                }
             }
 
             // Opdatér aktiv menu-markering
@@ -637,7 +673,7 @@
                     const ps = document.getElementById('page-scripts');
                     if (ps && newScripts) {
                         ps.innerHTML = newScripts.innerHTML;
-                        runScripts(ps);
+                        await runScripts(ps);
                     }
 
                     // Kald patchede DOMContentLoaded callbacks

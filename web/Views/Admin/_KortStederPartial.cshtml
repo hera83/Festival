@@ -146,10 +146,10 @@
 @* ── Opret POI modal ── *@
 <div class="modal fade" id="opretPoiModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+        <div class="modal-content">
             <form method="post" action="/Admin/KortStederOpret">
                 @Html.AntiForgeryToken()
-                <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-pin-map me-2" style="color: var(--clr-brand);"></i>Opret nyt sted</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -196,7 +196,7 @@
                     </div>
                     <div id="opretPoiMap" style="height: 300px; border-radius: var(--radius-md); border: 1px solid var(--clr-border);"></div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
                     <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-pin-map me-1"></i>Opret</button>
                 </div>
@@ -208,11 +208,11 @@
 @* ── Rediger POI modal ── *@
 <div class="modal fade" id="redigerPoiModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+        <div class="modal-content">
             <form method="post" action="/Admin/KortStederOpdater">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" id="redigerPoiId" />
-                <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-pencil me-2" style="color: var(--clr-brand);"></i>Rediger sted</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -259,7 +259,7 @@
                     </div>
                     <div id="redigerPoiMap" style="height: 300px; border-radius: var(--radius-md); border: 1px solid var(--clr-border);"></div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
                     <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-floppy me-1"></i>Gem</button>
                 </div>
@@ -271,11 +271,11 @@
 @* ── Slet POI modal ── *@
 <div class="modal fade" id="sletPoiModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+        <div class="modal-content">
             <form method="post" action="/Admin/KortStederSlet">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" id="sletPoiId" />
-                <div class="modal-header" style="border-bottom: 1px solid var(--clr-border);">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet sted</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -283,7 +283,7 @@
                     <p style="color: var(--clr-text);">Er du sikker på, at du vil slette stedet <strong id="sletPoiNavn"></strong>?</p>
                     <p style="color: var(--clr-text-muted); font-size: 0.85rem;">Dette kan ikke fortrydes.</p>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--clr-border);">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
                     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash me-1"></i>Slet</button>
                 </div>
@@ -299,9 +299,7 @@
     var _redigerMap = null, _redigerMarker = null;
 
     function loadLeaflet(callback) {
-        if (window.L) { callback(); return; }
-
-        // Indlæs CSS
+        // Sikr altid at CSS er til stede i <head> (kan være fjernet ved SPA-navigation)
         if (!document.getElementById('leaflet-css')) {
             var css = document.createElement('link');
             css.id  = 'leaflet-css';
@@ -309,6 +307,8 @@
             css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
             document.head.appendChild(css);
         }
+
+        if (window.L) { callback(); return; }
 
         // Indlæs JS
         var script = document.createElement('script');
