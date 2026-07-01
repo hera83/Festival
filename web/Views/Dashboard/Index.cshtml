@@ -686,6 +686,8 @@
     let pitSearchTimer = null;
     let dragPayload = null; // { type: 'volunteer'|'post', id, fromLocation, element }
     let _autoRefreshPaused = false; // sættes true under drag/drop
+    let _pendingBoardRefresh = false; // en ændring blev gemt mens der var en aktiv drag – opdater når den slipper
+    let _pendingBoardRefreshPitQuery = '';
     let _lastStateHash = null;
     let _knownAlarmState = new Map(); // postId → Set<volunteerId> der p.t. viser alarm
 
@@ -1730,6 +1732,20 @@
             .catch(() => showToast('Noget gik galt.', 'error'));
     }
 
+    // Opdater poster + pit efter en gemt ændring. Hvis der er en anden drag i gang
+    // (fx brugeren allerede greb fat i næste frivillig mens forrige flytning blev gemt),
+    // ville en fuld gentegning her rive drop-zonen væk under den aktive drag og få
+    // dropped til stille at fejle. Udsæt derfor gentegningen til den aktive drag slipper.
+    function refreshBoardAfterChange(pitQuery = '') {
+        if (_autoRefreshPaused) {
+            _pendingBoardRefresh = true;
+            _pendingBoardRefreshPitQuery = pitQuery;
+            return;
+        }
+        loadAllPosts();
+        loadPitVolunteers(pitQuery);
+    }
+
     // -- Drag & Drop -----------------------------------------------------------
     function onPostDragStart(e) {
         dragPayload = { type: 'post', id: parseInt(this.dataset.postId), element: this };
@@ -1882,7 +1898,7 @@
         // Kald UpdateColumn for selve kolonneskiftet og Reorder for den endelige rækkefølge
         postJson('/Post/UpdateColumn', { postId, columnIndex: newColumnIndex })
             .then(res => {
-                if (!res.success) { showToast(res.message, 'warning'); loadAllPosts(); return; }
+                if (!res.success) { showToast(res.message, 'warning'); refreshBoardAfterChange(); return; }
                 // Renummerer hele målkolonnen inkl. det nye kort
                 const items = existingIds.map((id, i) => ({ postId: id, sortOrder: i }));
                 return postJson('/Post/Reorder', { items });
@@ -1890,9 +1906,9 @@
             .then(res => {
                 if (res && !res.success) showToast(res.message, 'warning');
                 clearPitSearch();
-                loadAllPosts();
+                refreshBoardAfterChange();
             })
-            .catch(() => { showToast('Noget gik galt.', 'error'); loadAllPosts(); });
+            .catch(() => { showToast('Noget gik galt.', 'error'); refreshBoardAfterChange(); });
     }
 
     function reorderPostInColumn(postId, colEl, beforeCard) {
@@ -1913,14 +1929,14 @@
         remaining.forEach(c => colEl.appendChild(c));
 
         postJson('/Post/Reorder', { items })
-            .then(res => { if (!res.success) { showToast(res.message, 'warning'); loadAllPosts(); } else {
+            .then(res => { if (!res.success) { showToast(res.message, 'warning'); refreshBoardAfterChange(); } else {
                 // Opdater _lastPosts sortOrder lokalt
                 items.forEach(item => {
                     const p = _lastPosts.find(x => x.id === item.postId);
                     if (p) p.sortOrder = item.sortOrder;
                 });
             }})
-            .catch(() => { showToast('Noget gik galt.', 'error'); loadAllPosts(); });
+            .catch(() => { showToast('Noget gik galt.', 'error'); refreshBoardAfterChange(); });
     }
 
     function movePost(postId, newColumnIndex) {
@@ -1935,9 +1951,8 @@
             .then(res => {
                 if (res.success) {
                     clearPitSearch();
-                    loadPitVolunteers('');
-                    loadAllPosts();
                     updateCheckedInCount();
+                    refreshBoardAfterChange();
                 } else {
                     showToast(res.message, 'warning');
                 }
@@ -2149,7 +2164,17 @@
 
     // Lyt på drag-events for at pause refresh under drag
     document.addEventListener('dragstart', () => { _autoRefreshPaused = true; });
-    document.addEventListener('dragend',   () => { setTimeout(() => { _autoRefreshPaused = false; }, 500); });
+    document.addEventListener('dragend',   () => {
+        setTimeout(() => {
+            _autoRefreshPaused = false;
+            if (_pendingBoardRefresh) {
+                _pendingBoardRefresh = false;
+                loadAllPosts();
+                loadPitVolunteers(_pendingBoardRefreshPitQuery);
+                _pendingBoardRefreshPitQuery = '';
+            }
+        }, 500);
+    });
 
     async function backgroundRefresh() {
         // Spring over hvis brugeren er i gang med drag eller søger aktivt
