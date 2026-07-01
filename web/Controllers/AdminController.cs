@@ -616,7 +616,7 @@ public class AdminController : Controller
             .Select(r => new ShiftTypeImportKey(
                 currentSeasonId,
                 string.IsNullOrWhiteSpace(r.ShiftName) ? DefaultShiftName : r.ShiftName.Trim(),
-                r.Start.Value,
+                r.Start!.Value,
                 r.End!.Value))
             .Distinct()
             .ToList();
@@ -676,7 +676,7 @@ public class AdminController : Controller
             var shiftName = string.IsNullOrWhiteSpace(row.ShiftName) ? DefaultShiftName : row.ShiftName.Trim();
 
             var volunteer = volunteerMap[(seasonId, row.Key)];
-            var shiftType = shiftTypeMap[new ShiftTypeImportKey(seasonId, shiftName, row.Start.Value, row.End!.Value)];
+            var shiftType = shiftTypeMap[new ShiftTypeImportKey(seasonId, shiftName, row.Start!.Value, row.End!.Value)];
 
             shiftsToInsert.Add(new Shift
             {

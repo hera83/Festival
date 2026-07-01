@@ -30,7 +30,7 @@ public class BeskederController(
         {
             UnreadCount = await db.Messages.CountAsync(m => m.SeasonId == season && !m.IsRead && !m.IsDeleted),
             ReadCount   = await db.Messages.CountAsync(m => m.SeasonId == season && m.IsRead && !m.IsDeleted),
-            TaskCount   = await db.MessageTasks.CountAsync(t => t.Message.SeasonId == season && t.Status != MessageTaskStatus.Udført)
+            TaskCount   = await db.MessageTasks.CountAsync(t => t.Message != null && t.Message.SeasonId == season && t.Status != MessageTaskStatus.Udført)
         };
         return View(vm);
     }
@@ -43,7 +43,7 @@ public class BeskederController(
         {
             unreadCount = await db.Messages.CountAsync(m => m.SeasonId == season && !m.IsRead && !m.IsDeleted),
             readCount   = await db.Messages.CountAsync(m => m.SeasonId == season && m.IsRead && !m.IsDeleted),
-            taskCount   = await db.MessageTasks.CountAsync(t => t.Message.SeasonId == season && t.Status != MessageTaskStatus.Udført)
+            taskCount   = await db.MessageTasks.CountAsync(t => t.Message != null && t.Message.SeasonId == season && t.Status != MessageTaskStatus.Udført)
         });
     }
 
@@ -588,9 +588,9 @@ public class BeskederController(
     {
         var task = await db.MessageTasks
             .Include(t => t.Message)
-                .ThenInclude(m => m.Tasks)
+                .ThenInclude(m => m!.Tasks)
             .Include(t => t.Message)
-                .ThenInclude(m => m.Attachments)
+                .ThenInclude(m => m!.Attachments)
             .FirstOrDefaultAsync(t => t.Id == id);
         if (task is null) return Json(new { success = false, message = "Opgave ikke fundet." });
 
