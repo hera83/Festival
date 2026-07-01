@@ -307,6 +307,42 @@ namespace web.Controllers
             return Json(result);
         }
 
+        // GET: /Dashboard/GetVolunteerHistory?volunteerId=...
+        // Bevægelseshistorik for en frivilligs aktuelle check-in-session — bruges til
+        // hover-info på dashboardet (hvornår kom de til hver post, og hvor længe de var der).
+        [HttpGet]
+        public async Task<IActionResult> GetVolunteerHistory(int volunteerId)
+        {
+            var seasonId = AppTime.CopenhagenToday.Year;
+
+            var checkIn = await _db.VolunteerCheckIns
+                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == volunteerId && c.CheckedOutAt == null);
+
+            if (checkIn == null)
+                return Json(new { hasCheckIn = false });
+
+            var logs = await _db.VolunteerLocationLogs
+                .Where(l => l.CheckInId == checkIn.Id && l.EventType != "CheckOut")
+                .OrderBy(l => l.OccurredAt)
+                .ToListAsync();
+
+            var now = AppTime.Now;
+            var history = logs.Select((entry, i) =>
+            {
+                var end = i + 1 < logs.Count ? logs[i + 1].OccurredAt : now;
+                var minutes = Math.Max(0, (int)Math.Round((end - entry.OccurredAt).TotalMinutes));
+                return new
+                {
+                    location = entry.Location,
+                    occurredAt = entry.OccurredAt,
+                    durationMinutes = minutes,
+                    isCurrent = i == logs.Count - 1
+                };
+            }).ToList();
+
+            return Json(new { hasCheckIn = true, history });
+        }
+
         // POST: /Dashboard/MoveVolunteer  — flyt frivillig mellem Pit og post eller mellem poster
         [HttpPost]
         [ValidateAntiForgeryToken]

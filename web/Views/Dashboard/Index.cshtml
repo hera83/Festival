@@ -934,6 +934,7 @@
     window.loadPitVolunteers = loadPitVolunteers;
 
     function renderPitList(volunteers, q) {
+        hideVolunteerHistoryPopup();
         pitList.classList.remove('d-none');
         const hasQuery = q && q.trim() !== '';
 
@@ -1006,6 +1007,7 @@
                 </button>`
             row.addEventListener('dragstart', onVolunteerDragStart);
             row.addEventListener('dragend', onDragEnd);
+            attachVolunteerHistoryHover(row, v.volunteerId);
             pitList.appendChild(row);
         });
 
@@ -1030,6 +1032,7 @@
                         style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>`;
+                attachVolunteerHistoryHover(row, v.volunteerId);
                 pitList.appendChild(row);
             });
         }
@@ -1064,6 +1067,7 @@
     }
 
     function renderAllPosts(posts) {
+        hideVolunteerHistoryPopup();
         _lastPosts = posts;
         _knownAlarmState.clear(); // nulstil alarmtilstand så tickeren re-evaluerer
         // Ryd alle 5 kolonner og rebuild synkront (ingen visuel blink da JS er single-threaded)
@@ -1221,6 +1225,7 @@
         card.querySelectorAll('.volunteer-chip').forEach(chip => {
             chip.addEventListener('dragstart', onVolunteerDragStart);
             chip.addEventListener('dragend', onDragEnd);
+            attachVolunteerHistoryHover(chip, parseInt(chip.dataset.volunteerId));
         });
 
         if (alarmFiring) card.classList.add('alarm-firing');
@@ -1260,6 +1265,114 @@
                 <i class="bi bi-three-dots-vertical"></i>
             </button>
         </span>`;
+    }
+
+    // -- Frivillig historik-popup (hover) ---------------------------------------
+    // Viser hvornår en frivillig kom til sin nuværende post/pit, og hvor længe de
+    // har været der, samt tidligere poster i samme check-in-session.
+    let _volHistoryPopup = null;
+    let _volHistoryTicker = null;
+    let _volHistoryHideTimer = null;
+    let _volHistoryShowTimer = null;
+    let _volHistoryReqId = 0;
+    const VOL_HISTORY_HOVER_DELAY_MS = 2000;
+
+    function attachVolunteerHistoryHover(el, volunteerId) {
+        el.addEventListener('mouseenter', () => {
+            clearTimeout(_volHistoryShowTimer);
+            _volHistoryShowTimer = setTimeout(() => showVolunteerHistoryPopup(el, volunteerId), VOL_HISTORY_HOVER_DELAY_MS);
+        });
+        el.addEventListener('mouseleave', () => {
+            clearTimeout(_volHistoryShowTimer);
+            clearTimeout(_volHistoryHideTimer);
+            _volHistoryHideTimer = setTimeout(closeVolunteerHistoryPopup, 80);
+        });
+    }
+
+    // Lukker kun den viste popup — rører ikke en evt. ny, allerede planlagt visning
+    // for et element brugeren i mellemtiden er begyndt at hovere.
+    function closeVolunteerHistoryPopup() {
+        clearTimeout(_volHistoryHideTimer);
+        clearInterval(_volHistoryTicker);
+        _volHistoryTicker = null;
+        if (_volHistoryPopup) { _volHistoryPopup.remove(); _volHistoryPopup = null; }
+    }
+
+    // Fuld nulstilling — bruges når DOM'en genopbygges (fx ved auto-refresh),
+    // så en ventende visning ikke dukker op for et element der ikke længere findes.
+    function hideVolunteerHistoryPopup() {
+        clearTimeout(_volHistoryShowTimer);
+        closeVolunteerHistoryPopup();
+    }
+
+    function showVolunteerHistoryPopup(el, volunteerId) {
+        clearTimeout(_volHistoryHideTimer);
+        const reqId = ++_volHistoryReqId;
+
+        fetch(`/Dashboard/GetVolunteerHistory?volunteerId=${volunteerId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (reqId !== _volHistoryReqId) return; // en ny hover er startet i mellemtiden
+                if (!el.isConnected) return; // elementet blev fjernet (fx pga. re-render)
+                closeVolunteerHistoryPopup();
+                if (!data.hasCheckIn || !data.history || data.history.length === 0) return;
+                renderVolunteerHistoryPopup(el, data.history);
+            })
+            .catch(() => {});
+    }
+
+    function formatDuration(mins) {
+        if (mins < 1) return '<1 min';
+        if (mins < 60) return `${mins} min`;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return m > 0 ? `${h}t ${m}min` : `${h}t`;
+    }
+
+    function renderVolunteerHistoryPopup(el, history) {
+        const popup = document.createElement('div');
+        popup.id = 'vol-history-popup';
+        popup.style.cssText = `position:fixed;z-index:9998;min-width:190px;max-width:260px;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);font-size:0.78rem;padding:8px 10px;pointer-events:none;`;
+        document.body.appendChild(popup);
+        _volHistoryPopup = popup;
+
+        const renderContent = () => {
+            if (!_volHistoryPopup) return;
+            const now = Date.now();
+            const rows = [...history].reverse().map(h => {
+                const t = parseLocalDate(h.occurredAt);
+                const timeStr = t.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+                const mins = h.isCurrent
+                    ? Math.max(0, Math.round((now - t.getTime()) / 60000))
+                    : h.durationMinutes;
+                const locLabel = h.location === 'Pit' ? 'Pitten' : (h.location || '—');
+                return `<div style="display:flex;align-items:baseline;gap:6px;padding:2px 0;${h.isCurrent ? 'color:var(--clr-text);font-weight:600;' : 'color:var(--clr-text-muted);'}">
+                    <i class="bi ${h.isCurrent ? 'bi-geo-alt-fill' : 'bi-geo-alt'}" style="font-size:0.7rem;flex-shrink:0;"></i>
+                    <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(locLabel)}</span>
+                    <span style="white-space:nowrap;">${timeStr} · ${formatDuration(mins)}</span>
+                </div>`;
+            }).join('');
+            _volHistoryPopup.innerHTML = `<div style="font-size:0.68rem;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Historik i dag</div>${rows}`;
+            positionPopup();
+        };
+
+        const positionPopup = () => {
+            if (!_volHistoryPopup || !el.isConnected) { closeVolunteerHistoryPopup(); return; }
+            const rect = el.getBoundingClientRect();
+            const popH = _volHistoryPopup.offsetHeight;
+            const popW = _volHistoryPopup.offsetWidth;
+            let top = rect.bottom + 6;
+            let left = rect.left;
+            if (top + popH > window.innerHeight - 8) top = rect.top - popH - 6;
+            if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+            if (left < 4) left = 4;
+            _volHistoryPopup.style.top = top + 'px';
+            _volHistoryPopup.style.left = left + 'px';
+        };
+
+        renderContent();
+        // Tik varigheden på den aktuelle post live, i samme rytme som dashboardets øvrige opdateringer.
+        _volHistoryTicker = setInterval(renderContent, 1000);
     }
 
     // -- Frivillig kontekstmenu ------------------------------------------------
