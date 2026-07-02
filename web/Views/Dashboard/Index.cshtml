@@ -106,6 +106,21 @@
     border: 1px solid var(--clr-alarm, #e05a3a);
 }
 
+/* ── Elapsed-time badge (hvor længe en frivillig har været på nuv. post/pit) ── */
+.elapsed-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: var(--clr-bg);
+    color: var(--clr-text-muted);
+    border: 1px solid var(--clr-border);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* ── Reorder insert-indikator (linje der viser hvori kortet lander) */
 .post-insert-indicator {
     height: 3px;
@@ -1001,6 +1016,7 @@
                     ${escHtml(v.name).charAt(0).toUpperCase()}
                 </div>
                 <span style="font-size:0.875rem;color:var(--clr-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+                ${elapsedBadgeHtml(v.arrivedAtPit)}
                 ${firing ? '<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.75rem;" title="Over alarmtid"></i>' : ''}
                 ${alarmMuted ? '<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.7rem;" title="Alarm deaktiveret"></i>' : ''}
                 <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="Pit" draggable="false"
@@ -1030,6 +1046,7 @@
                     </div>
                     <span style="font-size:0.875rem;color:var(--clr-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
                     <span style="font-size:0.7rem;color:var(--clr-text-muted);white-space:nowrap;">${escHtml(v.currentLocation)}</span>
+                    ${elapsedBadgeHtml(v.arrivedAtPit)}
                     <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(v.currentLocation)}" draggable="false"
                         style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
                         <i class="bi bi-three-dots-vertical"></i>
@@ -1260,6 +1277,7 @@
                 ${escHtml(v.name).charAt(0).toUpperCase()}
             </span>
             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
+            ${elapsedBadgeHtml(v.arrivedAtPost)}
             ${alarmIcon}
             ${alarmMuted ? `<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.65rem;" title="Alarm deaktiveret"></i>` : ''}
             <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(postName)}" draggable="false"
@@ -1330,6 +1348,38 @@
         const m = mins % 60;
         return m > 0 ? `${h}t ${m}min` : `${h}t`;
     }
+
+    // -- Elapsed-time badge (lille badge i frivillig-elementet: "1 t 32 m") -----
+    // Bruges i pit-rækker og post-chips til at vise hvor længe en frivillig har
+    // været på sin nuværende post/pit. Tikkes hvert sekund af elapsedTick(),
+    // som kun skriver til DOM'en når den viste tekst faktisk ændrer sig.
+    function formatElapsedBadge(mins) {
+        if (mins < 1) return '<1 m';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        if (h === 0) return `${m} m`;
+        return m > 0 ? `${h} t ${m} m` : `${h} t`;
+    }
+
+    function elapsedBadgeHtml(arrivedAt) {
+        if (!arrivedAt) return '';
+        const mins = Math.max(0, Math.round((Date.now() - parseLocalDate(arrivedAt).getTime()) / 60000));
+        return `<span class="elapsed-badge" data-arrived-at="${escHtml(arrivedAt)}">${formatElapsedBadge(mins)}</span>`;
+    }
+
+    function elapsedTick() {
+        if (document.hidden) return;
+        const now = Date.now();
+        document.querySelectorAll('.elapsed-badge[data-arrived-at]').forEach(el => {
+            const arrivedAt = el.dataset.arrivedAt;
+            if (!arrivedAt) return;
+            const mins = Math.max(0, Math.round((now - parseLocalDate(arrivedAt).getTime()) / 60000));
+            const text = formatElapsedBadge(mins);
+            if (el.textContent !== text) el.textContent = text;
+        });
+    }
+
+    setInterval(elapsedTick, 1000);
 
     function renderVolunteerHistoryPopup(el, history) {
         const popup = document.createElement('div');
