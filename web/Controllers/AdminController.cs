@@ -9,6 +9,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
+using web.Services.Sms;
+using web.Services.Sms.Dtos.Subscriptions;
 using web.Utils;
 
 namespace web.Controllers;
@@ -21,12 +23,24 @@ public class AdminController : Controller
     private readonly ApplicationDbContext _db;
     private readonly UserManager<AppUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly ISmsService _smsService;
+    private readonly ISmsMessageLogService _smsMessageLogService;
+    private readonly ISmsGatewayStatusCache _smsGatewayStatusCache;
 
-    public AdminController(ApplicationDbContext db, UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+    public AdminController(
+        ApplicationDbContext db,
+        UserManager<AppUser> userManager,
+        RoleManager<IdentityRole> roleManager,
+        ISmsService smsService,
+        ISmsMessageLogService smsMessageLogService,
+        ISmsGatewayStatusCache smsGatewayStatusCache)
     {
         _db = db;
         _userManager = userManager;
         _roleManager = roleManager;
+        _smsService = smsService;
+        _smsMessageLogService = smsMessageLogService;
+        _smsGatewayStatusCache = smsGatewayStatusCache;
     }
 
     public IActionResult Index(string tab = "brugere")
@@ -966,14 +980,7 @@ public class AdminController : Controller
         }
     }
 
-    private static bool IsValidDanishPhone(string value)
-    {
-        var digits = new string(value.Where(char.IsDigit).ToArray());
-        if (digits.StartsWith("45") && digits.Length == 10)
-            digits = digits[2..];
-
-        return digits.Length == 8;
-    }
+    private static bool IsValidDanishPhone(string value) => PhoneNumbers.TryNormalizeDanish(value, out _);
 
     // ── Brugere partial ──────────────────────────────────────────
     public Task<IActionResult> UsersPartial() => UsersSearch();
@@ -1261,6 +1268,433 @@ public class AdminController : Controller
             TempData["Success"] = $"Stedet '{poi.Name}' blev slettet.";
         }
         return RedirectToAction(nameof(Index), new { tab = "kortsteder" });
+    }
+
+    // ── SMS ───────────────────────────────────────────────────────
+
+    public async Task<IActionResult> SmsPartial()
+    {
+        var vm = new SmsPartialViewModel
+        {
+            Status = await FetchAndCacheGatewayStatusAsync(),
+            Log = await SmsLogQuery("", 1, 10)
+        };
+
+        var season = AppTime.CurrentSeason;
+        vm.AllVolunteers = await _db.Volunteers
+            .Where(v => v.SeasonId == season && v.PhoneNumber != null && v.PhoneNumber != "")
+            .OrderBy(v => v.Name)
+            .Select(v => new SmsVolunteerPickerItem { VolunteerId = v.Id, Name = v.Name, PhoneNumber = v.PhoneNumber! })
+            .ToListAsync();
+
+        return PartialView("_SmsPartial", vm);
+    }
+
+    // Henter frisk status/saldo hos gatewayen, opdaterer den delte cache (som
+    // baggrundstjenesten SmsStatusUpdateService ellers holder ved lige hvert
+    // 15. sekund) og returnerer den til den aktuelle sidevisning.
+    private async Task<SmsGatewayStatusViewModel> FetchAndCacheGatewayStatusAsync()
+    {
+        var status = new SmsGatewayStatusViewModel();
+
+        try
+        {
+            var health = await _smsService.GetHealthAsync();
+            status.GatewayOnline = health is not null;
+            status.HealthStatus = health?.Status;
+            status.HealthTimestamp = health?.Timestamp;
+        }
+        catch (HttpRequestException ex)
+        {
+            status.GatewayOnline = false;
+            status.GatewayErrorMessage = ex.Message;
+        }
+
+        try
+        {
+            var balance = await _smsService.GetBalanceCostAsync();
+            status.Balance = balance?.Balance;
+            status.BalanceUpdatedAt = balance?.UpdatedAt;
+        }
+        catch (HttpRequestException ex)
+        {
+            status.GatewayErrorMessage ??= ex.Message;
+        }
+
+        _smsGatewayStatusCache.Update(new SmsGatewayStatusSnapshot
+        {
+            Online = status.GatewayOnline,
+            HealthStatus = status.HealthStatus,
+            HealthTimestamp = status.HealthTimestamp,
+            ErrorMessage = status.GatewayErrorMessage,
+            Balance = status.Balance,
+            BalanceUpdatedAt = status.BalanceUpdatedAt
+        });
+
+        return status;
+    }
+
+    // GET: /Admin/SmsGatewayStatus — læses fra den delte cache (ingen live gateway-kald),
+    // så klientens 1-sekunds polling kan genopfriske saldo/status-kortene billigt.
+    [HttpGet]
+    public IActionResult SmsGatewayStatus()
+    {
+        var snapshot = _smsGatewayStatusCache.Current;
+        var vm = new SmsGatewayStatusViewModel
+        {
+            GatewayOnline = snapshot.Online,
+            HealthStatus = snapshot.HealthStatus,
+            HealthTimestamp = snapshot.HealthTimestamp,
+            GatewayErrorMessage = snapshot.ErrorMessage,
+            Balance = snapshot.Balance,
+            BalanceUpdatedAt = snapshot.BalanceUpdatedAt
+        };
+        return PartialView("_SmsStatusPartial", vm);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SmsLogSearch(string q = "", int page = 1, int pageSize = 10)
+        => PartialView("_SmsLogTablePartial", await SmsLogQuery(q, page, pageSize));
+
+    // GET: /Admin/SmsLogStateHash — let fingerprint af sms-loggen OG gateway-status/saldo,
+    // bruges af klientens baggrunds-poller til at opdage ændringer (nye sms'er, statusskift,
+    // saldo-ændring) uden at hente alle data eller kalde gatewayen live for hvert poll.
+    [HttpGet]
+    public async Task<IActionResult> SmsLogStateHash()
+    {
+        var season = AppTime.CurrentSeason;
+        var rows = await _db.SmsMessages
+            .Where(m => m.SeasonId == season)
+            .Select(m => new { m.Id, m.Status })
+            .ToListAsync();
+
+        var snapshot = _smsGatewayStatusCache.Current;
+        var raw = string.Join("|", rows.Select(r => $"{r.Id}:{r.Status}"))
+            + $"||{snapshot.Online}|{snapshot.Balance}|{snapshot.HealthStatus}";
+        var hash = raw.GetHashCode().ToString("X8");
+        return Json(new { hash });
+    }
+
+    private async Task<SmsLogViewModel> SmsLogQuery(string q, int page, int pageSize)
+    {
+        var season = AppTime.CurrentSeason;
+        var query =
+            from m in _db.SmsMessages
+            where m.SeasonId == season
+            join v in _db.Volunteers on m.VolunteerId equals v.Id into vg
+            from v in vg.DefaultIfEmpty()
+            select new { m, v };
+
+        if (!string.IsNullOrWhiteSpace(q))
+            query = query.Where(x =>
+                (x.v != null && x.v.Name.Contains(q)) ||
+                x.m.PhoneNumberSnapshot.Contains(q) ||
+                x.m.MessageBody.Contains(q));
+
+        var total = await query.CountAsync();
+        if (pageSize < 1) pageSize = 10;
+        if (page < 1) page = 1;
+        var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+        if (page > totalPages && totalPages > 0) page = totalPages;
+
+        var rows = await query
+            .OrderByDescending(x => x.m.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var senderIds = rows.Where(x => x.m.SentByUserId != null).Select(x => x.m.SentByUserId!).Distinct().ToList();
+        var senders = await _db.Users.Where(u => senderIds.Contains(u.Id)).ToListAsync();
+
+        var items = rows.Select(x =>
+        {
+            var sender = x.m.SentByUserId is null ? null : senders.FirstOrDefault(u => u.Id == x.m.SentByUserId);
+            return new SmsMessageRowViewModel
+            {
+                Id = x.m.Id,
+                Direction = x.m.Direction,
+                MessageId = x.m.MessageId,
+                VolunteerId = x.v?.Id,
+                VolunteerName = x.v?.Name,
+                PhoneNumberSnapshot = x.m.PhoneNumberSnapshot,
+                MessageBody = x.m.MessageBody,
+                Status = x.m.Status,
+                SegmentCount = x.m.SegmentCount,
+                TotalPriceDkk = x.m.TotalPriceDkk,
+                CreatedAt = x.m.CreatedAt,
+                SentByDisplayName = x.m.Direction == SmsDirection.Inbound
+                    ? null
+                    : (sender?.DisplayName ?? sender?.UserName ?? "Ukendt")
+            };
+        }).ToList();
+
+        return new SmsLogViewModel
+        {
+            Items = items,
+            Q = q,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total,
+            TotalPages = totalPages,
+            RangeFrom = total == 0 ? 0 : (page - 1) * pageSize + 1,
+            RangeTo = Math.Min(page * pageSize, total)
+        };
+    }
+
+    public async Task<IActionResult> SmsAbonnementerListe()
+    {
+        var vm = new SmsSubscriptionListViewModel();
+        var season = AppTime.CurrentSeason;
+        var allVolunteers = await _db.Volunteers
+            .Where(v => v.SeasonId == season && v.PhoneNumber != null && v.PhoneNumber != "")
+            .OrderBy(v => v.Name)
+            .Select(v => new SmsVolunteerPickerItem { VolunteerId = v.Id, Name = v.Name, PhoneNumber = v.PhoneNumber! })
+            .ToListAsync();
+
+        try
+        {
+            var subs = await _smsService.GetAllSubscriptionsAsync();
+            var today = DateOnly.FromDateTime(AppTime.Now);
+
+            vm.Items = subs.Select(s =>
+            {
+                var normalizedSubNumbers = s.PhoneNumbers
+                    .Select(PhoneNumbers.NormalizeDanishOrNull)
+                    .Where(n => n is not null)
+                    .ToHashSet();
+                var matched = allVolunteers
+                    .Where(av => normalizedSubNumbers.Contains(PhoneNumbers.NormalizeDanishOrNull(av.PhoneNumber)))
+                    .ToList();
+                var matchedNormalizedNumbers = matched.Select(m => PhoneNumbers.NormalizeDanishOrNull(m.PhoneNumber)).ToHashSet();
+                return new SmsSubscriptionRowViewModel
+                {
+                    Id = s.Id,
+                    PhoneNumbers = s.PhoneNumbers,
+                    MatchedVolunteers = matched,
+                    UnmatchedPhoneNumbers = s.PhoneNumbers.Where(p => !matchedNormalizedNumbers.Contains(PhoneNumbers.NormalizeDanishOrNull(p))).ToList(),
+                    StartDate = s.StartDate,
+                    EndDate = s.EndDate,
+                    WebhookUrl = s.WebhookUrl,
+                    IsActive = s.IsActive,
+                    IsCurrentlyInWindow = s.IsActive && s.StartDate <= today && s.EndDate >= today
+                };
+            })
+            .OrderByDescending(x => x.IsCurrentlyInWindow)
+            .ThenByDescending(x => x.StartDate)
+            .ToList();
+        }
+        catch (HttpRequestException ex)
+        {
+            vm.Error = ex.Message;
+        }
+
+        return PartialView("_SmsAbonnementerListePartial", vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SmsAbonnementOpret(List<int>? volunteerIds, DateOnly startDate, DateOnly endDate)
+    {
+        var (phoneNumbers, skippedCount) = await ResolveVolunteerPhoneNumbersAsync(volunteerIds);
+        if (phoneNumbers.Count == 0)
+        {
+            TempData["Error"] = "Vælg mindst én frivillig med et gyldigt dansk telefonnummer.";
+            return RedirectToAction(nameof(Index), new { tab = "sms" });
+        }
+
+        try
+        {
+            await _smsService.CreateSubscriptionAsync(new CreateSubscriptionsRequestDto
+            {
+                PhoneNumbers = phoneNumbers,
+                StartDate = startDate,
+                EndDate = endDate,
+                WebhookUrl = GetSystemWebhookUrl()
+            });
+            TempData["Success"] = skippedCount > 0
+                ? $"Abonnementslisten blev oprettet. {skippedCount} frivillig(e) blev udeladt pga. ugyldigt telefonnummer."
+                : "Abonnementslisten blev oprettet.";
+        }
+        catch (HttpRequestException ex)
+        {
+            TempData["Error"] = "Kunne ikke oprette abonnementsliste: " + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { tab = "sms" });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SmsAbonnementOpdater(Guid id, List<int>? volunteerIds, DateOnly startDate, DateOnly endDate)
+    {
+        var (phoneNumbers, skippedCount) = await ResolveVolunteerPhoneNumbersAsync(volunteerIds);
+        if (phoneNumbers.Count == 0)
+        {
+            TempData["Error"] = "Vælg mindst én frivillig med et gyldigt dansk telefonnummer.";
+            return RedirectToAction(nameof(Index), new { tab = "sms" });
+        }
+
+        try
+        {
+            await _smsService.UpdateSubscriptionAsync(id, new UpdateSubscriptionsRequestDto
+            {
+                PhoneNumbers = phoneNumbers,
+                StartDate = startDate,
+                EndDate = endDate,
+                WebhookUrl = GetSystemWebhookUrl()
+            });
+            TempData["Success"] = skippedCount > 0
+                ? $"Abonnementslisten blev opdateret. {skippedCount} frivillig(e) blev udeladt pga. ugyldigt telefonnummer."
+                : "Abonnementslisten blev opdateret.";
+        }
+        catch (HttpRequestException ex)
+        {
+            TempData["Error"] = "Kunne ikke opdatere abonnementsliste: " + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { tab = "sms" });
+    }
+
+    // Webhook-URL sættes altid til vores eget faste endpoint — ikke noget admin vælger.
+    private string GetSystemWebhookUrl() => $"{Request.Scheme}://{Request.Host}/sms/webhook";
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SmsAbonnementSlet(Guid id)
+    {
+        try
+        {
+            await _smsService.DeleteSubscriptionAsync(id);
+            TempData["Success"] = "Abonnementslisten blev slettet.";
+        }
+        catch (HttpRequestException ex)
+        {
+            TempData["Error"] = "Kunne ikke slette abonnementsliste: " + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { tab = "sms" });
+    }
+
+    // Returnerer kun numre der er gyldige danske 8-cifrede numre (SMS-gatewayen
+    // kan intet andet) — resten tælles som "udeladt" så den kaldende action kan
+    // fortælle admin at nogle frivillige ikke kunne med på listen.
+    private async Task<(List<string> Numbers, int SkippedCount)> ResolveVolunteerPhoneNumbersAsync(List<int>? volunteerIds)
+    {
+        if (volunteerIds is null || volunteerIds.Count == 0) return ([], 0);
+        var season = AppTime.CurrentSeason;
+        var rawNumbers = await _db.Volunteers
+            .Where(v => volunteerIds.Contains(v.Id) && v.SeasonId == season && v.PhoneNumber != null && v.PhoneNumber != "")
+            .Select(v => v.PhoneNumber!)
+            .ToListAsync();
+
+        var valid = new List<string>();
+        var skippedCount = 0;
+        foreach (var raw in rawNumbers)
+        {
+            if (PhoneNumbers.TryNormalizeDanish(raw, out var normalized))
+                valid.Add(normalized);
+            else
+                skippedCount++;
+        }
+
+        return (valid.Distinct().ToList(), skippedCount);
+    }
+
+    public async Task<IActionResult> SmsAfsendModtagere()
+    {
+        var vm = new SmsAfsendModtagereViewModel();
+        try
+        {
+            vm.Items = await GetEligibleSmsVolunteersAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            vm.Error = ex.Message;
+        }
+        return PartialView("_SmsAfsendModtagerePartial", vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SmsAfsend(List<int>? volunteerIds, string message)
+    {
+        if (volunteerIds is null || volunteerIds.Count == 0 || string.IsNullOrWhiteSpace(message))
+        {
+            TempData["Error"] = "Vælg mindst én modtager og skriv en besked.";
+            return RedirectToAction(nameof(Index), new { tab = "sms" });
+        }
+
+        List<SmsVolunteerPickerItem> eligible;
+        try
+        {
+            eligible = await GetEligibleSmsVolunteersAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            TempData["Error"] = "Kunne ikke sende sms'er: " + ex.Message;
+            return RedirectToAction(nameof(Index), new { tab = "sms" });
+        }
+
+        var eligibleIds = eligible.Select(e => e.VolunteerId).ToHashSet();
+        var requestedIds = volunteerIds.Distinct().ToList();
+        var toSend = requestedIds.Where(eligibleIds.Contains).ToList();
+        var excludedCount = requestedIds.Count - toSend.Count;
+
+        var senderId = _userManager.GetUserId(User) ?? string.Empty;
+        var trimmedMessage = message.Trim();
+        var results = new List<SmsSendResult>();
+        foreach (var id in toSend)
+        {
+            results.Add(await _smsMessageLogService.SendAndLogAsync(id, trimmedMessage, senderId));
+        }
+
+        var successCount = results.Count(r => r.Success);
+        var failed = results.Where(r => !r.Success).ToList();
+
+        if (toSend.Count == 0)
+        {
+            TempData["Error"] = "Ingen af de valgte modtagere er længere på en aktiv abonnementsliste.";
+            return RedirectToAction(nameof(Index), new { tab = "sms" });
+        }
+
+        var summary = $"{successCount} af {toSend.Count} sms'er sendt.";
+        if (failed.Count > 0)
+            summary += " Fejlede: " + string.Join(", ", failed.Select(f => $"{(string.IsNullOrEmpty(f.VolunteerName) ? "Ukendt" : f.VolunteerName)} ({f.ErrorMessage})"));
+        if (excludedCount > 0)
+            summary += $" {excludedCount} modtager(e) udeladt (ikke længere på en aktiv abonnementsliste).";
+
+        if (successCount == toSend.Count && excludedCount == 0)
+            TempData["Success"] = summary;
+        else if (successCount == 0)
+            TempData["Error"] = summary;
+        else
+            TempData["Warning"] = summary;
+
+        return RedirectToAction(nameof(Index), new { tab = "sms" });
+    }
+
+    // Frivillige hvis telefonnummer er på en aktiv abonnementsliste (i dag inden for start-/slutdato).
+    private async Task<List<SmsVolunteerPickerItem>> GetEligibleSmsVolunteersAsync()
+    {
+        var subs = await _smsService.GetAllSubscriptionsAsync(isActive: true);
+        var today = DateOnly.FromDateTime(AppTime.Now);
+        var activePhoneNumbers = subs
+            .Where(s => s.IsActive && s.StartDate <= today && s.EndDate >= today)
+            .SelectMany(s => s.PhoneNumbers)
+            .Select(PhoneNumbers.NormalizeDanishOrNull)
+            .Where(n => n is not null)
+            .ToHashSet();
+
+        var season = AppTime.CurrentSeason;
+        var volunteers = await _db.Volunteers
+            .Where(v => v.SeasonId == season && v.PhoneNumber != null && v.PhoneNumber != "")
+            .OrderBy(v => v.Name)
+            .ToListAsync();
+
+        return volunteers
+            .Where(v => activePhoneNumbers.Contains(PhoneNumbers.NormalizeDanishOrNull(v.PhoneNumber!)))
+            .Select(v => new SmsVolunteerPickerItem { VolunteerId = v.Id, Name = v.Name, PhoneNumber = v.PhoneNumber! })
+            .ToList();
     }
 
     // ── System Logs ──────────────────────────────────────────────

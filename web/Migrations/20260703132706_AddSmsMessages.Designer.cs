@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using web.Data;
 
@@ -10,9 +11,11 @@ using web.Data;
 namespace web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260703132706_AddSmsMessages")]
+    partial class AddSmsMessages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -643,25 +646,19 @@ namespace web.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Direction")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsUnread")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("MessageBody")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("MessageId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("OccurredAt")
+                    b.Property<Guid>("MessageId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PhoneNumberSnapshot")
                         .IsRequired()
                         .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("QueuedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("SeasonId")
@@ -671,6 +668,7 @@ namespace web.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SentByUserId")
+                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
@@ -685,14 +683,12 @@ namespace web.Migrations
                     b.Property<decimal>("UnitPriceDkk")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("VolunteerId")
+                    b.Property<int>("VolunteerId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
-
-                    b.HasIndex("Direction");
 
                     b.HasIndex("MessageId")
                         .IsUnique();
@@ -1082,7 +1078,8 @@ namespace web.Migrations
                     b.HasOne("web.Models.Volunteer", "Volunteer")
                         .WithMany()
                         .HasForeignKey("VolunteerId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Volunteer");
                 });

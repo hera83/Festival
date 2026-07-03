@@ -1,0 +1,364 @@
+@model web.Models.SmsPartialViewModel
+
+<div id="smsStatusSection">
+    @await Html.PartialAsync("_SmsStatusPartial", Model.Status)
+</div>
+
+@* ── Handlingsknapper ── *@
+<div class="d-flex align-items-center gap-2 mb-3">
+    <button type="button" class="btn btn-sm"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;"
+            data-bs-toggle="modal" data-bs-target="#smsAbonnementModal">
+        <i class="bi bi-list-check me-1"></i>Subscribere
+    </button>
+    <button type="button" class="btn btn-sm btn-secondary" style="white-space: nowrap;"
+            data-bs-toggle="modal" data-bs-target="#smsAfsendModal">
+        <i class="bi bi-send me-1"></i>Send SMS
+    </button>
+</div>
+
+@* ── Søgebar for log ── *@
+<div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+    <div class="input-group input-group-sm" style="max-width: 340px;">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="smsLogSearchInput" class="form-control form-control-sm"
+               placeholder="Søg frivillig, telefon, besked…"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
+               value="@Model.Log.Q" autocomplete="off" />
+    </div>
+</div>
+
+<div id="smsLogSection">
+    @await Html.PartialAsync("_SmsLogTablePartial", Model.Log)
+</div>
+
+@* ── Abonnementsliste-modal (indhold hentes via AJAX) ── *@
+<div class="modal fade" id="smsAbonnementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-list-check me-2" style="color: var(--clr-brand);"></i>Abonnementslister</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="smsAbonnementBody">
+                <div class="text-center py-4">
+                    <span class="spinner-border spinner-border-sm" style="color: var(--clr-brand);"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Opret abonnementsliste-modal ── *@
+<div class="modal fade" id="smsAbonnementOpretModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="/Admin/SmsAbonnementOpret" id="smsAbonnementOpretForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-lg me-2" style="color: var(--clr-brand);"></i>Opret abonnementsliste</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("_SmsVolunteerCheckboxPicker", new SmsVolunteerCheckboxPickerModel { Volunteers = Model.AllVolunteers, FilterInputId = "smsAbonnementOpretFilter", ListId = "smsAbonnementOpretListe" })
+                    <div class="row g-2 mt-1 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Startdato *</label>
+                            <input type="date" name="startDate" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Slutdato *</label>
+                            <input type="date" name="endDate" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Opret</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Rediger abonnementsliste-modal ── *@
+<div class="modal fade" id="smsAbonnementRedigerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="/Admin/SmsAbonnementOpdater" id="smsAbonnementRedigerForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="smsAbonnementRedigerId" />
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2" style="color: var(--clr-brand);"></i>Rediger abonnementsliste</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("_SmsVolunteerCheckboxPicker", new SmsVolunteerCheckboxPickerModel { Volunteers = Model.AllVolunteers, FilterInputId = "smsAbonnementRedigerFilter", ListId = "smsAbonnementRedigerListe" })
+                    <div class="row g-2 mt-1 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Startdato *</label>
+                            <input type="date" name="startDate" id="smsAbonnementRedigerStart" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Slutdato *</label>
+                            <input type="date" name="endDate" id="smsAbonnementRedigerSlut" class="form-control form-control-sm" required
+                                   style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-floppy me-1"></i>Gem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Slet abonnementsliste-modal ── *@
+<div class="modal fade" id="smsAbonnementSletModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="/Admin/SmsAbonnementSlet">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="smsAbonnementSletId" />
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet abonnementsliste</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--clr-text);">Er du sikker på, at du vil slette denne abonnementsliste?</p>
+                    <p style="color: var(--clr-text-muted); font-size: 0.85rem;">Dette kan ikke fortrydes.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash me-1"></i>Slet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Send SMS-modal ── *@
+<div class="modal fade" id="smsAfsendModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="/Admin/SmsAfsend" id="smsAfsendForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-send me-2" style="color: var(--clr-brand);"></i>Send SMS</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Modtagere (kun frivillige på en aktiv abonnementsliste) *</label>
+                    <div id="smsAfsendModtagereBody">
+                        <div class="text-center py-4">
+                            <span class="spinner-border spinner-border-sm" style="color: var(--clr-brand);"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Besked *</label>
+                        <textarea name="message" form="smsAfsendForm" class="form-control form-control-sm" rows="4" required maxlength="1000"
+                                  style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text);"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ── Log: søgning + paginering ──
+    var smsLogSearchTimer = null;
+    var smsLogPage = 1;
+    var smsLogPageSize = @Model.Log.PageSize;
+    var smsLogQ = '@Html.Raw(Model.Log.Q.Replace("'", "\\'").Replace("\\", "\\\\"))';
+    var _lastSmsLogHash = null;
+
+    document.getElementById('smsLogSearchInput').addEventListener('keyup', function () {
+        clearTimeout(smsLogSearchTimer);
+        var val = this.value;
+        smsLogSearchTimer = setTimeout(function () {
+            smsLogQ = val;
+            smsLogPage = 1;
+            refreshSmsLogTable();
+        }, 250);
+    });
+
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.id === 'smsLogPageSize') {
+            smsLogPageSize = parseInt(e.target.value);
+            smsLogPage = 1;
+            refreshSmsLogTable();
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.smsLog-page-btn');
+        if (btn) {
+            var pg = parseInt(btn.dataset.page);
+            if (!isNaN(pg) && pg >= 1) { smsLogPage = pg; refreshSmsLogTable(); }
+        }
+    });
+
+    function refreshSmsLogTable(silent) {
+        var url = '/Admin/SmsLogSearch?q=' + encodeURIComponent(smsLogQ)
+            + '&page=' + smsLogPage + '&pageSize=' + smsLogPageSize;
+        var section = document.getElementById('smsLogSection');
+        if (!silent) section.style.opacity = '0.5';
+        fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+            section.innerHTML = html;
+            section.style.opacity = '1';
+        });
+    }
+
+    // ── Baggrundsopdatering: poller et let "state hash" hvert sekund og
+    // opdaterer kun tabellen og statuskortene (saldo/online) stille, hvis der
+    // reelt er sket en ændring (ny sms sendt, status- eller saldo-ændring) —
+    // samme mønster som dashboardet. Stopper sig selv hvis fanen er forladt
+    // (undgår at pollingen løber videre i baggrunden). ──
+    function refreshSmsStatusSection() {
+        var section = document.getElementById('smsStatusSection');
+        if (!section) return;
+        fetch('/Admin/SmsGatewayStatus').then(function (r) { return r.text(); }).then(function (html) {
+            section.innerHTML = html;
+        });
+    }
+
+    function backgroundRefreshSmsLog() {
+        if (!document.getElementById('smsLogSection')) { clearInterval(_smsLogPollInterval); return; }
+        if (document.hidden) return;
+        fetch('/Admin/SmsLogStateHash').then(function (r) { return r.json(); }).then(function (data) {
+            if (data.hash === _lastSmsLogHash) return;
+            _lastSmsLogHash = data.hash;
+            refreshSmsLogTable(true);
+            refreshSmsStatusSection();
+        }).catch(function () {});
+    }
+
+    fetch('/Admin/SmsLogStateHash').then(function (r) { return r.json(); }).then(function (data) { _lastSmsLogHash = data.hash; }).catch(function () {});
+    var _smsLogPollInterval = setInterval(backgroundRefreshSmsLog, 1000);
+
+    // ── Filterbar checkbox-vælger (delt hjælpefunktion) ──
+    function initFilter(inputId, containerId) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        input.addEventListener('keyup', function () {
+            var val = this.value.toLowerCase();
+            document.querySelectorAll('#' + containerId + ' .sms-modtager-row').forEach(function (row) {
+                // Bootstraps .d-flex bruger !important, så vi kan ikke nøjes med '' som synlig-værdi her.
+                row.style.display = row.dataset.filter.indexOf(val) === -1 ? 'none' : 'flex';
+            });
+        });
+    }
+    initFilter('smsAbonnementOpretFilter', 'smsAbonnementOpretListe');
+    initFilter('smsAbonnementRedigerFilter', 'smsAbonnementRedigerListe');
+
+    // ── Vælg alle (fremsøgte) / ryd valg – delt mellem alle modtager-vælgere ──
+    document.addEventListener('click', function (e) {
+        var selectBtn = e.target.closest('.sms-vaelg-alle-btn');
+        if (selectBtn) {
+            document.querySelectorAll('#' + selectBtn.dataset.targetList + ' .sms-modtager-row').forEach(function (row) {
+                if (row.style.display !== 'none') {
+                    var cb = row.querySelector('input[type=checkbox]');
+                    if (cb) cb.checked = true;
+                }
+            });
+            return;
+        }
+        var clearBtn = e.target.closest('.sms-ryd-valg-btn');
+        if (clearBtn) {
+            document.querySelectorAll('#' + clearBtn.dataset.targetList + ' input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+        }
+    });
+
+    function clearCheckboxes(containerId) {
+        document.querySelectorAll('#' + containerId + ' input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+    }
+
+    // ── Abonnement-modal: hent liste ved åbning ──
+    document.getElementById('smsAbonnementModal').addEventListener('shown.bs.modal', function () {
+        var body = document.getElementById('smsAbonnementBody');
+        body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm" style="color: var(--clr-brand);"></span></div>';
+        fetch('/Admin/SmsAbonnementerListe').then(function (r) { return r.text(); }).then(function (html) {
+            body.innerHTML = html;
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('#smsAbonnementRetryBtn')) {
+            document.getElementById('smsAbonnementModal').dispatchEvent(new Event('shown.bs.modal'));
+        }
+    });
+
+    // Skift fra liste-modal til opret/rediger/slet-modal (undgår stablede modaler)
+    function handoff(fromEl, toId, populate) {
+        var fromModal = bootstrap.Modal.getOrCreateInstance(fromEl);
+        function onHidden() {
+            fromEl.removeEventListener('hidden.bs.modal', onHidden);
+            if (populate) populate();
+            new bootstrap.Modal(document.getElementById(toId)).show();
+        }
+        fromEl.addEventListener('hidden.bs.modal', onHidden);
+        fromModal.hide();
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('#smsAbonnementOpretBtn')) {
+            handoff(document.getElementById('smsAbonnementModal'), 'smsAbonnementOpretModal', function () {
+                clearCheckboxes('smsAbonnementOpretListe');
+                document.getElementById('smsAbonnementOpretForm').reset();
+            });
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.sms-abonnement-rediger-btn');
+        if (!btn) return;
+        var volunteerIds = JSON.parse(btn.dataset.volunteerids || '[]');
+        handoff(document.getElementById('smsAbonnementModal'), 'smsAbonnementRedigerModal', function () {
+            document.getElementById('smsAbonnementRedigerId').value = btn.dataset.id;
+            document.getElementById('smsAbonnementRedigerStart').value = btn.dataset.startdate;
+            document.getElementById('smsAbonnementRedigerSlut').value = btn.dataset.enddate;
+            clearCheckboxes('smsAbonnementRedigerListe');
+            document.querySelectorAll('#smsAbonnementRedigerListe input[type=checkbox]').forEach(function (cb) {
+                cb.checked = volunteerIds.indexOf(parseInt(cb.value)) !== -1;
+            });
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.sms-abonnement-slet-btn');
+        if (!btn) return;
+        handoff(document.getElementById('smsAbonnementModal'), 'smsAbonnementSletModal', function () {
+            document.getElementById('smsAbonnementSletId').value = btn.dataset.id;
+        });
+    });
+
+    // ── Send SMS-modal: hent berettigede modtagere ved åbning ──
+    function loadSmsAfsendModtagere() {
+        var body = document.getElementById('smsAfsendModtagereBody');
+        body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm" style="color: var(--clr-brand);"></span></div>';
+        fetch('/Admin/SmsAfsendModtagere').then(function (r) { return r.text(); }).then(function (html) {
+            body.innerHTML = html;
+            initFilter('smsAfsendFilter', 'smsAfsendListe');
+        });
+    }
+
+    document.getElementById('smsAfsendModal').addEventListener('shown.bs.modal', loadSmsAfsendModtagere);
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('#smsAfsendRetryBtn')) loadSmsAfsendModtagere();
+    });
+})();
+</script>

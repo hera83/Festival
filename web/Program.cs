@@ -5,6 +5,7 @@ using Serilog;
 using web.Data;
 using web.Models;
 using web.Services.Email;
+using web.Services.Sms;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +57,19 @@ builder.Services
 
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IImapService, ImapService>();
+builder.Services.AddHttpClient<ISmsService, SmsService>((sp, client) =>
+{
+    var baseUrl = sp.GetRequiredService<IConfiguration>()["Sms:Url"];
+    if (!string.IsNullOrWhiteSpace(baseUrl))
+    {
+        client.BaseAddress = new Uri(baseUrl);
+    }
+});
+builder.Services.AddScoped<ISmsMessageLogService, SmsMessageLogService>();
+builder.Services.AddSingleton<ISmsGatewayStatusCache, SmsGatewayStatusCache>();
+
 builder.Services.AddHostedService<web.Services.ScheduledMoveService>();
+builder.Services.AddHostedService<SmsStatusUpdateService>();
 
 var app = builder.Build();
 

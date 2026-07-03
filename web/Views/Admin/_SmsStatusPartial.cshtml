@@ -1,0 +1,48 @@
+@model web.Models.SmsGatewayStatusViewModel
+
+@if (!Model.GatewayOnline)
+{
+    <div class="alert alert-danger d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span>SMS-gateway kan ikke kontaktes lige nu.@(Model.GatewayErrorMessage is not null ? " " + Model.GatewayErrorMessage : "")</span>
+    </div>
+}
+
+@* ── Statuskort ── *@
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div style="color: var(--clr-text-muted); font-size: 0.8rem;">Gateway-status</div>
+                <div class="mt-1">
+                    @if (Model.GatewayOnline)
+                    {
+                        <span class="badge-ok"><i class="bi bi-check-circle-fill me-1"></i>Online</span>
+                    }
+                    else
+                    {
+                        <span class="badge-alarm"><i class="bi bi-x-circle-fill me-1"></i>Offline</span>
+                    }
+                </div>
+                @if (Model.HealthTimestamp.HasValue)
+                {
+                    <div style="font-size: 0.75rem; color: var(--clr-text-muted);" class="mt-1">@Model.HealthTimestamp.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div style="color: var(--clr-text-muted); font-size: 0.8rem;">Saldo</div>
+                <div class="mt-1 fw-semibold" style="font-size: 1.2rem; color: var(--clr-text);">
+                    @(Model.Balance.HasValue ? Model.Balance.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " kr." : "–")
+                </div>
+                @if (Model.BalanceUpdatedAt.HasValue)
+                {
+                    <div style="font-size: 0.75rem; color: var(--clr-text-muted);">Opdateret @Model.BalanceUpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

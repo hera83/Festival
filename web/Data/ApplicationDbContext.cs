@@ -23,6 +23,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<VolunteerGpsLog> VolunteerGpsLogs => Set<VolunteerGpsLog>();
     public DbSet<MapLocation> MapLocations => Set<MapLocation>();
     public DbSet<ScheduledMove> ScheduledMoves => Set<ScheduledMove>();
+    public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -214,6 +215,29 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.Name).HasMaxLength(256).IsRequired();
             entity.Property(x => x.Category).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(1024);
+        });
+
+        builder.Entity<SmsMessage>(entity =>
+        {
+            entity.HasIndex(x => x.MessageId).IsUnique();
+            entity.HasIndex(x => new { x.SeasonId, x.VolunteerId });
+            entity.HasIndex(x => x.CreatedAt);
+            entity.HasIndex(x => x.Direction);
+
+            // Ingen HasDefaultValue her: Direction sættes altid eksplicit ved skrivning
+            // (SmsMessageLogService for udgående, SmsWebhookController for indgående).
+            // Et databasedefault ville kollidere med at Inbound=0 er enummets CLR-default.
+            entity.Property(x => x.Direction).HasConversion<int>();
+            entity.Property(x => x.PhoneNumberSnapshot).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.MessageBody).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.SentByUserId).HasMaxLength(450);
+
+            entity.HasOne(x => x.Volunteer)
+                .WithMany()
+                .HasForeignKey(x => x.VolunteerId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

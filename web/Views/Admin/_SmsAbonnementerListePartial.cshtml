@@ -1,0 +1,94 @@
+@model web.Models.SmsSubscriptionListViewModel
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <span style="color: var(--clr-text-muted); font-size: 0.85rem;">Numre der må modtage sms'er, i perioder du bestemmer.</span>
+    <button type="button" class="btn btn-sm" id="smsAbonnementOpretBtn"
+            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
+        <i class="bi bi-plus-lg me-1"></i>Opret ny liste
+    </button>
+</div>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Kunne ikke hente abonnementslister: @Model.Error</span>
+        <button type="button" class="btn btn-sm btn-secondary" id="smsAbonnementRetryBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>Prøv igen
+        </button>
+    </div>
+}
+else if (!Model.Items.Any())
+{
+    <div class="text-center py-4" style="color: var(--clr-text-muted);">
+        <i class="bi bi-list-check fs-4 d-block mb-1"></i>
+        Ingen abonnementslister endnu
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" style="color: var(--clr-text);">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--clr-border);">
+                    <th class="ps-3">Frivillige</th>
+                    <th>Periode</th>
+                    <th>Status</th>
+                    <th class="pe-3 text-end">Handlinger</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sub in Model.Items)
+                {
+                    var volunteerIdsJson = System.Text.Json.JsonSerializer.Serialize(sub.MatchedVolunteers.Select(v => v.VolunteerId));
+                    <tr style="border-bottom: 1px solid var(--clr-border);">
+                        <td class="ps-3 align-middle">
+                            @if (sub.MatchedVolunteers.Any())
+                            {
+                                <span>@string.Join(", ", sub.MatchedVolunteers.Select(v => v.Name))</span>
+                            }
+                            @if (sub.UnmatchedPhoneNumbers.Any())
+                            {
+                                <br />
+                                <small style="color: var(--clr-text-muted);">+ @sub.UnmatchedPhoneNumbers.Count nummer/numre uden match: @string.Join(", ", sub.UnmatchedPhoneNumbers)</small>
+                            }
+                        </td>
+                        <td class="align-middle" style="font-size: 0.85rem; color: var(--clr-text-muted);">
+                            @sub.StartDate.ToString("dd/MM/yyyy") – @sub.EndDate.ToString("dd/MM/yyyy")
+                        </td>
+                        <td class="align-middle">
+                            @if (sub.IsCurrentlyInWindow)
+                            {
+                                <span class="badge-ok">Aktiv</span>
+                            }
+                            else if (sub.IsActive)
+                            {
+                                <span class="badge-info">Uden for periode</span>
+                            }
+                            else
+                            {
+                                <span class="badge-alarm">Inaktiv</span>
+                            }
+                        </td>
+                        <td class="pe-3 align-middle text-end">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="button" class="btn btn-sm btn-secondary sms-abonnement-rediger-btn"
+                                        title="Rediger liste"
+                                        data-id="@sub.Id"
+                                        data-startdate="@sub.StartDate.ToString("yyyy-MM-dd")"
+                                        data-enddate="@sub.EndDate.ToString("yyyy-MM-dd")"
+                                        data-volunteerids="@volunteerIdsJson">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger sms-abonnement-slet-btn"
+                                        title="Slet liste"
+                                        data-id="@sub.Id">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,45 @@
+@model web.Models.SmsAfsendModtagereViewModel
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Kunne ikke hente modtagere: @Model.Error</span>
+        <button type="button" class="btn btn-sm btn-secondary" id="smsAfsendRetryBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>Prøv igen
+        </button>
+    </div>
+}
+else if (!Model.Items.Any())
+{
+    <div class="text-center py-3" style="color: var(--clr-text-muted);">
+        <i class="bi bi-person-x fs-4 d-block mb-1"></i>
+        Ingen frivillige er på en aktiv abonnementsliste lige nu.
+    </div>
+}
+else
+{
+    <div class="input-group input-group-sm mb-2">
+        <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="smsAfsendFilter" class="form-control form-control-sm" placeholder="Filtrér modtagere…" autocomplete="off"
+               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" />
+    </div>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <small style="color: var(--clr-text-muted);">@Model.Items.Count berettigede modtagere</small>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-secondary sms-vaelg-alle-btn" data-target-list="smsAfsendListe">Vælg alle fremsøgte</button>
+            <button type="button" class="btn btn-sm btn-secondary sms-ryd-valg-btn" data-target-list="smsAfsendListe">Ryd valg</button>
+        </div>
+    </div>
+    <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--clr-border); border-radius: var(--radius-sm); padding: 0.5rem;" id="smsAfsendListe">
+        @foreach (var item in Model.Items)
+        {
+            <label class="sms-modtager-row" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;" data-filter="@($"{item.Name} {item.PhoneNumber}".ToLowerInvariant())">
+                <input type="checkbox" name="volunteerIds" value="@item.VolunteerId" form="smsAfsendForm" />
+                <span>@item.Name</span>
+                <small style="color: var(--clr-text-muted);">(@item.PhoneNumber)</small>
+            </label>
+        }
+    </div>
+}

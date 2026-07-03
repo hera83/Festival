@@ -1,0 +1,31 @@
+@model web.Models.SmsVolunteerCheckboxPickerModel
+
+<label class="form-label" style="color: var(--clr-text-muted); font-size: 0.82rem;">Frivillige *</label>
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text" style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text-muted);">
+        <i class="bi bi-search"></i>
+    </span>
+    <input type="text" id="@Model.FilterInputId" class="form-control form-control-sm" placeholder="Filtrér frivillige…" autocomplete="off"
+           style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" />
+</div>
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <small style="color: var(--clr-text-muted);">@Model.Volunteers.Count frivillige</small>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-secondary sms-vaelg-alle-btn" data-target-list="@Model.ListId">Vælg alle fremsøgte</button>
+        <button type="button" class="btn btn-sm btn-secondary sms-ryd-valg-btn" data-target-list="@Model.ListId">Ryd valg</button>
+    </div>
+</div>
+<div id="@Model.ListId" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--clr-border); border-radius: var(--radius-sm); padding: 0.5rem;">
+    @if (!Model.Volunteers.Any())
+    {
+        <div class="text-center py-2" style="color: var(--clr-text-muted); font-size: 0.85rem;">Ingen frivillige med telefonnummer i denne sæson.</div>
+    }
+    @foreach (var v in Model.Volunteers)
+    {
+        <label class="sms-modtager-row" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;" data-filter="@($"{v.Name} {v.PhoneNumber}".ToLowerInvariant())">
+            <input type="checkbox" name="volunteerIds" value="@v.VolunteerId" />
+            <span>@v.Name</span>
+            <small style="color: var(--clr-text-muted);">(@v.PhoneNumber)</small>
+        </label>
+    }
+</div>

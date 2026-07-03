@@ -49,6 +49,14 @@
             <i class="bi bi-geo-alt me-2"></i>Kortsteder
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "sms" ? "active" : "")"
+                id="tab-sms"
+                data-tab="sms"
+                type="button" role="tab">
+            <i class="bi bi-chat-dots me-2"></i>SMS
+        </button>
+    </li>
     @* System Logs – højrejusteret *@
     <li class="nav-item ms-auto" role="presentation">
         <button class="nav-link @(activeTab == "systemlogs" ? "active" : "")"
@@ -80,6 +88,7 @@
             statistik: '@Url.Action("StatistikPartial", "Admin")',
             qrscanner: '@Url.Action("QrScannerPartial", "Admin")',
             kortsteder: '@Url.Action("KortStederPartial", "Admin")',
+            sms: '@Url.Action("SmsPartial", "Admin")',
             systemlogs: '@Url.Action("SystemLogsPartial", "Admin")',
         };
 
