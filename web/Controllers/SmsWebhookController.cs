@@ -67,6 +67,7 @@ public class SmsWebhookController : ControllerBase
             MessageBody = payload.Body,
             Status = "Modtaget",
             IsUnread = isUnread,
+            IsReadByCoordinator = false,
             OccurredAt = occurredAt,
             CreatedAt = AppTime.Now
         });

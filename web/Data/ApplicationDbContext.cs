@@ -232,6 +232,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.MessageBody).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
             entity.Property(x => x.SentByUserId).HasMaxLength(450);
+            entity.Property(x => x.IsReadByCoordinator).HasDefaultValue(true);
 
             entity.HasOne(x => x.Volunteer)
                 .WithMany()

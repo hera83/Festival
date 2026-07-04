@@ -17,6 +17,8 @@ services:
       Email__Imap__Host: ${EMAIL_IMAP_HOST}
       Email__Imap__Username: ${EMAIL_IMAP_USERNAME}
       Email__Imap__Password: ${EMAIL_IMAP_PASSWORD}
+      Sms__Url: ${SMS_URL}
+      Sms__ApiKey: ${SMS_API_KEY}
     volumes:
       - festival_app_dbs:/app/App_dbs
       - festival_dp_keys:/app/App_files/DataProtection-Keys

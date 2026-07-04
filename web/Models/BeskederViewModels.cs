@@ -11,32 +11,40 @@ public class BeskederIndexViewModel
     public int TaskCount    { get; set; }
 }
 
-// ── Besked liste row ─────────────────────────────────────────────
-public class MessageRowViewModel
+// ── Kanal for en tråd i Besked Center ────────────────────────────
+public enum ThreadChannel
 {
-    public int    Id              { get; set; }
-    public string VolunteerName   { get; set; } = string.Empty;
-    public string VolunteerKey    { get; set; } = string.Empty;
-    public string Subject         { get; set; } = string.Empty;
-    public string BodyPreview     { get; set; } = string.Empty;
-    public bool   IsRead          { get; set; }
-    public DateTime SentAt        { get; set; }
-    public DateTime? ReadAt       { get; set; }
-    public MessageDirection Direction { get; set; }
-    public int AttachmentCount    { get; set; }
-    public int TaskCount          { get; set; }
+    App = 0,
+    Sms = 1
+}
+
+// ── Samlet tråd-række (app-besked eller sms-samtale) ─────────────
+public class ThreadRowViewModel
+{
+    public ThreadChannel Channel   { get; set; }
+    public int?    MessageId       { get; set; }   // sat for App
+    public int?    VolunteerId     { get; set; }   // sat for Sms med kendt frivillig
+    public string? PhoneNumber     { get; set; }   // sat for Sms uden kendt frivillig ("Ukendt")
+    public string  VolunteerName   { get; set; } = string.Empty;
+    public string  VolunteerKey    { get; set; } = string.Empty;
+    public string  Subject         { get; set; } = string.Empty;
+    public string  BodyPreview     { get; set; } = string.Empty;
+    public DateTime LastActivityAt { get; set; }
+    public DateTime? ReadAt        { get; set; }
+    public int AttachmentCount     { get; set; }
+    public int TaskCount           { get; set; }
 }
 
 // ── Ulæste pagineret ─────────────────────────────────────────────
 public class UnreadMessagesViewModel : PagedViewModelBase
 {
-    public List<MessageRowViewModel> Messages { get; set; } = new();
+    public List<ThreadRowViewModel> Messages { get; set; } = new();
 }
 
 // ── Læste pagineret ──────────────────────────────────────────────
 public class ReadMessagesViewModel : PagedViewModelBase
 {
-    public List<MessageRowViewModel> Messages { get; set; } = new();
+    public List<ThreadRowViewModel> Messages { get; set; } = new();
 }
 
 // ── Opgaver pagineret ────────────────────────────────────────────
@@ -62,6 +70,7 @@ public class TasksViewModel : PagedViewModelBase
 // ── Opret besked ─────────────────────────────────────────────────
 public class CreateMessageViewModel
 {
+    public ThreadChannel Channel { get; set; } = ThreadChannel.App;
     public int    VolunteerId  { get; set; }
     public string Subject      { get; set; } = string.Empty;
     public string Body         { get; set; } = string.Empty;
@@ -95,6 +104,25 @@ public class ReplyMessageViewModel
 {
     public int    MessageId { get; set; }
     public string Body      { get; set; } = string.Empty;
+}
+
+// ── Vis sms-tråd (én løbende samtale pr. frivillig/nummer) ───────
+public class SmsThreadDetailViewModel
+{
+    public int?    VolunteerId   { get; set; }
+    public string? PhoneNumber   { get; set; }
+    public string  VolunteerName { get; set; } = string.Empty;
+    public string  VolunteerKey  { get; set; } = string.Empty;
+    public List<SmsThreadMessageViewModel> Messages { get; set; } = new();
+}
+
+public class SmsThreadMessageViewModel
+{
+    public int    Id          { get; set; }
+    public SmsDirection Direction { get; set; }
+    public string Body        { get; set; } = string.Empty;
+    public DateTime OccurredAt { get; set; }
+    public string? SentByName { get; set; }
 }
 
 // ── Opret opgave ─────────────────────────────────────────────────

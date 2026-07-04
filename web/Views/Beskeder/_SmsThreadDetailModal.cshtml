@@ -1,0 +1,128 @@
+@model web.Models.SmsThreadDetailViewModel
+@{
+    var replyUrl  = Url.Action("SmsReply", "Beskeder");
+    var threadUrl = Url.Action("SmsThreadDetail", "Beskeder");
+    var token     = Html.AntiForgeryToken();
+}<div class="modal-header">
+    <div>
+        <h6 class="modal-title mb-0">
+            <i class="bi bi-phone me-2" style="color: var(--clr-brand);"></i>SMS
+        </h6>
+        <small style="color: var(--clr-text-muted);">
+            @Model.VolunteerName
+            @if (!string.IsNullOrEmpty(Model.VolunteerKey))
+            {
+                <span class="badge badge-info ms-1" style="font-size:0.7rem;">@Model.VolunteerKey</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+            {
+                <span class="badge badge-warn ms-1" style="font-size:0.7rem;">@Model.PhoneNumber</span>
+            }
+        </small>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+</div>
+<div class="modal-body">
+
+    @* ── Sms-tråd ── *@
+    <div id="sms-thread-messages" class="d-flex flex-column gap-2 mb-3">
+        @foreach (var m in Model.Messages)
+        {
+            var isOutbound = m.Direction == web.Models.SmsDirection.Outbound;
+            <div class="d-flex @(isOutbound ? "justify-content-end" : "justify-content-start")">
+                <div style="max-width: 85%;">
+                    <div class="px-3 py-2 rounded-3"
+                         style="background: @(isOutbound ? "var(--clr-brand)" : "var(--clr-bg)");
+                                border: 1px solid var(--clr-border);
+                                white-space: pre-line; font-size:0.9rem; line-height:1.5;
+                                color: @(isOutbound ? "#fff" : "var(--clr-text)");
+                                text-align:left; word-break:break-word;
+                                border-bottom-@(isOutbound ? "right" : "left")-radius: 4px;">@m.Body</div>
+                    <div class="mt-1 px-1 d-flex align-items-center gap-1"
+                         style="font-size: 0.72rem; color: var(--clr-text-muted);
+                         justify-content: @(isOutbound ? "flex-end" : "flex-start");">
+                        <span><i class="bi bi-person me-1"></i>@m.SentByName</span>
+                        <span>&nbsp;·&nbsp;</span>
+                        <span><i class="bi bi-clock me-1"></i>@m.OccurredAt.ToString("dd/MM HH:mm")</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Besvar-formular ── *@
+    @if (Model.VolunteerId.HasValue)
+    {
+        <div class="mt-3 pt-3" style="border-top: 1px solid var(--clr-border);">
+            <p class="mb-2 fw-semibold" style="font-size:0.85rem; color: var(--clr-text-muted);">
+                <i class="bi bi-reply me-1"></i>Svar (sms)
+            </p>
+            <form id="smsReplyForm">
+                @token
+                <input type="hidden" name="volunteerId" value="@Model.VolunteerId" />
+                <textarea name="body" class="form-control mb-2" rows="3" placeholder="Skriv sms-svar her…"
+                          style="background: var(--clr-bg); border: 1px solid var(--clr-border);
+                                 color: var(--clr-text); resize: vertical; font-size:0.9rem;"></textarea>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-send me-1"></i>Send sms
+                    </button>
+                </div>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="mt-3 pt-3 text-center" style="border-top: 1px solid var(--clr-border); color: var(--clr-text-muted); font-size:0.85rem;">
+            <i class="bi bi-info-circle me-1"></i>Nummeret er ikke tilknyttet en frivillig og kan ikke besvares herfra.
+        </div>
+    }
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg me-1"></i>Luk
+    </button>
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById('smsReplyForm');
+    if (!form) return;
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const textarea = form.querySelector('textarea[name="body"]');
+        const body = textarea.value.trim();
+        if (!body) { showToast('Svar kan ikke være tomt.', 'warning'); return; }
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        try {
+            const fd = new FormData(form);
+            const res = await fetch('@replyUrl', { method: 'POST', body: fd });
+            const json = await res.json();
+            if (json.success) {
+                showToast(json.message, 'success');
+                document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
+                const volunteerId = form.querySelector('input[name="volunteerId"]').value;
+                const modalBody = form.closest('[id^="detailMsgModalBody"]');
+                if (modalBody) {
+                    const r = await fetch('@threadUrl' + '?volunteerId=' + volunteerId);
+                    if (r.ok) {
+                        modalBody.innerHTML = await r.text();
+                        modalBody.querySelectorAll('script').forEach(function (oldScript) {
+                            const s = document.createElement('script');
+                            s.textContent = oldScript.textContent;
+                            oldScript.parentNode.replaceChild(s, oldScript);
+                        });
+                    }
+                }
+            } else {
+                showToast(json.message, 'danger');
+                submitBtn.disabled = false;
+            }
+        } catch {
+            showToast('Netværksfejl.', 'danger');
+            submitBtn.disabled = false;
+        }
+    });
+})();
+</script>

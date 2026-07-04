@@ -37,6 +37,13 @@ public class SmsMessage
     // Administration; er til fremtidig brug (fx en ulæst-tæller).
     public bool IsUnread { get; set; }
 
+    // Koordinatorens egen læst-status i Besked Center — adskilt fra IsUnread
+    // ovenfor, som er gatewayens modem-state. Default true, da Outbound-rækker
+    // (koordinator har selv skrevet dem) er læst fra start; sættes false kun
+    // på nye Inbound-rækker fra SmsWebhookController.
+    public bool IsReadByCoordinator { get; set; } = true;
+    public DateTime? ReadByCoordinatorAt { get; set; }
+
     public int SegmentCount { get; set; }
     public decimal UnitPriceDkk { get; set; }
     public decimal TotalPriceDkk { get; set; }

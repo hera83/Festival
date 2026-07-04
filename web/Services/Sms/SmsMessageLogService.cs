@@ -61,6 +61,7 @@ namespace web.Services.Sms
                 PhoneNumberSnapshot = normalizedPhone,
                 MessageBody = message,
                 Status = response.Status,
+                IsReadByCoordinator = true,
                 SegmentCount = response.SegmentCount,
                 UnitPriceDkk = response.UnitPriceDkk,
                 TotalPriceDkk = response.TotalPriceDkk,

@@ -118,12 +118,21 @@
                         }
                         @foreach (var m in Model.Messages)
                         {
+                            var isSms = m.Channel == web.Models.ThreadChannel.Sms;
                             <tr style="border-bottom: 1px solid var(--clr-border);">
                                 <td class="ps-3 align-middle">
                                     <span class="fw-semibold">@m.VolunteerName</span><br />
-                                    <span class="badge badge-info" style="font-size:0.7rem;">@m.VolunteerKey</span>
+                                    @if (!string.IsNullOrEmpty(m.VolunteerKey))
+                                    {
+                                        <span class="badge badge-info" style="font-size:0.7rem;">@m.VolunteerKey</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(m.PhoneNumber))
+                                    {
+                                        <span class="badge badge-warn" style="font-size:0.7rem;">@m.PhoneNumber</span>
+                                    }
                                 </td>
                                 <td class="align-middle fw-semibold">
+                                    <i class="bi @(isSms ? "bi-phone" : "bi-chat-dots") me-1" style="color: var(--clr-text-muted); font-size:0.85rem;" title="@(isSms ? "SMS" : "App")"></i>
                                     @m.Subject
                                     @if (m.AttachmentCount > 0)
                                     {
@@ -131,11 +140,15 @@
                                     }
                                 </td>
                                 <td class="align-middle" style="color: var(--clr-text-muted); font-size:0.85rem;">@m.BodyPreview</td>
-                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@m.SentAt.ToString("dd/MM HH:mm")</td>
+                                <td class="align-middle" style="font-size:0.85rem; white-space:nowrap;">@m.LastActivityAt.ToString("dd/MM HH:mm")</td>
                                 <td class="pe-3 align-middle text-end">
                                     <div class="d-flex gap-1 justify-content-end">
                                         <button type="button" class="btn btn-sm btn-secondary msg-detail-btn"
-                                                title="Åbn besked" data-id="@m.Id">
+                                                title="Åbn besked"
+                                                data-channel="@(isSms ? "sms" : "app")"
+                                                data-id="@m.MessageId"
+                                                data-volunteer-id="@m.VolunteerId"
+                                                data-phone="@m.PhoneNumber">
                                             <i class="bi bi-eye me-1"></i>Åbn besked
                                         </button>
                                     </div>
@@ -210,6 +223,7 @@
     var createFormUrl = '@Url.Action("GetCreateForm",     "Beskeder")';
     var createPostUrl = '@Url.Action("CreateMessage",     "Beskeder")';
     var detailUrl     = '@Url.Action("Detail",            "Beskeder")';
+    var smsDetailUrl  = '@Url.Action("SmsThreadDetail",   "Beskeder")';
     var deletePostUrl = '@Url.Action("DeleteMessage",     "Beskeder")';
     var taskFormUrl   = '@Url.Action("GetCreateTaskForm", "Beskeder")';
     var taskPostUrl   = '@Url.Action("CreateTask",        "Beskeder")';
@@ -296,6 +310,21 @@
         } catch (e) { bsDetailModal.hide(); showToast('Netværksfejl.', 'error'); }
     }
 
+    async function openSmsDetail(volunteerId, phone) {
+        detailModalBody.innerHTML = spinner();
+        bsDetailModal.show();
+        try {
+            var qs = volunteerId ? ('volunteerId=' + volunteerId) : ('phone=' + encodeURIComponent(phone || ''));
+            var res = await fetch(smsDetailUrl + '?' + qs);
+            if (res.ok) {
+                detailModalBody.innerHTML = await res.text();
+                execScripts(detailModalBody);
+                document.dispatchEvent(new CustomEvent('beskeder:countsChanged'));
+                await loadPage(currentPage, currentSize);
+            } else { bsDetailModal.hide(); showToast('Kunne ikke hente sms-tråd.', 'error'); }
+        } catch (e) { bsDetailModal.hide(); showToast('Netværksfejl.', 'error'); }
+    }
+
     // ── Opret opgave modal ────────────────────────────────────────
     var taskModalEl   = document.getElementById('createTaskModal');
     var taskModalBody = document.getElementById('createTaskModalBody');
@@ -358,6 +387,7 @@
     function bindCreateForm() {
         var form = document.getElementById('createMsgForm');
         if (!form) return;
+        bindCreateChannelToggle(form);
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
             var submitEl = document.getElementById('createMsgSubmit');
@@ -375,9 +405,51 @@
         });
     }
 
+    function bindCreateChannelToggle(form) {
+        var group        = form.querySelector('#createMsgChannelGroup');
+        var channelInput = form.querySelector('#createMsgChannelInput');
+        var subjectGroup = form.querySelector('#createMsgSubjectGroup');
+        var subjectInput = form.querySelector('#createMsgSubjectInput');
+        var volunteerSel = form.querySelector('#createMsgVolunteerSelect');
+        var noPhoneHint  = form.querySelector('#createMsgNoPhoneHint');
+        if (!group) return;
+
+        function applyChannel() {
+            var channel = group.querySelector('input[name="channelRadio"]:checked').value;
+            channelInput.value = channel;
+            var isSms = channel === 'Sms';
+            subjectGroup.classList.toggle('d-none', isSms);
+            subjectInput.required = !isSms;
+
+            var anyEnabled = false;
+            Array.prototype.forEach.call(volunteerSel.options, function (opt) {
+                if (!opt.value) return;
+                var hasPhone = !!opt.dataset.phone;
+                opt.disabled = isSms && !hasPhone;
+                if (!opt.disabled) anyEnabled = true;
+            });
+            if (volunteerSel.selectedOptions[0] && volunteerSel.selectedOptions[0].disabled) {
+                volunteerSel.value = '';
+            }
+            noPhoneHint.classList.toggle('d-none', !(isSms && !anyEnabled));
+        }
+
+        group.querySelectorAll('input[name="channelRadio"]').forEach(function (r) {
+            r.addEventListener('change', applyChannel);
+        });
+        applyChannel();
+    }
+
     function bindRowActions() {
         document.querySelectorAll('.msg-detail-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () { openDetail(parseInt(this.dataset.id)); });
+            btn.addEventListener('click', function () {
+                if (this.dataset.channel === 'sms') {
+                    var vid = this.dataset.volunteerId;
+                    openSmsDetail(vid ? parseInt(vid) : null, this.dataset.phone);
+                } else {
+                    openDetail(parseInt(this.dataset.id));
+                }
+            });
         });
         document.querySelectorAll('.msg-delete-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {

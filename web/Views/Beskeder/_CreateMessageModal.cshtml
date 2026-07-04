@@ -10,19 +10,32 @@
     </div>
     <div class="modal-body">
         <div class="mb-3">
+            <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Kanal</label>
+            <div class="btn-group w-100" role="group" id="createMsgChannelGroup">
+                <input type="radio" class="btn-check" name="channelRadio" id="channelApp" value="App" checked autocomplete="off">
+                <label class="btn btn-sm btn-outline-secondary" for="channelApp"><i class="bi bi-chat-dots me-1"></i>App</label>
+                <input type="radio" class="btn-check" name="channelRadio" id="channelSms" value="Sms" autocomplete="off">
+                <label class="btn btn-sm btn-outline-secondary" for="channelSms"><i class="bi bi-phone me-1"></i>SMS</label>
+            </div>
+            <input type="hidden" name="Channel" id="createMsgChannelInput" value="App" />
+        </div>
+        <div class="mb-3">
             <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Frivillig</label>
-            <select name="VolunteerId" class="form-select form-select-sm"
+            <select name="VolunteerId" id="createMsgVolunteerSelect" class="form-select form-select-sm"
                     style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" required>
                 <option value="">— Vælg frivillig —</option>
                 @foreach (var v in Model.AvailableVolunteers)
                 {
-                    <option value="@v.Id">@v.Name (@v.Key)</option>
+                    <option value="@v.Id" data-phone="@v.PhoneNumber">@v.Name (@v.Key)</option>
                 }
             </select>
+            <small id="createMsgNoPhoneHint" class="d-none" style="color: var(--clr-alarm);">
+                <i class="bi bi-exclamation-triangle me-1"></i>Ingen frivillige med telefonnummer registreret.
+            </small>
         </div>
-        <div class="mb-3">
+        <div class="mb-3" id="createMsgSubjectGroup">
             <label class="form-label" style="font-size:0.85rem; color: var(--clr-text-muted);">Emne</label>
-            <input type="text" name="Subject" class="form-control form-control-sm"
+            <input type="text" name="Subject" id="createMsgSubjectInput" class="form-control form-control-sm"
                    style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);"
                    placeholder="Beskedens emne" required />
         </div>
