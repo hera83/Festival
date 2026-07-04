@@ -61,6 +61,7 @@ public class SmsStatusUpdateService : BackgroundService
         string? errorMessage = null;
         decimal? balance = null;
         DateTime? balanceUpdatedAt = null;
+        decimal? smsPrice = null;
 
         try
         {
@@ -86,6 +87,16 @@ public class SmsStatusUpdateService : BackgroundService
             errorMessage ??= ex.Message;
         }
 
+        try
+        {
+            var costResponse = await sms.GetCurrentCostAsync(cancellationToken: ct);
+            smsPrice = costResponse?.SmsPriceDkk;
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage ??= ex.Message;
+        }
+
         _statusCache.Update(new SmsGatewayStatusSnapshot
         {
             Online = online,
@@ -93,8 +104,45 @@ public class SmsStatusUpdateService : BackgroundService
             HealthTimestamp = healthTimestamp,
             ErrorMessage = errorMessage,
             Balance = balance,
-            BalanceUpdatedAt = balanceUpdatedAt
+            BalanceUpdatedAt = balanceUpdatedAt,
+            SmsPriceDkk = smsPrice
         });
+
+        await StopSmsFlowIfBalanceTooLowAsync(balance, smsPrice, ct);
+    }
+
+    // Slår automatisk sms-flowet i dashboardet fra hvis saldoen er brugt op eller
+    // ikke længere rækker til en enkelt sms, mens flowet er slået til.
+    private async Task StopSmsFlowIfBalanceTooLowAsync(decimal? balance, decimal? smsPrice, CancellationToken ct)
+    {
+        if (!balance.HasValue) return;
+        var tooLow = balance.Value <= 0m || (smsPrice.HasValue && balance.Value < smsPrice.Value);
+        if (!tooLow) return;
+
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var seasonId = AppTime.CurrentSeason;
+        var flowSetting = await db.DashboardSettings
+            .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.Key, ct);
+
+        if (flowSetting?.Value != "true") return;
+
+        flowSetting.Value = "false";
+        flowSetting.UpdatedAt = AppTime.Now;
+
+        var autoOffSetting = await db.DashboardSettings
+            .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.AutoOffAtKey, ct);
+        if (autoOffSetting == null)
+        {
+            autoOffSetting = new DashboardSetting { SeasonId = seasonId, Key = SmsFlowSetting.AutoOffAtKey };
+            db.DashboardSettings.Add(autoOffSetting);
+        }
+        autoOffSetting.Value = AppTime.Now.Ticks.ToString();
+        autoOffSetting.UpdatedAt = AppTime.Now;
+
+        await db.SaveChangesAsync(ct);
+        _logger.LogWarning("Sms-flow slået automatisk fra – saldoen ({Balance} kr.) rækker ikke til sms-taksten ({Price} kr.).", balance, smsPrice);
     }
 
     private async Task CheckPendingStatuses(CancellationToken ct)

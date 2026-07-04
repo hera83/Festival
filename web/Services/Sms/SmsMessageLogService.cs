@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
 using web.Services.Sms.Dtos.Sms;
@@ -72,6 +73,27 @@ namespace web.Services.Sms
             await _db.SaveChangesAsync(cancellationToken);
 
             return new SmsSendResult { Success = true, VolunteerId = volunteer.Id, VolunteerName = volunteer.Name, MessageId = response.MessageId };
+        }
+
+        public async Task<HashSet<int>> GetEligibleVolunteerIdsAsync(int seasonId, CancellationToken cancellationToken = default)
+        {
+            var subs = await _smsService.GetAllSubscriptionsAsync(isActive: true, cancellationToken: cancellationToken);
+            var today = DateOnly.FromDateTime(AppTime.Now);
+            var activePhoneNumbers = subs
+                .Where(s => s.IsActive && s.StartDate <= today && s.EndDate >= today)
+                .SelectMany(s => s.PhoneNumbers)
+                .Select(PhoneNumbers.NormalizeDanishOrNull)
+                .Where(n => n is not null)
+                .ToHashSet();
+
+            var volunteers = await _db.Volunteers
+                .Where(v => v.SeasonId == seasonId && v.PhoneNumber != null && v.PhoneNumber != "")
+                .ToListAsync(cancellationToken);
+
+            return volunteers
+                .Where(v => activePhoneNumbers.Contains(PhoneNumbers.NormalizeDanishOrNull(v.PhoneNumber!)))
+                .Select(v => v.Id)
+                .ToHashSet();
         }
     }
 }

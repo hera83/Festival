@@ -66,6 +66,7 @@ builder.Services.AddHttpClient<ISmsService, SmsService>((sp, client) =>
     }
 });
 builder.Services.AddScoped<ISmsMessageLogService, SmsMessageLogService>();
+builder.Services.AddScoped<IDashboardSmsFlowService, DashboardSmsFlowService>();
 builder.Services.AddSingleton<ISmsGatewayStatusCache, SmsGatewayStatusCache>();
 
 builder.Services.AddHostedService<web.Services.ScheduledMoveService>();

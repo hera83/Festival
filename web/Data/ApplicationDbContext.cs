@@ -24,6 +24,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MapLocation> MapLocations => Set<MapLocation>();
     public DbSet<ScheduledMove> ScheduledMoves => Set<ScheduledMove>();
     public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
+    public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -239,6 +240,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .HasForeignKey(x => x.VolunteerId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<SmsTemplate>(entity =>
+        {
+            entity.HasIndex(x => new { x.SeasonId, x.Type }).IsUnique();
+            entity.Property(x => x.Type).HasConversion<int>();
+            entity.Property(x => x.Body).HasMaxLength(1000).IsRequired();
         });
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Models;
+using web.Services.Sms;
 using web.Utils;
 
 namespace web.Services;
@@ -43,6 +44,7 @@ public class ScheduledMoveService : BackgroundService
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var smsFlowService = scope.ServiceProvider.GetRequiredService<IDashboardSmsFlowService>();
 
         var now = AppTime.Now;
 
@@ -54,6 +56,7 @@ public class ScheduledMoveService : BackgroundService
         if (due.Count == 0) return;
 
         var seasonId = AppTime.CopenhagenToday.Year;
+        var executedMoves = new List<(int VolunteerId, string VolunteerName, string From, string To)>();
 
         foreach (var move in due)
         {
@@ -87,11 +90,22 @@ public class ScheduledMoveService : BackgroundService
                     OccurredAt = now
                 });
                 _logger.LogInformation("ScheduledMove {Id}: {Name} flyttet fra {From} til {To}.", move.Id, move.Volunteer?.Name, from, to);
+
+                if (move.Volunteer != null)
+                    executedMoves.Add((move.VolunteerId, move.Volunteer.Name, from, to));
             }
 
             move.ExecutedAt = now;
         }
 
         await db.SaveChangesAsync(ct);
+
+        // Sms sendes først når flytningen er gemt, og kun for dem der reelt blev flyttet.
+        foreach (var m in executedMoves)
+        {
+            await smsFlowService.SendTemplatedSmsAsync(
+                SmsTemplateType.Moved, m.VolunteerId, m.VolunteerName, now,
+                fraPost: m.From, tilPost: m.To, sentByUserId: "system", cancellationToken: ct);
+        }
     }
 }

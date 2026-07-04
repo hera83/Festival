@@ -424,8 +424,8 @@
             var anyEnabled = false;
             Array.prototype.forEach.call(volunteerSel.options, function (opt) {
                 if (!opt.value) return;
-                var hasPhone = !!opt.dataset.phone;
-                opt.disabled = isSms && !hasPhone;
+                var smsEligible = opt.dataset.smsEligible === '1';
+                opt.disabled = isSms && !smsEligible;
                 if (!opt.disabled) anyEnabled = true;
             });
             if (volunteerSel.selectedOptions[0] && volunteerSel.selectedOptions[0].disabled) {

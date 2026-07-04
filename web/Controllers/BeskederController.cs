@@ -272,7 +272,8 @@ public class BeskederController(
             AvailableVolunteers = await db.Volunteers
                 .Where(v => v.SeasonId == CurrentSeason)
                 .OrderBy(v => v.Name)
-                .ToListAsync()
+                .ToListAsync(),
+            SmsEligibleVolunteerIds = await smsMessageLogService.GetEligibleVolunteerIdsAsync(CurrentSeason)
         };
         return PartialView("_CreateMessageModal", vm);
     }
@@ -289,6 +290,10 @@ public class BeskederController(
 
         if (vm.Channel == ThreadChannel.Sms)
         {
+            var eligibleIds = await smsMessageLogService.GetEligibleVolunteerIdsAsync(CurrentSeason);
+            if (!eligibleIds.Contains(vm.VolunteerId))
+                return Json(new { success = false, message = "Frivillig er ikke på en aktiv sms-abonnementsliste." });
+
             var result = await smsMessageLogService.SendAndLogAsync(vm.VolunteerId, vm.Body.Trim(), user.Id);
             return Json(new { success = result.Success, message = result.Success ? "Sms sendt." : result.ErrorMessage });
         }

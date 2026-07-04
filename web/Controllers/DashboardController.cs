@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using web.Data;
 using web.Models;
+using web.Services.Sms;
 using web.Utils;
 
 namespace web.Controllers
@@ -12,10 +13,29 @@ namespace web.Controllers
     public class DashboardController : Controller
     {
         private readonly ApplicationDbContext _db;
+        private readonly IDashboardSmsFlowService _smsFlowService;
+        private readonly ISmsGatewayStatusCache _smsGatewayStatusCache;
 
-        public DashboardController(ApplicationDbContext db)
+        public DashboardController(ApplicationDbContext db, IDashboardSmsFlowService smsFlowService, ISmsGatewayStatusCache smsGatewayStatusCache)
         {
             _db = db;
+            _smsFlowService = smsFlowService;
+            _smsGatewayStatusCache = smsGatewayStatusCache;
+        }
+
+        // Kaldes KUN fra de manuelle dashboard-handlinger nedenfor (aldrig fra
+        // baggrundsjob eller fra det polling der holder boardet i sync på tværs
+        // af åbne faner), så der uanset antallet af åbne faner kun sendes præcis
+        // én sms pr. faktisk hændelse. Planlagte flytninger sender via samme
+        // IDashboardSmsFlowService, men trigges fra ScheduledMoveService når de
+        // rent faktisk udføres.
+        private Task SendTemplatedSmsAsync(
+            SmsTemplateType type, int volunteerId, string volunteerName, DateTime when,
+            string? post = null, string? fraPost = null, string? tilPost = null)
+        {
+            var sentByUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            return _smsFlowService.SendTemplatedSmsAsync(
+                type, volunteerId, volunteerName, when, post, fraPost, tilPost, sentByUserId);
         }
 
         public IActionResult Index()
@@ -56,6 +76,58 @@ namespace web.Controllers
             await _db.SaveChangesAsync();
 
             return Json(new { success = true });
+        }
+
+        // GET /Dashboard/GetSmsFlowStatus — bruges af sms-flow-knappen i Pitten og SMS-cardet
+        [HttpGet]
+        public async Task<IActionResult> GetSmsFlowStatus()
+        {
+            var seasonId = AppTime.CurrentSeason;
+            var setting = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.Key);
+            var autoOff = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.AutoOffAtKey);
+
+            return Json(new { enabled = setting?.Value == "true", autoOffAt = autoOff?.Value });
+        }
+
+        // POST /Dashboard/SetSmsFlowEnabled — som SetSetting, men afviser tænd hvis
+        // sms-saldoen er 0 eller ikke rækker til sms-taksten.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetSmsFlowEnabled([FromBody] SetSmsFlowEnabledRequest req)
+        {
+            if (req.Enabled)
+            {
+                var status = _smsGatewayStatusCache.Current;
+                var balance = status.Balance;
+                var tooLow = !balance.HasValue || balance.Value <= 0m ||
+                    (status.SmsPriceDkk.HasValue && balance.Value < status.SmsPriceDkk.Value);
+
+                if (tooLow)
+                    return Json(new { success = false, message = "SMS-flow kan ikke slås til – saldoen er for lav til at sende sms'er." });
+            }
+
+            var seasonId = AppTime.CurrentSeason;
+            var setting = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.Key);
+
+            if (setting == null)
+            {
+                setting = new DashboardSetting { SeasonId = seasonId, Key = SmsFlowSetting.Key };
+                _db.DashboardSettings.Add(setting);
+            }
+
+            setting.Value = req.Enabled ? "true" : "false";
+            setting.UpdatedAt = AppTime.Now;
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        public class SetSmsFlowEnabledRequest
+        {
+            public bool Enabled { get; set; }
         }
 
         // GET: /Dashboard/CheckInSearch?q=...&date=yyyy-MM-dd
@@ -149,6 +221,8 @@ namespace web.Controllers
             };
             _db.VolunteerLocationLogs.Add(log);
             await _db.SaveChangesAsync();
+
+            await SendTemplatedSmsAsync(SmsTemplateType.CheckIn, volunteer.Id, volunteer.Name, log.OccurredAt, post: "Pit");
 
             return Json(new { success = true, message = $"{volunteer.Name} er nu checket ind i Pitten." });
         }
@@ -367,6 +441,7 @@ namespace web.Controllers
                 return Json(new { success = true, message = "Ingen ændring." });
 
             checkIn.CurrentLocation = to;
+            var moveTime = AppTime.Now;
             _db.VolunteerLocationLogs.Add(new VolunteerLocationLog
             {
                 CheckInId = checkIn.Id,
@@ -374,10 +449,12 @@ namespace web.Controllers
                 SeasonId = seasonId,
                 EventType = "Move",
                 Location = to,
-                OccurredAt = AppTime.Now
+                OccurredAt = moveTime
             });
 
             await _db.SaveChangesAsync();
+
+            await SendTemplatedSmsAsync(SmsTemplateType.Moved, checkIn.Volunteer.Id, checkIn.Volunteer.Name, moveTime, fraPost: from, tilPost: to);
 
             return Json(new { success = true, message = $"{checkIn.Volunteer.Name} flyttet til {to}." });
         }
@@ -435,6 +512,8 @@ namespace web.Controllers
                 });
                 await _db.SaveChangesAsync();
 
+                await SendTemplatedSmsAsync(SmsTemplateType.CheckIn, volunteer.Id, volunteer.Name, now, post: "Pit");
+
                 return Json(new { result = "checkedin", message = $"{volunteer.Name} er nu checket ind i Pitten." });
             }
 
@@ -454,6 +533,8 @@ namespace web.Controllers
                 OccurredAt = now
             });
             await _db.SaveChangesAsync();
+
+            await SendTemplatedSmsAsync(SmsTemplateType.Moved, volunteer.Id, volunteer.Name, now, fraPost: from, tilPost: "Pit");
 
             return Json(new { result = "moved", message = $"{volunteer.Name} er flyttet fra {from} til Pitten.", volunteerId = volunteer.Id });
         }
@@ -645,8 +726,14 @@ namespace web.Controllers
             var postMetaHash = posts.Aggregate(0, (acc, p) =>
                 HashCode.Combine(acc, p.Name, p.AlarmAfterMinutes ?? 0));
 
+            // Inkluder sms-flow-tilstanden (og evt. automatisk sluk) så alle åbne faner opdager ændringer fra andre
+            var smsFlowSetting = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.Key);
+            var smsFlowAutoOff = await _db.DashboardSettings
+                .FirstOrDefaultAsync(s => s.SeasonId == seasonId && s.Key == SmsFlowSetting.AutoOffAtKey);
+
             // Enkel deterministisk hash – billig at beregne
-            var raw = $"{checkInCount}|{lastLogTick?.Ticks ?? 0}|{postCount}|{postPositionHash}|{postMetaHash}";
+            var raw = $"{checkInCount}|{lastLogTick?.Ticks ?? 0}|{postCount}|{postPositionHash}|{postMetaHash}|{smsFlowSetting?.Value}|{smsFlowAutoOff?.Value}";
             var hash = raw.GetHashCode().ToString("X8");
 
             return Json(new { hash });
@@ -670,6 +757,7 @@ namespace web.Controllers
                 return Json(new { success = false, message = $"{volunteer.Name} er ikke checket ind." });
 
             var now = AppTime.Now;
+            var checkedOutFrom = existing.CurrentLocation;
 
             // Hvis personen ikke er i pitten
             if (existing.CurrentLocation != "Pit")
@@ -706,7 +794,60 @@ namespace web.Controllers
 
             await _db.SaveChangesAsync();
 
+            await SendTemplatedSmsAsync(SmsTemplateType.CheckOut, volunteer.Id, volunteer.Name, now, post: checkedOutFrom);
+
             return Json(new { success = true, message = $"{volunteer.Name} er nu checket ud." });
+        }
+
+        // GET /Dashboard/GetSmsTemplates
+        [HttpGet]
+        public async Task<IActionResult> GetSmsTemplates()
+        {
+            var seasonId = AppTime.CurrentSeason;
+            var saved = await _db.SmsTemplates
+                .Where(t => t.SeasonId == seasonId)
+                .ToDictionaryAsync(t => t.Type, t => t.Body);
+
+            return Json(new
+            {
+                checkIn = saved.GetValueOrDefault(SmsTemplateType.CheckIn, SmsTemplateDefaults.CheckIn),
+                checkOut = saved.GetValueOrDefault(SmsTemplateType.CheckOut, SmsTemplateDefaults.CheckOut),
+                moved = saved.GetValueOrDefault(SmsTemplateType.Moved, SmsTemplateDefaults.Moved)
+            });
+        }
+
+        // POST /Dashboard/SaveSmsTemplate
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveSmsTemplate([FromBody] SaveSmsTemplateRequest req)
+        {
+            if (!Enum.TryParse<SmsTemplateType>(req.Type, ignoreCase: true, out var type))
+                return Json(new { success = false, message = "Ugyldig skabelontype." });
+
+            if (string.IsNullOrWhiteSpace(req.Body))
+                return Json(new { success = false, message = "Teksten må ikke være tom." });
+
+            var seasonId = AppTime.CurrentSeason;
+            var template = await _db.SmsTemplates
+                .FirstOrDefaultAsync(t => t.SeasonId == seasonId && t.Type == type);
+
+            if (template == null)
+            {
+                template = new SmsTemplate { SeasonId = seasonId, Type = type };
+                _db.SmsTemplates.Add(template);
+            }
+
+            template.Body = req.Body.Trim();
+            template.UpdatedAt = AppTime.Now;
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        public class SaveSmsTemplateRequest
+        {
+            public string Type { get; set; } = "";
+            public string Body { get; set; } = "";
         }
     }
 }

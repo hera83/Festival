@@ -1676,23 +1676,15 @@ public class AdminController : Controller
     // Frivillige hvis telefonnummer er på en aktiv abonnementsliste (i dag inden for start-/slutdato).
     private async Task<List<SmsVolunteerPickerItem>> GetEligibleSmsVolunteersAsync()
     {
-        var subs = await _smsService.GetAllSubscriptionsAsync(isActive: true);
-        var today = DateOnly.FromDateTime(AppTime.Now);
-        var activePhoneNumbers = subs
-            .Where(s => s.IsActive && s.StartDate <= today && s.EndDate >= today)
-            .SelectMany(s => s.PhoneNumbers)
-            .Select(PhoneNumbers.NormalizeDanishOrNull)
-            .Where(n => n is not null)
-            .ToHashSet();
-
         var season = AppTime.CurrentSeason;
+        var eligibleIds = await _smsMessageLogService.GetEligibleVolunteerIdsAsync(season);
+
         var volunteers = await _db.Volunteers
-            .Where(v => v.SeasonId == season && v.PhoneNumber != null && v.PhoneNumber != "")
+            .Where(v => v.SeasonId == season && eligibleIds.Contains(v.Id))
             .OrderBy(v => v.Name)
             .ToListAsync();
 
         return volunteers
-            .Where(v => activePhoneNumbers.Contains(PhoneNumbers.NormalizeDanishOrNull(v.PhoneNumber!)))
             .Select(v => new SmsVolunteerPickerItem { VolunteerId = v.Id, Name = v.Name, PhoneNumber = v.PhoneNumber! })
             .ToList();
     }

@@ -26,11 +26,11 @@
                 <option value="">— Vælg frivillig —</option>
                 @foreach (var v in Model.AvailableVolunteers)
                 {
-                    <option value="@v.Id" data-phone="@v.PhoneNumber">@v.Name (@v.Key)</option>
+                    <option value="@v.Id" data-sms-eligible="@(Model.SmsEligibleVolunteerIds.Contains(v.Id) ? "1" : "0")">@v.Name (@v.Key)</option>
                 }
             </select>
             <small id="createMsgNoPhoneHint" class="d-none" style="color: var(--clr-alarm);">
-                <i class="bi bi-exclamation-triangle me-1"></i>Ingen frivillige med telefonnummer registreret.
+                <i class="bi bi-exclamation-triangle me-1"></i>Ingen frivillige på en aktiv sms-abonnementsliste.
             </small>
         </div>
         <div class="mb-3" id="createMsgSubjectGroup">

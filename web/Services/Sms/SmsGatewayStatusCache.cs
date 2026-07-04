@@ -13,6 +13,11 @@ public sealed class SmsGatewayStatusSnapshot
     public string? ErrorMessage { get; init; }
     public decimal? Balance { get; init; }
     public DateTime? BalanceUpdatedAt { get; init; }
+
+    // Prisen for én sms lige nu — bruges til at afgøre om saldoen rækker til
+    // at slå sms-flowet i dashboardet til (se DashboardController.SetSmsFlowEnabled
+    // og SmsStatusUpdateService's automatiske sluk ved tom saldo).
+    public decimal? SmsPriceDkk { get; init; }
 }
 
 public interface ISmsGatewayStatusCache

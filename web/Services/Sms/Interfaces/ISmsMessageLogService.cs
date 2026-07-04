@@ -5,6 +5,10 @@ namespace web.Services.Sms;
 public interface ISmsMessageLogService
 {
     Task<SmsSendResult> SendAndLogAsync(int volunteerId, string message, string sentByUserId, CancellationToken cancellationToken = default);
+
+    // Frivillig-id'er hvis telefonnummer er på en aktiv abonnementsliste hos sms-gatewayen
+    // (i dag inden for start-/slutdato) — kun disse kan modtage sms og få deres svar matchet tilbage.
+    Task<HashSet<int>> GetEligibleVolunteerIdsAsync(int seasonId, CancellationToken cancellationToken = default);
 }
 
 public sealed class SmsSendResult

@@ -77,6 +77,10 @@ public class CreateMessageViewModel
 
     // Til dropdown i formularen
     public List<Volunteer> AvailableVolunteers { get; set; } = new();
+
+    // Frivillig-id'er hvis telefonnummer er på en aktiv sms-abonnementsliste — kun
+    // disse kan vælges når Kanal = Sms, ellers kan et evt. svar ikke matches tilbage.
+    public HashSet<int> SmsEligibleVolunteerIds { get; set; } = new();
 }
 
 // ── Vis besked detalje ───────────────────────────────────────────

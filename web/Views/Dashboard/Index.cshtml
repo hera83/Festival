@@ -194,6 +194,17 @@
                 </div>
             </div>
         </div>
+        <div class="card card-clickable" style="min-width:155px;cursor:pointer;" data-bs-toggle="modal" data-bs-target="#smsModal" title="Klik for at se SMS">
+            <div class="card-body d-flex align-items-center gap-2 py-2 px-3">
+                <div style="width:32px;height:32px;border-radius:var(--radius-md);background:var(--clr-info-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-chat-dots" style="color:var(--clr-info);font-size:0.9rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;line-height:1;color:var(--clr-text-muted);" id="smsFlowStatusText">—</div>
+                    <div style="font-size:0.75rem;color:var(--clr-text-muted);">SMS</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <hr style="border-color:var(--clr-border);margin:0.75rem 0 1rem;">
@@ -232,6 +243,10 @@
                     <button type="button" id="qrPitScanBtn" class="btn btn-sm" title="QR Scanner – tænd/sluk"
                             style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
                         <i class="bi bi-qr-code-scan"></i>
+                    </button>
+                    <button type="button" id="smsFlowToggleBtn" class="btn btn-sm" title="SMS-flow – slået fra"
+                            style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);padding:0.25rem 0.5rem;">
+                        <i class="bi bi-chat-dots"></i>
                     </button>
                 </div>
 
@@ -397,6 +412,93 @@
             </div>
             <div class="modal-footer">
                 <span id="noShowFooterCount" style="font-size:0.8rem;color:var(--clr-text-muted);margin-right:auto;"></span>
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SMS Modal -->
+<div class="modal fade" id="smsModal" tabindex="-1" aria-labelledby="smsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="smsModalLabel">
+                    <i class="bi bi-chat-dots me-2" style="color:var(--clr-info);"></i>SMS
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" style="font-size:0.83rem;color:var(--clr-text-muted);">
+                    Skabeloner for de sms'er der sendes til en frivillig ved check-in, check-ud og flytning i dashboardet.
+                    Klik på et fletfelt for at indsætte det i teksten.
+                </p>
+
+                <ul class="nav nav-tabs mb-3" id="smsTemplateTabs" role="tablist" style="border-bottom:1px solid var(--clr-border);">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="smsTab-CheckIn" data-bs-toggle="tab" data-bs-target="#smsPane-CheckIn" type="button" role="tab">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Check-in
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="smsTab-CheckOut" data-bs-toggle="tab" data-bs-target="#smsPane-CheckOut" type="button" role="tab">
+                            <i class="bi bi-box-arrow-right me-2"></i>Check-ud
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="smsTab-Moved" data-bs-toggle="tab" data-bs-target="#smsPane-Moved" type="button" role="tab">
+                            <i class="bi bi-arrow-left-right me-2"></i>Flytning
+                        </button>
+                    </li>
+                </ul>
+
+                <div id="smsSpinner" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm" style="color:var(--clr-brand);"></div>
+                </div>
+
+                <div class="tab-content d-none" id="smsTemplateTabContent">
+                    <div class="tab-pane fade show active" id="smsPane-CheckIn" role="tabpanel" data-template-type="CheckIn">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Navn}}">{{Navn}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Post}}">{{Post}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Tidspunkt}}">{{Tidspunkt}}</button>
+                        </div>
+                        <textarea class="form-control form-control-sm sms-template-textarea" rows="4" maxlength="1000"
+                                  style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);resize:vertical;"></textarea>
+                    </div>
+                    <div class="tab-pane fade" id="smsPane-CheckOut" role="tabpanel" data-template-type="CheckOut">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Navn}}">{{Navn}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Post}}">{{Post}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Tidspunkt}}">{{Tidspunkt}}</button>
+                        </div>
+                        <textarea class="form-control form-control-sm sms-template-textarea" rows="4" maxlength="1000"
+                                  style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);resize:vertical;"></textarea>
+                    </div>
+                    <div class="tab-pane fade" id="smsPane-Moved" role="tabpanel" data-template-type="Moved">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Navn}}">{{Navn}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{FraPost}}">{{FraPost}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{TilPost}}">{{TilPost}}</button>
+                            <button type="button" class="btn sms-merge-btn" data-field="{{Tidspunkt}}">{{Tidspunkt}}</button>
+                        </div>
+                        <textarea class="form-control form-control-sm sms-template-textarea" rows="4" maxlength="1000"
+                                  style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);resize:vertical;"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span id="smsTemplateSavedMsg" class="me-auto" style="font-size:0.8rem;color:var(--clr-ok);display:none;">
+                    <i class="bi bi-check2 me-1"></i>Gemt
+                </span>
+                <button type="button" id="smsTemplateResetBtn" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Nulstil til standard
+                </button>
+                <button type="button" id="smsTemplateSaveBtn" class="btn btn-sm" style="background:var(--clr-brand);border-color:var(--clr-brand);color:#fff;">
+                    <i class="bi bi-save me-1"></i>Gem skabelon
+                </button>
                 <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Luk
                 </button>
@@ -609,6 +711,17 @@
 <style>
     .card-clickable { transition: outline 0.15s, box-shadow 0.15s; }
     .card-clickable:hover { outline: 2px solid var(--clr-brand); box-shadow: 0 0 0 4px var(--clr-brand-dim); }
+
+    .sms-merge-btn {
+        background: var(--clr-bg);
+        border: 1px dashed var(--clr-border);
+        color: var(--clr-brand);
+        font-size: 0.75rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 20px;
+        transition: border-color 0.12s, background 0.12s;
+    }
+    .sms-merge-btn:hover { border-color: var(--clr-brand); background: var(--clr-brand-dim); }
 
     .post-card {
         background: var(--clr-bg);
@@ -2036,6 +2149,97 @@
         return new Date(value);
     }
 
+    // -- SMS skabeloner ----------------------------------------------------------
+    (function () {
+        const smsModal   = document.getElementById('smsModal');
+        const smsSpinner = document.getElementById('smsSpinner');
+        const tabContent = document.getElementById('smsTemplateTabContent');
+        const savedMsg   = document.getElementById('smsTemplateSavedMsg');
+        const saveBtn    = document.getElementById('smsTemplateSaveBtn');
+        const resetBtn   = document.getElementById('smsTemplateResetBtn');
+
+        const smsDefaults = {
+            CheckIn: 'Hej {{Navn}}, du er nu checket ind til {{Post}}. Tak fordi du hjælper til i dag!',
+            CheckOut: 'Hej {{Navn}}, du er nu checket ud fra {{Post}}. Tak for din indsats i dag – vi ses igen snart!',
+            Moved: 'Hej {{Navn}}, du er blevet flyttet fra {{FraPost}} til {{TilPost}}. Mød op på den nye post hurtigst muligt.'
+        };
+
+        let smsTemplatesLoaded = false;
+
+        function smsTextarea(type) {
+            return document.querySelector(`#smsPane-${type} .sms-template-textarea`);
+        }
+
+        function smsActiveType() {
+            const activePane = tabContent.querySelector('.tab-pane.active');
+            return activePane ? activePane.dataset.templateType : null;
+        }
+
+        function loadSmsTemplates() {
+            smsSpinner.classList.remove('d-none');
+            tabContent.classList.add('d-none');
+            fetch('/Dashboard/GetSmsTemplates')
+                .then(r => r.json())
+                .then(data => {
+                    smsTextarea('CheckIn').value = data.checkIn;
+                    smsTextarea('CheckOut').value = data.checkOut;
+                    smsTextarea('Moved').value = data.moved;
+                    smsTemplatesLoaded = true;
+                })
+                .catch(() => showToast('Kunne ikke hente sms-skabeloner.', 'error'))
+                .finally(() => {
+                    smsSpinner.classList.add('d-none');
+                    tabContent.classList.remove('d-none');
+                });
+        }
+
+        smsModal.addEventListener('shown.bs.modal', () => {
+            savedMsg.style.display = 'none';
+            if (!smsTemplatesLoaded) loadSmsTemplates();
+        });
+
+        document.querySelectorAll('.sms-merge-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const textarea = this.closest('.tab-pane').querySelector('.sms-template-textarea');
+                const field = this.dataset.field;
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.slice(0, start) + field + textarea.value.slice(end);
+                const cursor = start + field.length;
+                textarea.focus();
+                textarea.setSelectionRange(cursor, cursor);
+            });
+        });
+
+        resetBtn.addEventListener('click', () => {
+            const type = smsActiveType();
+            if (!type) return;
+            smsTextarea(type).value = smsDefaults[type];
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const type = smsActiveType();
+            if (!type) return;
+            const body = smsTextarea(type).value.trim();
+            if (!body) {
+                showToast('Teksten må ikke være tom.', 'warning');
+                return;
+            }
+            saveBtn.disabled = true;
+            postJson('/Dashboard/SaveSmsTemplate', { type, body })
+                .then(res => {
+                    if (res.success) {
+                        savedMsg.style.display = 'inline-block';
+                        setTimeout(() => { savedMsg.style.display = 'none'; }, 2500);
+                    } else {
+                        showToast(res.message || 'Kunne ikke gemme skabelonen.', 'error');
+                    }
+                })
+                .catch(() => showToast('Noget gik galt. Prøv igen.', 'error'))
+                .finally(() => { saveBtn.disabled = false; });
+        });
+    })();
+
     // -- Alarm toggle ----------------------------------------------------------
     let alarmsEnabled = true;
     let pitAlarmMinutes = null;
@@ -2246,6 +2450,7 @@
             loadAllPosts(true);
             updateCheckedInCount();
             updateNoShowCount();            // Diskret prik der viser at siden er synkroniseret
+            if (typeof window.syncSmsFlowButton === 'function') window.syncSmsFlowButton();
             showSyncDot();
         } catch {
             // Netværksfejl – ignorer stille
@@ -2295,6 +2500,93 @@
             btn.title             = 'QR Scanner – sluk';
         }
     });
+})();
+</script>
+
+@* -- SMS-flow: global, DB-gemt kontakt der styrer om check-in/check-ud/flytning sender sms -- *@
+<script>
+(function () {
+    const btn = document.getElementById('smsFlowToggleBtn');
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    const cardStatusText = document.getElementById('smsFlowStatusText');
+
+    function applyState(enabled) {
+        btn.dataset.enabled = enabled ? 'true' : 'false';
+        if (enabled) {
+            icon.className        = 'bi bi-chat-dots-fill';
+            btn.style.background  = 'var(--clr-brand)';
+            btn.style.color       = '#fff';
+            btn.style.borderColor = 'var(--clr-brand)';
+            btn.title             = 'SMS-flow – slået til (klik for at slukke)';
+        } else {
+            icon.className        = 'bi bi-chat-dots';
+            btn.style.background  = 'var(--clr-bg)';
+            btn.style.color       = 'var(--clr-text-muted)';
+            btn.style.borderColor = 'var(--clr-border)';
+            btn.title             = 'SMS-flow – slået fra (klik for at tænde)';
+        }
+        if (cardStatusText) {
+            cardStatusText.textContent = enabled ? 'Aktiv' : 'Passiv';
+            cardStatusText.style.color = enabled ? 'var(--clr-ok)' : 'var(--clr-text-muted)';
+        }
+    }
+
+    let smsAutoOffSeen = null;
+    let smsAutoOffInitialized = false;
+
+    function syncSmsFlowButton() {
+        fetch('/Dashboard/GetSmsFlowStatus')
+            .then(r => r.json())
+            .then(d => {
+                applyState(d.enabled);
+
+                if (!smsAutoOffInitialized) {
+                    // Første load: husk den nuværende værdi uden at vise en toast for
+                    // en evt. gammel automatisk sluk der skete før siden blev åbnet.
+                    smsAutoOffSeen = d.autoOffAt;
+                    smsAutoOffInitialized = true;
+                    return;
+                }
+
+                if (d.autoOffAt && d.autoOffAt !== smsAutoOffSeen) {
+                    smsAutoOffSeen = d.autoOffAt;
+                    showToast('SMS-flow er stoppet – saldoen er opbrugt.', 'error');
+                }
+            })
+            .catch(() => {});
+    }
+
+    function getToken() {
+        const el = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (el) return el.value;
+        const meta = document.querySelector('meta[name="RequestVerificationToken"]');
+        return meta ? meta.content : '';
+    }
+
+    btn.addEventListener('click', function () {
+        const nextEnabled = btn.dataset.enabled !== 'true';
+        btn.disabled = true;
+        fetch('/Dashboard/SetSmsFlowEnabled', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getToken() },
+            body: JSON.stringify({ enabled: nextEnabled })
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    applyState(nextEnabled);
+                    showToast(nextEnabled ? 'SMS-flow slået til' : 'SMS-flow slået fra', nextEnabled ? 'success' : 'warn');
+                } else {
+                    showToast(res.message || 'Kunne ikke opdatere sms-flow.', 'error');
+                }
+            })
+            .catch(() => showToast('Noget gik galt. Prøv igen.', 'error'))
+            .finally(() => { btn.disabled = false; });
+    });
+
+    syncSmsFlowButton();
+    window.syncSmsFlowButton = syncSmsFlowButton;
 })();
 </script>
 }
