@@ -202,6 +202,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return PartialView("_ShiftTypesPartial", vm);
     }
 
+    [Authorize(Roles = "Administrator")]
     public IActionResult GetCreateShiftTypeForm()
     {
         var vm = new ShiftTypeFormViewModel
@@ -214,6 +215,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return PartialView("_CreateShiftTypeModal", vm);
     }
 
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetEditShiftTypeForm(int id)
     {
         var shiftType = await db.ShiftTypes
@@ -233,7 +235,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return PartialView("_EditShiftTypeModal", vm);
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> CreateShiftType([FromForm] ShiftTypeFormViewModel vm)
     {
         if (string.IsNullOrWhiteSpace(vm.ShiftName))
@@ -260,7 +262,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return Json(new { success = true, message = $"Vagttype '{shiftType.ShiftName}' oprettet." });
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> UpdateShiftType([FromForm] ShiftTypeFormViewModel vm)
     {
         if (string.IsNullOrWhiteSpace(vm.ShiftName))
@@ -339,6 +341,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         });
     }
 
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetCreateForm()
     {
         var vm = new CreateVolunteerViewModel
@@ -352,7 +355,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return PartialView("_CreateVolunteerModal", vm);
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> CreateVolunteer([FromForm] CreateVolunteerViewModel vm)
     {
         if (string.IsNullOrWhiteSpace(vm.Name))
@@ -400,6 +403,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return Json(new { success = true, message = $"Frivillig '{volunteer.Name}' oprettet." });
     }
 
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetEditForm(int id)
     {
         var volunteer = await db.Volunteers
@@ -424,7 +428,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return PartialView("_EditVolunteerModal", vm);
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> UpdateVolunteer([FromForm] EditVolunteerViewModel vm)
     {
         if (string.IsNullOrWhiteSpace(vm.Name))
@@ -466,7 +470,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return Json(new { success = true, message = $"Frivillig '{volunteer.Name}' opdateret." });
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> DeleteVolunteer(int id)
     {
         var volunteer = await db.Volunteers
@@ -482,7 +486,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return Json(new { success = true, message = $"Frivillig '{volunteer.Name}' slettet." });
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> DeleteShiftType(int id)
     {
         var shiftType = await db.ShiftTypes
@@ -498,7 +502,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return Json(new { success = true, message = $"Vagttype '{shiftType.ShiftName}' og tilhørende vagter er slettet." });
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> DeleteShift(int id)
     {
         var shift = await db.Shifts
@@ -512,6 +516,31 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         await db.SaveChangesAsync();
 
         return Json(new { success = true, message = $"Vagten '{shift.ShiftType.ShiftName}' er fjernet fra {shift.Volunteer.Name}." });
+    }
+
+    // Kun administratorer må tilpasse en frivilligs faktiske vagttid – ændrer ikke selve vagten (ShiftType)
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> SetCustomShiftTime(int id, DateTime? customStart, DateTime? customEnd)
+    {
+        var shift = await db.Shifts
+            .Include(s => s.Volunteer)
+            .Include(s => s.ShiftType)
+            .FirstOrDefaultAsync(s => s.Id == id && s.SeasonId == CurrentSeason);
+
+        if (shift is null) return Json(new { success = false, message = "Vagt ikke fundet." });
+
+        if (customStart.HasValue && customEnd.HasValue && customEnd.Value <= customStart.Value)
+            return Json(new { success = false, message = "Sluttidspunkt skal være efter starttidspunkt." });
+
+        shift.CustomStartTime = customStart;
+        shift.CustomEndTime = customEnd;
+        await db.SaveChangesAsync();
+
+        var message = customStart.HasValue || customEnd.HasValue
+            ? $"Tilpasset vagttid gemt for {shift.Volunteer.Name}."
+            : $"Vagttid nulstillet til original vagt for {shift.Volunteer.Name}.";
+
+        return Json(new { success = true, message });
     }
 
     // ── Behov ─────────────────────────────────────────────────────
@@ -571,7 +600,7 @@ public class FrivilligController(ApplicationDbContext db) : Controller
         return PartialView("_BehovPartial", vm);
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrator")]
     public async Task<IActionResult> SetBehov(int shiftTypeId, int requiredCount)
     {
         var shiftType = await db.ShiftTypes

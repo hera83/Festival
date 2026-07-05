@@ -286,6 +286,14 @@
                             }
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small" style="color: var(--clr-text-muted);">
+                            <i class="bi bi-key me-1"></i>Nyt password
+                        </label>
+                        <input type="password" id="editNewPassword" name="NewPassword" class="form-control form-control-sm"
+                               placeholder="Lad stå tom for at bevare nuværende password" autocomplete="new-password"
+                               style="background: var(--clr-bg); border: 1px solid var(--clr-border); color: var(--clr-text);" />
+                    </div>
                     <div class="mb-1 p-2 rounded" style="background: var(--clr-bg); border: 1px solid var(--clr-border);">
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" id="editIsLockedOut" name="IsLockedOut" value="true" />
@@ -430,6 +438,7 @@
         roleSelect.value = userRoles.length > 0 ? userRoles[0] : '';
 
         document.getElementById('editIsLockedOut').checked = btn.dataset.lockedout === 'true';
+        document.getElementById('editNewPassword').value = '';
     });
 
     var deleteUserModal = document.getElementById('deleteUserModal');

@@ -36,6 +36,7 @@ public class EditUserViewModel
     public string? PhoneNumber { get; set; }
     public List<string> SelectedRoles { get; set; } = [];
     public bool IsLockedOut { get; set; }
+    public string? NewPassword { get; set; }
 }
 
 public class CreateUserViewModel

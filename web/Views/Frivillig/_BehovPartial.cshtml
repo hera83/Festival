@@ -96,14 +96,17 @@
                                     </span>
                                 </td>
                                 <td class="pe-3 align-middle text-end">
-                                    <button type="button" class="btn btn-sm btn-secondary bh-edit-btn"
-                                            title="Rediger behov"
-                                            data-id="@row.ShiftTypeId"
-                                            data-name="@row.ShiftName"
-                                            data-required="@row.RequiredCount"
-                                            data-bs-toggle="modal" data-bs-target="#editBehovModal">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
+                                    @if (User.IsInRole("Administrator"))
+                                    {
+                                        <button type="button" class="btn btn-sm btn-secondary bh-edit-btn"
+                                                title="Rediger behov"
+                                                data-id="@row.ShiftTypeId"
+                                                data-name="@row.ShiftName"
+                                                data-required="@row.RequiredCount"
+                                                data-bs-toggle="modal" data-bs-target="#editBehovModal">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -169,31 +172,34 @@
     </div>
 </div>
 
-@* Rediger behov modal *@
-<div class="modal fade" id="editBehovModal" tabindex="-1" aria-labelledby="editBehovModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editBehovModalLabel"><i class="bi bi-bullseye me-2" style="color: var(--clr-brand);"></i>Rediger behov</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-3" style="color: var(--clr-text-muted);">Angiv det ønskede antal frivillige for <strong id="editBehovName" style="color: var(--clr-text);"></strong>.</p>
-                <div class="mb-0">
-                    <label for="editBehovCount" class="form-label" style="font-size: 0.9rem;">Behov (antal frivillige)</label>
-                    <input type="number" id="editBehovCount" class="form-control form-control-sm" min="0" max="9999"
-                           style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text); max-width: 140px;" />
+@if (User.IsInRole("Administrator"))
+{
+    @* Rediger behov modal *@
+    <div class="modal fade" id="editBehovModal" tabindex="-1" aria-labelledby="editBehovModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editBehovModalLabel"><i class="bi bi-bullseye me-2" style="color: var(--clr-brand);"></i>Rediger behov</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
-                <button type="button" class="btn btn-sm btn-primary" id="editBehovConfirm">
-                    <i class="bi bi-floppy me-1"></i>Gem
-                </button>
+                <div class="modal-body">
+                    <p class="mb-3" style="color: var(--clr-text-muted);">Angiv det ønskede antal frivillige for <strong id="editBehovName" style="color: var(--clr-text);"></strong>.</p>
+                    <div class="mb-0">
+                        <label for="editBehovCount" class="form-label" style="font-size: 0.9rem;">Behov (antal frivillige)</label>
+                        <input type="number" id="editBehovCount" class="form-control form-control-sm" min="0" max="9999"
+                               style="background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text); max-width: 140px;" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Annuller</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="editBehovConfirm">
+                        <i class="bi bi-floppy me-1"></i>Gem
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 <script>
 (function () {
@@ -250,46 +256,48 @@
         debounce = setTimeout(function () { loadPage(1, currentSize); }, 250);
     });
 
-    // ── Rediger behov modal ───────────────────────────────────────
+    // ── Rediger behov modal (kun administrator) ───────────────────
     var editModalEl      = document.getElementById('editBehovModal');
-    var bsEditModal      = new bootstrap.Modal(editModalEl);
+    var bsEditModal      = editModalEl ? new bootstrap.Modal(editModalEl) : null;
     var pendingTypeId    = null;
 
-    editModalEl.addEventListener('show.bs.modal', function (event) {
-        var btn = event.relatedTarget;
-        pendingTypeId = parseInt(btn.dataset.id);
-        document.getElementById('editBehovName').textContent  = btn.dataset.name;
-        document.getElementById('editBehovCount').value       = btn.dataset.required;
-    });
+    if (editModalEl) {
+        editModalEl.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            pendingTypeId = parseInt(btn.dataset.id);
+            document.getElementById('editBehovName').textContent  = btn.dataset.name;
+            document.getElementById('editBehovCount').value       = btn.dataset.required;
+        });
 
-    document.getElementById('editBehovConfirm').addEventListener('click', async function () {
-        if (!pendingTypeId) return;
-        var btn = this;
-        var count = parseInt(document.getElementById('editBehovCount').value);
-        if (isNaN(count) || count < 0) { showToast('Angiv et gyldigt tal (min. 0).', 'warning'); return; }
-        btn.disabled = true;
-        try {
-            var fd = new FormData();
-            fd.append('shiftTypeId',  pendingTypeId);
-            fd.append('requiredCount', count);
-            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-            var res  = await fetch(setUrl, { method: 'POST', body: fd });
-            var json = await res.json();
-            bsEditModal.hide();
-            if (json.success) {
-                showToast(json.message, 'success');
-                await loadPage(currentPage, currentSize);
-            } else {
-                showToast(json.message, 'error');
+        document.getElementById('editBehovConfirm').addEventListener('click', async function () {
+            if (!pendingTypeId) return;
+            var btn = this;
+            var count = parseInt(document.getElementById('editBehovCount').value);
+            if (isNaN(count) || count < 0) { showToast('Angiv et gyldigt tal (min. 0).', 'warning'); return; }
+            btn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('shiftTypeId',  pendingTypeId);
+                fd.append('requiredCount', count);
+                fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                var res  = await fetch(setUrl, { method: 'POST', body: fd });
+                var json = await res.json();
+                bsEditModal.hide();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    await loadPage(currentPage, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (e) {
+                bsEditModal.hide();
+                showToast('Netværksfejl – kunne ikke gemme.', 'error');
+            } finally {
+                btn.disabled = false;
+                pendingTypeId = null;
             }
-        } catch (e) {
-            bsEditModal.hide();
-            showToast('Netværksfejl – kunne ikke gemme.', 'error');
-        } finally {
-            btn.disabled = false;
-            pendingTypeId = null;
-        }
-    });
+        });
+    }
 
     bindZoneEvents();
 })();

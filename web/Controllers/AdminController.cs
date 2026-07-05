@@ -1140,6 +1140,24 @@ public class AdminController : Controller
         else
             await _userManager.SetLockoutEndDateAsync(user, null);
 
+        // Opdater password – kun hvis der er indtastet noget
+        if (!string.IsNullOrWhiteSpace(model.NewPassword))
+        {
+            var removePassword = await _userManager.RemovePasswordAsync(user);
+            if (!removePassword.Succeeded)
+            {
+                TempData["Error"] = "Gem bruger fejlede: " + string.Join(" ", removePassword.Errors.Select(e => e.Description));
+                return RedirectToAction(nameof(Index), new { tab = "brugere" });
+            }
+
+            var addPassword = await _userManager.AddPasswordAsync(user, model.NewPassword);
+            if (!addPassword.Succeeded)
+            {
+                TempData["Error"] = "Gem bruger fejlede: " + string.Join(" ", addPassword.Errors.Select(e => e.Description));
+                return RedirectToAction(nameof(Index), new { tab = "brugere" });
+            }
+        }
+
         TempData["Success"] = $"Brugeren '{model.DisplayName}' blev opdateret.";
         return RedirectToAction(nameof(Index), new { tab = "brugere" });
     }

@@ -177,9 +177,9 @@ namespace web.Controllers
             // Frivillige med vagt den pågældende dag
             var withShiftTodayIds = await _db.Shifts
                 .Where(s => s.SeasonId == seasonId &&
-                            s.ShiftType.StartTime.Year == today.Year &&
-                            s.ShiftType.StartTime.Month == today.Month &&
-                            s.ShiftType.StartTime.Day == today.Day)
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Year == today.Year &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Month == today.Month &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Day == today.Day)
                 .Select(s => s.VolunteerId)
                 .Distinct()
                 .ToListAsync();
@@ -284,23 +284,28 @@ namespace web.Controllers
             var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
-            // Frivillige der allerede er checket ind i dag
+            // Frivillige der allerede har været checket ind i dag (uanset om de
+            // stadig er det, eller allerede er tjekket ud igen – de er dermed
+            // reelt mødt op og skal ikke tælle som udeblevet).
             var checkedInVolunteerIds = await _db.VolunteerCheckIns
-                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null)
+                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today)
                 .Select(c => c.VolunteerId)
                 .ToListAsync();
 
             // Frivillige med et aktivt snooze (udsat varsel)
             var snoozedVolunteerIds = await GetActiveSnoozedVolunteerIdsAsync(seasonId, now);
 
-            // Vagter der starter i dag og hvor starttidspunktet er passeret
+            // Vagter der starter i dag, hvor starttidspunktet er passeret, og
+            // hvor vagten ikke allerede er slut (så de ikke fortsat vises som
+            // udeblevet, når vagten er overstået)
             var noShowCount = await _db.Shifts
                 .Include(s => s.ShiftType)
                 .Where(s => s.SeasonId == seasonId &&
-                            s.ShiftType.StartTime.Year == today.Year &&
-                            s.ShiftType.StartTime.Month == today.Month &&
-                            s.ShiftType.StartTime.Day == today.Day &&
-                            s.ShiftType.StartTime <= now &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Year == today.Year &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Month == today.Month &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Day == today.Day &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime) <= now &&
+                            (s.CustomEndTime ?? s.ShiftType.EndTime) > now &&
                             !checkedInVolunteerIds.Contains(s.VolunteerId) &&
                             !snoozedVolunteerIds.Contains(s.VolunteerId))
                 .Select(s => s.VolunteerId)
@@ -318,8 +323,11 @@ namespace web.Controllers
             var today = AppTime.CopenhagenToday;
             var seasonId = today.Year;
 
+            // Frivillige der allerede har været checket ind i dag (uanset om de
+            // stadig er det, eller allerede er tjekket ud igen – de er dermed
+            // reelt mødt op og skal ikke tælle som udeblevet).
             var checkedInVolunteerIds = await _db.VolunteerCheckIns
-                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today && c.CheckedOutAt == null)
+                .Where(c => c.SeasonId == seasonId && c.CheckInDate == today)
                 .Select(c => c.VolunteerId)
                 .ToListAsync();
 
@@ -330,10 +338,11 @@ namespace web.Controllers
                 .Include(s => s.ShiftType)
                 .Include(s => s.Volunteer)
                 .Where(s => s.SeasonId == seasonId &&
-                            s.ShiftType.StartTime.Year == today.Year &&
-                            s.ShiftType.StartTime.Month == today.Month &&
-                            s.ShiftType.StartTime.Day == today.Day &&
-                            s.ShiftType.StartTime <= now &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Year == today.Year &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Month == today.Month &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Day == today.Day &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime) <= now &&
+                            (s.CustomEndTime ?? s.ShiftType.EndTime) > now &&
                             !checkedInVolunteerIds.Contains(s.VolunteerId) &&
                             !snoozedVolunteerIds.Contains(s.VolunteerId))
                 .ToListAsync();
@@ -359,7 +368,7 @@ namespace web.Controllers
                     g.First().Volunteer.Name,
                     PhoneNumber = g.First().Volunteer.PhoneNumber,
                     SmsEligible = eligibleIds.Contains(g.Key),
-                    EarliestStart = g.Min(s => s.ShiftType.StartTime)
+                    EarliestStart = g.Min(s => s.CustomStartTime ?? s.ShiftType.StartTime)
                 });
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -441,10 +450,10 @@ namespace web.Controllers
                 .Include(s => s.ShiftType)
                 .Where(s => s.SeasonId == seasonId &&
                             s.VolunteerId == req.VolunteerId &&
-                            s.ShiftType.StartTime.Year == today.Year &&
-                            s.ShiftType.StartTime.Month == today.Month &&
-                            s.ShiftType.StartTime.Day == today.Day &&
-                            s.ShiftType.StartTime <= now)
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Year == today.Year &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Month == today.Month &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime).Day == today.Day &&
+                            (s.CustomStartTime ?? s.ShiftType.StartTime) <= now)
                 .ToListAsync();
 
             if (shiftsToRemove.Count == 0)

@@ -16,37 +16,43 @@
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <button type="button" id="btnOpenCreateSt" class="btn btn-sm"
-            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
-        <i class="bi bi-plus-square me-1"></i>Opret vagttype
-    </button>
+    @if (User.IsInRole("Administrator"))
+    {
+        <button type="button" id="btnOpenCreateSt" class="btn btn-sm"
+                style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
+            <i class="bi bi-plus-square me-1"></i>Opret vagttype
+        </button>
+    }
 </div>
 
-@* Opret-modal *@
-<div class="modal fade" id="createStModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div id="createStModalBody">
-                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
-                    <div class="spinner-border spinner-border-sm" role="status"></div>
+@if (User.IsInRole("Administrator"))
+{
+    @* Opret-modal *@
+    <div class="modal fade" id="createStModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div id="createStModalBody">
+                    <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-@* Rediger-modal *@
-<div class="modal fade" id="editStModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div id="editStModalBody">
-                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
-                    <div class="spinner-border spinner-border-sm" role="status"></div>
+    @* Rediger-modal *@
+    <div class="modal fade" id="editStModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div id="editStModalBody">
+                    <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @* Resultat-zone — kun denne div overskrives ved søgning/sideskift *@
 <div id="st-result-zone">
@@ -82,20 +88,23 @@
                                 <td class="align-middle">@st.StartTime.ToString("dd-MM-yyyy HH:mm")</td>
                                 <td class="align-middle">@st.EndTime.ToString("dd-MM-yyyy HH:mm")</td>
                                 <td class="pe-3 align-middle text-end">
-                                    <div class="d-flex gap-2 justify-content-end">
-                                        <button type="button" class="btn btn-sm btn-secondary st-edit-btn"
-                                                title="Rediger vagttype"
-                                                data-id="@st.Id">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm st-delete-btn"
-                                                style="background: var(--clr-alarm); color: #fff; border: none;"
-                                                title="Slet vagttype"
-                                                data-id="@st.Id" data-name="@st.ShiftName"
-                                                data-bs-toggle="modal" data-bs-target="#deleteStModal">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
+                                    @if (User.IsInRole("Administrator"))
+                                    {
+                                        <div class="d-flex gap-2 justify-content-end">
+                                            <button type="button" class="btn btn-sm btn-secondary st-edit-btn"
+                                                    title="Rediger vagttype"
+                                                    data-id="@st.Id">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm st-delete-btn"
+                                                    style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                    title="Slet vagttype"
+                                                    data-id="@st.Id" data-name="@st.ShiftName"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteStModal">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -161,27 +170,30 @@
     </div>
 </div>
 
-@* Slet vagttype modal *@
-<div class="modal fade" id="deleteStModal" tabindex="-1" aria-labelledby="deleteStModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteStModalLabel"><i class="bi bi-exclamation-triangle me-2" style="color: var(--clr-alarm);"></i>Slet vagttype</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
-            </div>
-            <div class="modal-body">
-                <p>Er du sikker på, at du vil slette vagttypen <strong id="deleteStName"></strong>?</p>
-                <p class="mb-0" style="color: var(--clr-alarm); font-size: 0.9rem;"><i class="bi bi-exclamation-circle me-1"></i>Alle vagter med denne vagttype fjernes fra alle frivillige.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuller</button>
-                <button type="button" class="btn btn-sm btn-danger" id="deleteStConfirm">
-                    <i class="bi bi-trash3 me-1"></i>Slet
-                </button>
+@if (User.IsInRole("Administrator"))
+{
+    @* Slet vagttype modal *@
+    <div class="modal fade" id="deleteStModal" tabindex="-1" aria-labelledby="deleteStModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteStModalLabel"><i class="bi bi-exclamation-triangle me-2" style="color: var(--clr-alarm);"></i>Slet vagttype</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Er du sikker på, at du vil slette vagttypen <strong id="deleteStName"></strong>?</p>
+                    <p class="mb-0" style="color: var(--clr-alarm); font-size: 0.9rem;"><i class="bi bi-exclamation-circle me-1"></i>Alle vagter med denne vagttype fjernes fra alle frivillige.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuller</button>
+                    <button type="button" class="btn btn-sm btn-danger" id="deleteStConfirm">
+                        <i class="bi bi-trash3 me-1"></i>Slet
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 <script>
 (function () {
@@ -225,23 +237,26 @@
         bindRowActions();
     }
 
-    // ── Opret / rediger ──────────────────────────────────────────
+    // ── Opret / rediger (kun administrator) ───────────────────────
     var createModalEl = document.getElementById('createStModal');
     var editModalEl   = document.getElementById('editStModal');
-    var bsCreateModal = new bootstrap.Modal(createModalEl);
-    var bsEditModal   = new bootstrap.Modal(editModalEl);
+    var bsCreateModal = createModalEl ? new bootstrap.Modal(createModalEl) : null;
+    var bsEditModal   = editModalEl ? new bootstrap.Modal(editModalEl) : null;
+    var btnOpenCreateSt = document.getElementById('btnOpenCreateSt');
 
-    document.getElementById('btnOpenCreateSt').addEventListener('click', async function () {
-        try {
-            var res = await fetch(createFormUrl);
-            if (!res.ok) { showToast('Kunne ikke åbne opret-formular.', 'error'); return; }
-            document.getElementById('createStModalBody').innerHTML = await res.text();
-            bsCreateModal.show();
-            bindCreateForm();
-        } catch (e) {
-            showToast('Netværksfejl – prøv igen.', 'error');
-        }
-    });
+    if (btnOpenCreateSt) {
+        btnOpenCreateSt.addEventListener('click', async function () {
+            try {
+                var res = await fetch(createFormUrl);
+                if (!res.ok) { showToast('Kunne ikke åbne opret-formular.', 'error'); return; }
+                document.getElementById('createStModalBody').innerHTML = await res.text();
+                bsCreateModal.show();
+                bindCreateForm();
+            } catch (e) {
+                showToast('Netværksfejl – prøv igen.', 'error');
+            }
+        });
+    }
 
     function bindRowActions() {
         document.querySelectorAll('.st-edit-btn').forEach(function (btn) {
@@ -330,43 +345,45 @@
         debounce = setTimeout(function () { loadPage(1, currentSize); }, 250);
     });
 
-    // ── Slet-modal ────────────────────────────────────────────────
+    // ── Slet-modal (kun administrator) ────────────────────────────
     var deleteModalEl   = document.getElementById('deleteStModal');
-    var bsDeleteModal   = new bootstrap.Modal(deleteModalEl);
+    var bsDeleteModal   = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
     var pendingDeleteId = null;
 
-    deleteModalEl.addEventListener('show.bs.modal', function (event) {
-        var btn = event.relatedTarget;
-        pendingDeleteId = parseInt(btn.dataset.id);
-        document.getElementById('deleteStName').textContent = btn.dataset.name;
-    });
+    if (deleteModalEl) {
+        deleteModalEl.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            pendingDeleteId = parseInt(btn.dataset.id);
+            document.getElementById('deleteStName').textContent = btn.dataset.name;
+        });
 
-    document.getElementById('deleteStConfirm').addEventListener('click', async function () {
-        if (!pendingDeleteId) return;
-        var btn = this;
-        btn.disabled = true;
-        try {
-            var fd = new FormData();
-            fd.append('id', pendingDeleteId);
-            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-            var res  = await fetch(deleteUrl, { method: 'POST', body: fd });
-            var json = await res.json();
-            bsDeleteModal.hide();
-            if (json.success) {
-                showToast(json.message, 'success');
-                document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
-                await loadPage(currentPage, currentSize);
-            } else {
-                showToast(json.message, 'error');
+        document.getElementById('deleteStConfirm').addEventListener('click', async function () {
+            if (!pendingDeleteId) return;
+            var btn = this;
+            btn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('id', pendingDeleteId);
+                fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                var res  = await fetch(deleteUrl, { method: 'POST', body: fd });
+                var json = await res.json();
+                bsDeleteModal.hide();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                    await loadPage(currentPage, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (e) {
+                bsDeleteModal.hide();
+                showToast('Netværksfejl – kunne ikke slette.', 'error');
+            } finally {
+                btn.disabled = false;
+                pendingDeleteId = null;
             }
-        } catch (e) {
-            bsDeleteModal.hide();
-            showToast('Netværksfejl – kunne ikke slette.', 'error');
-        } finally {
-            btn.disabled = false;
-            pendingDeleteId = null;
-        }
-    });
+        });
+    }
 
     bindZoneEvents();
 })();

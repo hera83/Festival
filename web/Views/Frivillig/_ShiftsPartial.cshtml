@@ -33,7 +33,7 @@
                             <th>Vagttype</th>
                             <th>Start</th>
                             <th>Slut</th>
-                            <th class="pe-3" style="width:60px;"></th>
+                            <th class="pe-3" style="width:100px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -51,18 +51,51 @@
                             <tr style="border-bottom: 1px solid var(--clr-border);">
                                 <td class="ps-3 align-middle fw-semibold">@s.Volunteer.Name</td>
                                 <td class="align-middle">@s.ShiftType.ShiftName</td>
-                                <td class="align-middle">@s.ShiftType.StartTime.ToString("dd-MM-yyyy HH:mm")</td>
-                                <td class="align-middle">@s.ShiftType.EndTime.ToString("dd-MM-yyyy HH:mm")</td>
+                                <td class="align-middle">
+                                    @((s.CustomStartTime ?? s.ShiftType.StartTime).ToString("dd-MM-yyyy HH:mm"))
+                                    @if (s.CustomStartTime.HasValue)
+                                    {
+                                        <i class="bi bi-pencil-fill ms-1" style="color: var(--clr-warn); font-size: 0.75rem;"
+                                           title="Tilpasset – oprindelig vagtstart: @s.ShiftType.StartTime.ToString("dd-MM-yyyy HH:mm")"></i>
+                                    }
+                                </td>
+                                <td class="align-middle">
+                                    @((s.CustomEndTime ?? s.ShiftType.EndTime).ToString("dd-MM-yyyy HH:mm"))
+                                    @if (s.CustomEndTime.HasValue)
+                                    {
+                                        <i class="bi bi-pencil-fill ms-1" style="color: var(--clr-warn); font-size: 0.75rem;"
+                                           title="Tilpasset – oprindelig vagtslut: @s.ShiftType.EndTime.ToString("dd-MM-yyyy HH:mm")"></i>
+                                    }
+                                </td>
                                 <td class="pe-3 align-middle text-end">
-                                    <button type="button" class="btn btn-sm sh-delete-btn"
-                                            style="background: var(--clr-alarm); color: #fff; border: none;"
-                                            title="Slet vagt"
-                                            data-id="@s.Id"
-                                            data-name="@s.Volunteer.Name"
-                                            data-shift="@s.ShiftType.ShiftName"
-                                            data-bs-toggle="modal" data-bs-target="#deleteShiftModal">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    @if (User.IsInRole("Administrator"))
+                                    {
+                                        <button type="button" class="btn btn-sm sh-edit-btn me-1"
+                                                style="background: var(--clr-brand); color: #fff; border: none;"
+                                                title="Rediger vagttid"
+                                                data-id="@s.Id"
+                                                data-name="@s.Volunteer.Name"
+                                                data-shift="@s.ShiftType.ShiftName"
+                                                data-original-start="@s.ShiftType.StartTime.ToString("yyyy-MM-ddTHH:mm")"
+                                                data-original-end="@s.ShiftType.EndTime.ToString("yyyy-MM-ddTHH:mm")"
+                                                data-custom-start="@(s.CustomStartTime.HasValue ? s.CustomStartTime.Value.ToString("yyyy-MM-ddTHH:mm") : "")"
+                                                data-custom-end="@(s.CustomEndTime.HasValue ? s.CustomEndTime.Value.ToString("yyyy-MM-ddTHH:mm") : "")"
+                                                data-bs-toggle="modal" data-bs-target="#editCustomShiftTimeModal">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    }
+                                    @if (User.IsInRole("Administrator"))
+                                    {
+                                        <button type="button" class="btn btn-sm sh-delete-btn"
+                                                style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                title="Slet vagt"
+                                                data-id="@s.Id"
+                                                data-name="@s.Volunteer.Name"
+                                                data-shift="@s.ShiftType.ShiftName"
+                                                data-bs-toggle="modal" data-bs-target="#deleteShiftModal">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -128,34 +161,82 @@
     </div>
 </div>
 
-@* Slet-modal *@
-<div class="modal fade" id="deleteShiftModal" tabindex="-1" aria-labelledby="deleteShiftModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h6 class="modal-title mb-0" id="deleteShiftModalLabel">
-                    <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet vagt
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
-                <p class="mb-1">Er du sikker på du vil fjerne vagten</p>
-                <p class="fw-semibold mb-1" id="deleteShiftName"></p>
-                <p class="mb-0">fra</p>
-                <p class="fw-semibold mb-0" id="deleteShiftVolunteer"></p>
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Annuller
-                </button>
-                <button type="button" id="deleteShiftConfirm" class="btn btn-sm btn-danger">
-                    <i class="bi bi-trash3 me-1"></i>Slet
-                </button>
+@if (User.IsInRole("Administrator"))
+{
+    @* Slet-modal *@
+    <div class="modal fade" id="deleteShiftModal" tabindex="-1" aria-labelledby="deleteShiftModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title mb-0" id="deleteShiftModalLabel">
+                        <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet vagt
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                    <p class="mb-1">Er du sikker på du vil fjerne vagten</p>
+                    <p class="fw-semibold mb-1" id="deleteShiftName"></p>
+                    <p class="mb-0">fra</p>
+                    <p class="fw-semibold mb-0" id="deleteShiftVolunteer"></p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Annuller
+                    </button>
+                    <button type="button" id="deleteShiftConfirm" class="btn btn-sm btn-danger">
+                        <i class="bi bi-trash3 me-1"></i>Slet
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
+
+@* Rediger vagttid-modal (kun administrator) *@
+@if (User.IsInRole("Administrator"))
+{
+    <div class="modal fade" id="editCustomShiftTimeModal" tabindex="-1" aria-labelledby="editCustomShiftTimeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title mb-0" id="editCustomShiftTimeModalLabel">
+                        <i class="bi bi-pencil me-2" style="color: var(--clr-brand);"></i>Tilpas vagttid
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-1">Frivillig: <span class="fw-semibold" id="editShiftVolunteer"></span></p>
+                    <p class="mb-3">Vagt: <span class="fw-semibold" id="editShiftName"></span></p>
+                    <p class="mb-3" style="color: var(--clr-text-muted); font-size: 0.85rem;">
+                        Ændrer kun denne frivilligs faktiske tid for denne vagt – påvirker ikke vagtens behov eller statistik.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label" for="editShiftStart">Start</label>
+                        <input type="datetime-local" id="editShiftStart" class="form-control form-control-sm"
+                               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="editShiftEnd">Slut</label>
+                        <input type="datetime-local" id="editShiftEnd" class="form-control form-control-sm"
+                               style="background: var(--clr-surface); border-color: var(--clr-border); color: var(--clr-text);" />
+                    </div>
+                    <button type="button" id="editShiftResetBtn" class="btn btn-sm btn-link p-0">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Nulstil til original vagttid
+                    </button>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Annuller
+                    </button>
+                    <button type="button" id="editShiftSave" class="btn btn-sm" style="background: var(--clr-brand); color: #fff;">
+                        <i class="bi bi-check-lg me-1"></i>Gem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <script>
 (function () {
@@ -194,44 +275,98 @@
         });
     }
 
-    // ── Slet-modal ────────────────────────────────────────────────
+    // ── Slet-modal (kun administrator) ────────────────────────────
     var deleteModalEl   = document.getElementById('deleteShiftModal');
-    var bsDeleteModal   = new bootstrap.Modal(deleteModalEl);
+    var bsDeleteModal   = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
     var pendingDeleteId = null;
 
-    deleteModalEl.addEventListener('show.bs.modal', function (event) {
-        var btn = event.relatedTarget;
-        pendingDeleteId = parseInt(btn.dataset.id);
-        document.getElementById('deleteShiftName').textContent      = btn.dataset.shift;
-        document.getElementById('deleteShiftVolunteer').textContent = btn.dataset.name;
-    });
+    if (deleteModalEl) {
+        deleteModalEl.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            pendingDeleteId = parseInt(btn.dataset.id);
+            document.getElementById('deleteShiftName').textContent      = btn.dataset.shift;
+            document.getElementById('deleteShiftVolunteer').textContent = btn.dataset.name;
+        });
 
-    document.getElementById('deleteShiftConfirm').addEventListener('click', async function () {
-        if (!pendingDeleteId) return;
-        var btn = this;
-        btn.disabled = true;
-        try {
-            var fd = new FormData();
-            fd.append('id', pendingDeleteId);
-            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-            var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
-            var json = await res.json();
-            bsDeleteModal.hide();
-            if (json.success) {
-                showToast(json.message, 'success');
-                document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
-                await loadPage(currentPage, currentSize);
-            } else {
-                showToast(json.message, 'error');
+        document.getElementById('deleteShiftConfirm').addEventListener('click', async function () {
+            if (!pendingDeleteId) return;
+            var btn = this;
+            btn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('id', pendingDeleteId);
+                fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
+                var json = await res.json();
+                bsDeleteModal.hide();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                    await loadPage(currentPage, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (e) {
+                bsDeleteModal.hide();
+                showToast('Netværksfejl – kunne ikke slette.', 'error');
+            } finally {
+                btn.disabled = false;
+                pendingDeleteId = null;
             }
-        } catch (e) {
-            bsDeleteModal.hide();
-            showToast('Netværksfejl – kunne ikke slette.', 'error');
-        } finally {
-            btn.disabled = false;
-            pendingDeleteId = null;
-        }
-    });
+        });
+    }
+
+    // ── Rediger vagttid-modal (kun administrator) ───────────────────
+    var saveCustomTimeUrl = '@Url.Action("SetCustomShiftTime", "Frivillig")';
+    var editModalEl = document.getElementById('editCustomShiftTimeModal');
+    if (editModalEl) {
+        var bsEditModal   = new bootstrap.Modal(editModalEl);
+        var pendingEditId = null;
+
+        editModalEl.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            pendingEditId = parseInt(btn.dataset.id);
+            document.getElementById('editShiftVolunteer').textContent = btn.dataset.name;
+            document.getElementById('editShiftName').textContent      = btn.dataset.shift;
+            document.getElementById('editShiftStart').value = btn.dataset.customStart || btn.dataset.originalStart;
+            document.getElementById('editShiftEnd').value   = btn.dataset.customEnd   || btn.dataset.originalEnd;
+        });
+
+        document.getElementById('editShiftResetBtn').addEventListener('click', function () {
+            document.getElementById('editShiftStart').value = '';
+            document.getElementById('editShiftEnd').value   = '';
+        });
+
+        document.getElementById('editShiftSave').addEventListener('click', async function () {
+            if (!pendingEditId) return;
+            var btn = this;
+            btn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('id', pendingEditId);
+                var startVal = document.getElementById('editShiftStart').value;
+                var endVal   = document.getElementById('editShiftEnd').value;
+                if (startVal) fd.append('customStart', startVal);
+                if (endVal)   fd.append('customEnd', endVal);
+                fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                var res  = await fetch(saveCustomTimeUrl, { method: 'POST', body: fd });
+                var json = await res.json();
+                bsEditModal.hide();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    await loadPage(currentPage, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (e) {
+                bsEditModal.hide();
+                showToast('Netværksfejl – kunne ikke gemme.', 'error');
+            } finally {
+                btn.disabled = false;
+                pendingEditId = null;
+            }
+        });
+    }
 
     // ── Søgning ───────────────────────────────────────────────────
     var shInput = document.getElementById('shSearchInput');

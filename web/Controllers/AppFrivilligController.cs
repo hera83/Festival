@@ -47,8 +47,8 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
             s.Id,
             shiftTypeId = s.ShiftTypeId,
             name = s.ShiftType.ShiftName,
-            startLocal = s.ShiftType.StartTime,
-            endLocal = s.ShiftType.EndTime,
+            startLocal = s.CustomStartTime ?? s.ShiftType.StartTime,
+            endLocal = s.CustomEndTime ?? s.ShiftType.EndTime,
         }).OrderBy(s => s.startLocal).ToList();
 
         // Dagens check-in sessioner (inkl. afsluttede – for "ingen nag" reglen)
@@ -145,8 +145,8 @@ public class AppFrivilligController(ApplicationDbContext db, IEmailService email
         var result = shifts
             .Select(s =>
             {
-                var startLocal = s.ShiftType.StartTime;
-                var endLocal = s.ShiftType.EndTime;
+                var startLocal = s.CustomStartTime ?? s.ShiftType.StartTime;
+                var endLocal = s.CustomEndTime ?? s.ShiftType.EndTime;
                 var shiftDate = DateOnly.FromDateTime(startLocal);
 
                 string status;

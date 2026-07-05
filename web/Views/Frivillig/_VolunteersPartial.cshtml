@@ -16,65 +16,71 @@
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <button type="button" id="btnOpenCreateVol" class="btn btn-sm"
-            style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
-        <i class="bi bi-person-plus me-1"></i>Opret frivillig
-    </button>
+    @if (User.IsInRole("Administrator"))
+    {
+        <button type="button" id="btnOpenCreateVol" class="btn btn-sm"
+                style="background: var(--clr-brand); color: #fff; border: none; white-space: nowrap;">
+            <i class="bi bi-person-plus me-1"></i>Opret frivillig
+        </button>
+    }
 </div>
 
-@* Modal — indhold hentes dynamisk *@
-<div class="modal fade" id="createVolModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div id="createVolModalBody">
-                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
-                    <div class="spinner-border spinner-border-sm" role="status"></div>
+@if (User.IsInRole("Administrator"))
+{
+    @* Modal — indhold hentes dynamisk *@
+    <div class="modal fade" id="createVolModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div id="createVolModalBody">
+                    <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-@* Rediger-modal *@
-<div class="modal fade" id="editVolModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div id="editVolModalBody">
-                <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
-                    <div class="spinner-border spinner-border-sm" role="status"></div>
+    @* Rediger-modal *@
+    <div class="modal fade" id="editVolModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div id="editVolModalBody">
+                    <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-@* Slet-modal *@
-<div class="modal fade" id="deleteVolModal" tabindex="-1" aria-labelledby="deleteVolModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h6 class="modal-title mb-0" id="deleteVolModalLabel">
-                    <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet frivillig
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
-                <p class="mb-1">Er du sikker på du vil slette</p>
-                <p class="fw-semibold mb-1" id="deleteVolName"></p>
-                <p class="small mb-0" style="color: var(--clr-text-muted);">Alle tilknyttede vagter slettes også.</p>
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Annuller
-                </button>
-                <button type="button" id="deleteVolConfirm" class="btn btn-sm btn-danger">
-                    <i class="bi bi-trash3 me-1"></i>Slet
-                </button>
+    @* Slet-modal *@
+    <div class="modal fade" id="deleteVolModal" tabindex="-1" aria-labelledby="deleteVolModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title mb-0" id="deleteVolModalLabel">
+                        <i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet frivillig
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
+                    <p class="mb-1">Er du sikker på du vil slette</p>
+                    <p class="fw-semibold mb-1" id="deleteVolName"></p>
+                    <p class="small mb-0" style="color: var(--clr-text-muted);">Alle tilknyttede vagter slettes også.</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Annuller
+                    </button>
+                    <button type="button" id="deleteVolConfirm" class="btn btn-sm btn-danger">
+                        <i class="bi bi-trash3 me-1"></i>Slet
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @* QR-kode modal *@
 <div class="modal fade" id="qrVolModal" tabindex="-1" aria-labelledby="qrVolModalLabel" aria-hidden="true">
@@ -178,18 +184,21 @@
                                                 data-id="@v.Id" data-name="@v.Name" data-key="@v.Key">
                                             <i class="bi bi-qr-code"></i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-secondary vol-edit-btn"
-                                                title="Rediger frivillig"
-                                                data-id="@v.Id">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm vol-delete-btn"
-                                                style="background: var(--clr-alarm); color: #fff; border: none;"
-                                                title="Slet frivillig"
-                                                data-id="@v.Id" data-name="@v.Name"
-                                                data-bs-toggle="modal" data-bs-target="#deleteVolModal">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        @if (User.IsInRole("Administrator"))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-secondary vol-edit-btn"
+                                                    title="Rediger frivillig"
+                                                    data-id="@v.Id">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm vol-delete-btn"
+                                                    style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                    title="Slet frivillig"
+                                                    data-id="@v.Id" data-name="@v.Name"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteVolModal">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -319,43 +328,45 @@
         bindRowActions();
     }
 
-    // ── Slet-modal ────────────────────────────────────────────────
+    // ── Slet-modal (kun administrator) ────────────────────────────
     var deleteModalEl   = document.getElementById('deleteVolModal');
-    var bsDeleteModal   = new bootstrap.Modal(deleteModalEl);
+    var bsDeleteModal   = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
     var pendingDeleteId = null;
 
-    deleteModalEl.addEventListener('show.bs.modal', function (event) {
-        var btn = event.relatedTarget;
-        pendingDeleteId = parseInt(btn.dataset.id);
-        document.getElementById('deleteVolName').textContent = btn.dataset.name;
-    });
+    if (deleteModalEl) {
+        deleteModalEl.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            pendingDeleteId = parseInt(btn.dataset.id);
+            document.getElementById('deleteVolName').textContent = btn.dataset.name;
+        });
 
-    document.getElementById('deleteVolConfirm').addEventListener('click', async function () {
-        if (!pendingDeleteId) return;
-        var btn = this;
-        btn.disabled = true;
-        try {
-            var fd = new FormData();
-            fd.append('id', pendingDeleteId);
-            fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-            var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
-            var json = await res.json();
-            bsDeleteModal.hide();
-            if (json.success) {
-                showToast(json.message, 'success');
-                document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
-                await loadPage(currentPage, currentSize);
-            } else {
-                showToast(json.message, 'error');
+        document.getElementById('deleteVolConfirm').addEventListener('click', async function () {
+            if (!pendingDeleteId) return;
+            var btn = this;
+            btn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('id', pendingDeleteId);
+                fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
+                var json = await res.json();
+                bsDeleteModal.hide();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    document.dispatchEvent(new CustomEvent('frivillig:countsChanged'));
+                    await loadPage(currentPage, currentSize);
+                } else {
+                    showToast(json.message, 'error');
+                }
+            } catch (e) {
+                bsDeleteModal.hide();
+                showToast('Netværksfejl – kunne ikke slette.', 'error');
+            } finally {
+                btn.disabled = false;
+                pendingDeleteId = null;
             }
-        } catch (e) {
-            bsDeleteModal.hide();
-            showToast('Netværksfejl – kunne ikke slette.', 'error');
-        } finally {
-            btn.disabled = false;
-            pendingDeleteId = null;
-        }
-    });
+        });
+    }
 
     // ── QR-kode modal ─────────────────────────────────────────────
     var qrModalEl  = document.getElementById('qrVolModal');
@@ -411,23 +422,26 @@
         });
     }
 
-    // ── Opret-modal ───────────────────────────────────────────────
+    // ── Opret-modal (kun administrator) ───────────────────────────
     var createModalEl   = document.getElementById('createVolModal');
     var createModalBody = document.getElementById('createVolModalBody');
-    var bsCreateModal   = new bootstrap.Modal(createModalEl);
+    var bsCreateModal   = createModalEl ? new bootstrap.Modal(createModalEl) : null;
+    var btnOpenCreateVol = document.getElementById('btnOpenCreateVol');
 
-    document.getElementById('btnOpenCreateVol').addEventListener('click', async function () {
-        createModalBody.innerHTML = spinner();
-        bsCreateModal.show();
-        try {
-            var res = await fetch(createFormUrl);
-            if (res.ok) { createModalBody.innerHTML = await res.text(); bindCreateForm(); }
-            else { bsCreateModal.hide(); showToast('Kunne ikke hente opret-formularen.', 'error'); }
-        } catch (e) {
-            bsCreateModal.hide();
-            showToast('Netværksfejl – prøv igen.', 'error');
-        }
-    });
+    if (btnOpenCreateVol) {
+        btnOpenCreateVol.addEventListener('click', async function () {
+            createModalBody.innerHTML = spinner();
+            bsCreateModal.show();
+            try {
+                var res = await fetch(createFormUrl);
+                if (res.ok) { createModalBody.innerHTML = await res.text(); bindCreateForm(); }
+                else { bsCreateModal.hide(); showToast('Kunne ikke hente opret-formularen.', 'error'); }
+            } catch (e) {
+                bsCreateModal.hide();
+                showToast('Netværksfejl – prøv igen.', 'error');
+            }
+        });
+    }
 
     function bindCreateForm() {
         var form = document.getElementById('createVolForm');
@@ -438,10 +452,10 @@
         });
     }
 
-    // ── Rediger-modal ─────────────────────────────────────────────
+    // ── Rediger-modal (kun administrator) ─────────────────────────
     var editModalEl   = document.getElementById('editVolModal');
     var editModalBody = document.getElementById('editVolModalBody');
-    var bsEditModal   = new bootstrap.Modal(editModalEl);
+    var bsEditModal   = editModalEl ? new bootstrap.Modal(editModalEl) : null;
 
     async function openEditModal(id) {
         editModalBody.innerHTML = spinner();
