@@ -25,6 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ScheduledMove> ScheduledMoves => Set<ScheduledMove>();
     public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
     public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
+    public DbSet<NoShowSnooze> NoShowSnoozes => Set<NoShowSnooze>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -247,6 +248,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(x => new { x.SeasonId, x.Type }).IsUnique();
             entity.Property(x => x.Type).HasConversion<int>();
             entity.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+        });
+
+        builder.Entity<NoShowSnooze>(entity =>
+        {
+            entity.HasIndex(x => new { x.SeasonId, x.VolunteerId }).IsUnique();
+            entity.Property(x => x.CreatedByUser).HasMaxLength(450).IsRequired();
+
+            entity.HasOne(x => x.Volunteer)
+                .WithMany()
+                .HasForeignKey(x => x.VolunteerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -15,12 +15,14 @@ namespace web.Controllers
         private readonly ApplicationDbContext _db;
         private readonly IDashboardSmsFlowService _smsFlowService;
         private readonly ISmsGatewayStatusCache _smsGatewayStatusCache;
+        private readonly ISmsMessageLogService _smsMessageLogService;
 
-        public DashboardController(ApplicationDbContext db, IDashboardSmsFlowService smsFlowService, ISmsGatewayStatusCache smsGatewayStatusCache)
+        public DashboardController(ApplicationDbContext db, IDashboardSmsFlowService smsFlowService, ISmsGatewayStatusCache smsGatewayStatusCache, ISmsMessageLogService smsMessageLogService)
         {
             _db = db;
             _smsFlowService = smsFlowService;
             _smsGatewayStatusCache = smsGatewayStatusCache;
+            _smsMessageLogService = smsMessageLogService;
         }
 
         // Kaldes KUN fra de manuelle dashboard-handlinger nedenfor (aldrig fra
@@ -36,6 +38,35 @@ namespace web.Controllers
             var sentByUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
             return _smsFlowService.SendTemplatedSmsAsync(
                 type, volunteerId, volunteerName, when, post, fraPost, tilPost, sentByUserId);
+        }
+
+        // Snoozet er kun en midlertidig undertrykkelse – når den frivillige rent
+        // faktisk checkes ind, eller vagten fjernes (afbud), er der intet der
+        // kan udløse et nyt udeblivelsesvarsel før det, så snoozet ryddes op med
+        // det samme i stedet for at ligge og vente på at udløbe af sig selv.
+        private async Task ClearNoShowSnoozeAsync(int seasonId, int volunteerId)
+        {
+            var snooze = await _db.NoShowSnoozes
+                .FirstOrDefaultAsync(sn => sn.SeasonId == seasonId && sn.VolunteerId == volunteerId);
+            if (snooze != null)
+                _db.NoShowSnoozes.Remove(snooze);
+        }
+
+        // Rydder samtidig udløbne snoozes op, så tabellen ikke vokser ubegrænset.
+        private async Task<HashSet<int>> GetActiveSnoozedVolunteerIdsAsync(int seasonId, DateTime now)
+        {
+            var snoozes = await _db.NoShowSnoozes
+                .Where(sn => sn.SeasonId == seasonId)
+                .ToListAsync();
+
+            var expired = snoozes.Where(sn => sn.SnoozedUntil <= now).ToList();
+            if (expired.Count > 0)
+            {
+                _db.NoShowSnoozes.RemoveRange(expired);
+                await _db.SaveChangesAsync();
+            }
+
+            return snoozes.Except(expired).Select(sn => sn.VolunteerId).ToHashSet();
         }
 
         public IActionResult Index()
@@ -208,6 +239,7 @@ namespace web.Controllers
                 CurrentLocation = "Pit"
             };
             _db.VolunteerCheckIns.Add(checkIn);
+            await ClearNoShowSnoozeAsync(seasonId, request.VolunteerId);
             await _db.SaveChangesAsync();
 
             var log = new VolunteerLocationLog
@@ -258,6 +290,9 @@ namespace web.Controllers
                 .Select(c => c.VolunteerId)
                 .ToListAsync();
 
+            // Frivillige med et aktivt snooze (udsat varsel)
+            var snoozedVolunteerIds = await GetActiveSnoozedVolunteerIdsAsync(seasonId, now);
+
             // Vagter der starter i dag og hvor starttidspunktet er passeret
             var noShowCount = await _db.Shifts
                 .Include(s => s.ShiftType)
@@ -266,7 +301,8 @@ namespace web.Controllers
                             s.ShiftType.StartTime.Month == today.Month &&
                             s.ShiftType.StartTime.Day == today.Day &&
                             s.ShiftType.StartTime <= now &&
-                            !checkedInVolunteerIds.Contains(s.VolunteerId))
+                            !checkedInVolunteerIds.Contains(s.VolunteerId) &&
+                            !snoozedVolunteerIds.Contains(s.VolunteerId))
                 .Select(s => s.VolunteerId)
                 .Distinct()
                 .CountAsync();
@@ -287,6 +323,9 @@ namespace web.Controllers
                 .Select(c => c.VolunteerId)
                 .ToListAsync();
 
+            // Frivillige med et aktivt snooze (udsat varsel)
+            var snoozedVolunteerIds = await GetActiveSnoozedVolunteerIdsAsync(seasonId, now);
+
             var noShows = await _db.Shifts
                 .Include(s => s.ShiftType)
                 .Include(s => s.Volunteer)
@@ -295,8 +334,21 @@ namespace web.Controllers
                             s.ShiftType.StartTime.Month == today.Month &&
                             s.ShiftType.StartTime.Day == today.Day &&
                             s.ShiftType.StartTime <= now &&
-                            !checkedInVolunteerIds.Contains(s.VolunteerId))
+                            !checkedInVolunteerIds.Contains(s.VolunteerId) &&
+                            !snoozedVolunteerIds.Contains(s.VolunteerId))
                 .ToListAsync();
+
+            // Fejler gatewayen (fx nede), skal listen stadig kunne vises – bare
+            // uden mulighed for at sende sms, så alle knapper er deaktiverede.
+            HashSet<int> eligibleIds;
+            try
+            {
+                eligibleIds = await _smsMessageLogService.GetEligibleVolunteerIdsAsync(seasonId);
+            }
+            catch
+            {
+                eligibleIds = new HashSet<int>();
+            }
 
             // Én række pr. frivillig – tag den tidligste vagtstart hvis de har flere
             var grouped = noShows
@@ -306,6 +358,7 @@ namespace web.Controllers
                     g.First().Volunteer.Id,
                     g.First().Volunteer.Name,
                     PhoneNumber = g.First().Volunteer.PhoneNumber,
+                    SmsEligible = eligibleIds.Contains(g.Key),
                     EarliestStart = g.Min(s => s.ShiftType.StartTime)
                 });
 
@@ -318,6 +371,152 @@ namespace web.Controllers
             var result = grouped.OrderBy(v => v.EarliestStart).ThenBy(v => v.Name).ToList();
 
             return Json(result);
+        }
+
+        // POST: /Dashboard/SnoozeNoShow
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SnoozeNoShow([FromBody] SnoozeNoShowRequest req)
+        {
+            if (req.VolunteerId <= 0)
+                return Json(new { success = false, message = "Ugyldige parametre." });
+
+            var volunteer = await _db.Volunteers.FindAsync(req.VolunteerId);
+            if (volunteer == null)
+                return Json(new { success = false, message = "Frivillig ikke fundet." });
+
+            var seasonId = AppTime.CurrentSeason;
+            var now = AppTime.Now;
+            var snoozedUntil = now.AddHours(1);
+            var createdByUser = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+            var snooze = await _db.NoShowSnoozes
+                .FirstOrDefaultAsync(sn => sn.SeasonId == seasonId && sn.VolunteerId == req.VolunteerId);
+
+            if (snooze == null)
+            {
+                _db.NoShowSnoozes.Add(new NoShowSnooze
+                {
+                    SeasonId = seasonId,
+                    VolunteerId = req.VolunteerId,
+                    SnoozedUntil = snoozedUntil,
+                    CreatedByUser = createdByUser,
+                    CreatedAt = now
+                });
+            }
+            else
+            {
+                snooze.SnoozedUntil = snoozedUntil;
+                snooze.CreatedByUser = createdByUser;
+                snooze.CreatedAt = now;
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"{volunteer.Name} er udsat i 1 time og forsvinder fra listen." });
+        }
+
+        public class SnoozeNoShowRequest
+        {
+            public int VolunteerId { get; set; }
+        }
+
+        // POST: /Dashboard/CancelNoShowShift
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelNoShowShift([FromBody] CancelNoShowShiftRequest req)
+        {
+            if (req.VolunteerId <= 0)
+                return Json(new { success = false, message = "Ugyldige parametre." });
+
+            var volunteer = await _db.Volunteers.FindAsync(req.VolunteerId);
+            if (volunteer == null)
+                return Json(new { success = false, message = "Frivillig ikke fundet." });
+
+            var now = AppTime.CopenhagenNow;
+            var today = AppTime.CopenhagenToday;
+            var seasonId = today.Year;
+
+            var shiftsToRemove = await _db.Shifts
+                .Include(s => s.ShiftType)
+                .Where(s => s.SeasonId == seasonId &&
+                            s.VolunteerId == req.VolunteerId &&
+                            s.ShiftType.StartTime.Year == today.Year &&
+                            s.ShiftType.StartTime.Month == today.Month &&
+                            s.ShiftType.StartTime.Day == today.Day &&
+                            s.ShiftType.StartTime <= now)
+                .ToListAsync();
+
+            if (shiftsToRemove.Count == 0)
+                return Json(new { success = false, message = $"{volunteer.Name} har ingen udeblevne vagter i dag." });
+
+            _db.Shifts.RemoveRange(shiftsToRemove);
+            await ClearNoShowSnoozeAsync(seasonId, req.VolunteerId);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Afbud registreret for {volunteer.Name} – vagten er fjernet." });
+        }
+
+        public class CancelNoShowShiftRequest
+        {
+            public int VolunteerId { get; set; }
+        }
+
+        // GET: /Dashboard/GetVolunteerSmsInfo?volunteerId=...
+        [HttpGet]
+        public async Task<IActionResult> GetVolunteerSmsInfo(int volunteerId)
+        {
+            var volunteer = await _db.Volunteers.FindAsync(volunteerId);
+            if (volunteer == null)
+                return Json(new { success = false, message = "Frivillig ikke fundet." });
+
+            if (string.IsNullOrWhiteSpace(volunteer.PhoneNumber))
+                return Json(new { success = false, message = $"{volunteer.Name} har intet telefonnummer." });
+
+            var seasonId = AppTime.CurrentSeason;
+            HashSet<int> eligibleIds;
+            try
+            {
+                eligibleIds = await _smsMessageLogService.GetEligibleVolunteerIdsAsync(seasonId);
+            }
+            catch
+            {
+                eligibleIds = new HashSet<int>();
+            }
+
+            if (!eligibleIds.Contains(volunteerId))
+                return Json(new { success = false, message = $"{volunteer.Name} er ikke på en aktiv sms-abonnementsliste." });
+
+            return Json(new { success = true, name = volunteer.Name, phoneNumber = volunteer.PhoneNumber });
+        }
+
+        // POST: /Dashboard/SendVolunteerSms
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendVolunteerSms([FromBody] SendVolunteerSmsRequest req)
+        {
+            if (req.VolunteerId <= 0 || string.IsNullOrWhiteSpace(req.Message))
+                return Json(new { success = false, message = "Udfyld alle påkrævede felter." });
+
+            var volunteer = await _db.Volunteers.FindAsync(req.VolunteerId);
+            if (volunteer == null)
+                return Json(new { success = false, message = "Frivillig ikke fundet." });
+
+            var seasonId = AppTime.CurrentSeason;
+            var eligibleIds = await _smsMessageLogService.GetEligibleVolunteerIdsAsync(seasonId);
+            if (!eligibleIds.Contains(req.VolunteerId))
+                return Json(new { success = false, message = $"{volunteer.Name} er ikke på en aktiv sms-abonnementsliste." });
+
+            var sentByUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var result = await _smsMessageLogService.SendAndLogAsync(req.VolunteerId, req.Message.Trim(), sentByUserId);
+
+            return Json(new { success = result.Success, message = result.Success ? "Sms sendt." : result.ErrorMessage });
+        }
+
+        public class SendVolunteerSmsRequest
+        {
+            public int VolunteerId { get; set; }
+            public string Message { get; set; } = string.Empty;
         }
 
         // GET: /Dashboard/GetPitVolunteers?q=...
@@ -499,6 +698,7 @@ namespace web.Controllers
                     CurrentLocation = "Pit"
                 };
                 _db.VolunteerCheckIns.Add(checkIn);
+                await ClearNoShowSnoozeAsync(seasonId, volunteer.Id);
                 await _db.SaveChangesAsync();
 
                 _db.VolunteerLocationLogs.Add(new VolunteerLocationLog

@@ -83,6 +83,14 @@ public class AppCheckInController : Controller
             CurrentLocation = "Pit"
         };
         _db.VolunteerCheckIns.Add(checkIn);
+
+        // Et evt. aktivt snooze (udsat udeblivelsesvarsel) er ikke længere
+        // relevant, nu hvor den frivillige rent faktisk er mødt op.
+        var snooze = await _db.NoShowSnoozes
+            .FirstOrDefaultAsync(sn => sn.SeasonId == seasonId && sn.VolunteerId == volunteer.Id);
+        if (snooze != null)
+            _db.NoShowSnoozes.Remove(snooze);
+
         await _db.SaveChangesAsync();
 
         _db.VolunteerLocationLogs.Add(new VolunteerLocationLog

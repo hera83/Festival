@@ -394,11 +394,12 @@
                                 <th>Navn</th>
                                 <th>Telefon</th>
                                 <th>Vagtstart</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="noShowTbody">
                             <tr>
-                                <td colspan="3" class="text-center py-3" style="color:var(--clr-text-muted);">
+                                <td colspan="4" class="text-center py-3" style="color:var(--clr-text-muted);">
                                     <div class="spinner-border spinner-border-sm me-2" style="color:var(--clr-brand);"></div>Henter...
                                 </td>
                             </tr>
@@ -707,6 +708,69 @@
     </div>
 </div>
 
+<!-- Send SMS Modal (delt: bruges fra udeblivelser-listen og fra frivillig-menuen) -->
+<div class="modal fade" id="smsComposeModal" tabindex="-1" aria-labelledby="smsComposeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="smsComposeModalLabel" style="font-size:0.95rem;color:var(--clr-text);">
+                    <i class="bi bi-chat-dots me-2" style="color:var(--clr-brand);"></i>Send sms
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="smsComposeVolunteerId">
+                <p class="mb-3">
+                    <span id="smsComposeVolunteerName" style="font-weight:600;color:var(--clr-text);"></span><br>
+                    <span id="smsComposeVolunteerPhone" style="font-size:0.85rem;color:var(--clr-text-muted);"><i class="bi bi-telephone me-1"></i></span>
+                </p>
+                <div class="mb-1">
+                    <label class="form-label" style="color:var(--clr-text-muted);font-size:0.8rem;">Besked</label>
+                    <textarea id="smsComposeBody" class="form-control" rows="4" placeholder="Skriv besked..."
+                              style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="smsComposeBackBtn" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);">
+                    <i class="bi bi-chevron-left me-1"></i>Tilbage
+                </button>
+                <button type="button" id="smsComposeSendBtn" class="btn btn-sm" style="background:var(--clr-brand);border-color:var(--clr-brand);color:#fff;">
+                    <i class="bi bi-send me-1"></i>Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Afbud Bekræft Modal -->
+<div class="modal fade" id="noShowCancelModal" tabindex="-1" aria-labelledby="noShowCancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="noShowCancelModalLabel">
+                    <i class="bi bi-x-circle me-2" style="color:var(--clr-alarm);"></i>Registrer afbud
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="noShowCancelVolunteerId">
+                <p class="mb-0" style="color:var(--clr-text);font-size:0.88rem;">
+                    Er du sikker på at du vil registrere afbud for <strong id="noShowCancelVolunteerName" style="color:var(--clr-text);"></strong>?
+                    Den udeblevne vagt fjernes, og frivillige forsvinder fra udeblivelseslisten.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="confirmNoShowCancelBtn" class="btn btn-sm btn-danger">
+                    <i class="bi bi-x-circle me-1"></i>Bekræft afbud
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <style>
     .card-clickable { transition: outline 0.15s, box-shadow 0.15s; }
@@ -1000,7 +1064,7 @@
             .catch(() => {
                 noShowSpinner.classList.add('d-none');
                 noShowWrapper.classList.remove('d-none');
-                noShowTbody.innerHTML = '<tr><td colspan="3" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
+                noShowTbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:var(--clr-alarm)"><i class="bi bi-exclamation-triangle me-1"></i>Fejl ved indlæsning</td></tr>';
                 noShowEmpty.classList.add('d-none');
             });
     }
@@ -1026,13 +1090,172 @@
             const lateLabel = minsLate > 0
                 ? `<span class="badge-warn ms-2" style="font-size:0.68rem;"><i class="bi bi-clock me-1"></i>${minsLate} min forsinket</span>`
                 : '';
+            let smsBtn;
+            if (!v.phoneNumber) {
+                smsBtn = `<button type="button" class="btn btn-sm" disabled title="Intet telefonnummer" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-dim);"><i class="bi bi-chat-dots"></i></button>`;
+            } else if (!v.smsEligible) {
+                smsBtn = `<button type="button" class="btn btn-sm" disabled title="Frivillig er ikke på en aktiv sms-abonnementsliste" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-dim);"><i class="bi bi-chat-dots"></i></button>`;
+            } else {
+                smsBtn = `<button type="button" class="btn btn-sm noshow-sms-btn" data-id="${v.id}" data-name="${escHtml(v.name)}" data-phone="${escHtml(v.phoneNumber)}" title="Send sms" style="background:var(--clr-brand);border-color:var(--clr-brand);color:#fff;"><i class="bi bi-chat-dots"></i></button>`;
+            }
+            const snoozeBtn = `<button type="button" class="btn btn-sm noshow-snooze-btn" data-id="${v.id}" data-name="${escHtml(v.name)}" title="Udsæt 1 time" style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-muted);"><i class="bi bi-alarm"></i></button>`;
+            const cancelBtn = `<button type="button" class="btn btn-sm noshow-cancel-btn" data-id="${v.id}" data-name="${escHtml(v.name)}" title="Registrer afbud" style="background:var(--clr-alarm-bg);border-color:var(--clr-alarm);color:var(--clr-alarm);"><i class="bi bi-x-circle"></i></button>`;
             tr.innerHTML = `
                 <td><span style="font-weight:600;">${escHtml(v.name)}</span>${lateLabel}</td>
                 <td>${phone}</td>
-                <td style="color:var(--clr-text-muted);white-space:nowrap;">${startStr}</td>`;
+                <td style="color:var(--clr-text-muted);white-space:nowrap;">${startStr}</td>
+                <td class="text-end"><div class="d-inline-flex" style="gap:0.3rem;">${smsBtn}${snoozeBtn}${cancelBtn}</div></td>`;
             noShowTbody.appendChild(tr);
         });
+        document.querySelectorAll('.noshow-sms-btn').forEach(btn => btn.addEventListener('click', function () {
+            openSmsComposeModal(parseInt(this.dataset.id), this.dataset.name, this.dataset.phone, noShowModal);
+        }));
+        document.querySelectorAll('.noshow-snooze-btn').forEach(btn => btn.addEventListener('click', function () {
+            snoozeNoShow(parseInt(this.dataset.id), this.dataset.name, this);
+        }));
+        document.querySelectorAll('.noshow-cancel-btn').forEach(btn => btn.addEventListener('click', function () {
+            openNoShowCancelModal(parseInt(this.dataset.id), this.dataset.name);
+        }));
     }
+
+    // -- Send sms (delt mellem udeblivelser og frivillig-menuen) ----------------
+    const smsComposeModalEl = document.getElementById('smsComposeModal');
+    let _smsComposeReturnModal = null;
+
+    // returnModal: modal-elementet der skal skjules mens sms-modalen er åben og
+    // vises igen bagefter (fx noShowModal), eller null hvis der ikke skal ske noget.
+    function openSmsComposeModal(volunteerId, name, phone, returnModal) {
+        document.getElementById('smsComposeVolunteerId').value = volunteerId;
+        document.getElementById('smsComposeVolunteerName').textContent = name;
+        document.getElementById('smsComposeVolunteerPhone').innerHTML = `<i class="bi bi-telephone me-1"></i>${escHtml(phone || '')}`;
+        document.getElementById('smsComposeBody').value = '';
+        _smsComposeReturnModal = returnModal || null;
+        document.getElementById('smsComposeBackBtn').innerHTML = returnModal
+            ? '<i class="bi bi-chevron-left me-1"></i>Tilbage'
+            : '<i class="bi bi-x-lg me-1"></i>Luk';
+        if (returnModal) bootstrap.Modal.getOrCreateInstance(returnModal).hide();
+        bootstrap.Modal.getOrCreateInstance(smsComposeModalEl).show();
+    }
+
+    function openVolunteerSmsFromMenu(volunteerId, name) {
+        fetch(`/Dashboard/GetVolunteerSmsInfo?volunteerId=${volunteerId}`)
+            .then(r => r.json())
+            .then(info => {
+                if (!info.success) { showToast(info.message, 'warning'); return; }
+                openSmsComposeModal(volunteerId, info.name, info.phoneNumber, null);
+            })
+            .catch(() => showToast('Noget gik galt. Prøv igen.', 'error'));
+    }
+
+    smsComposeModalEl.addEventListener('shown.bs.modal', () => {
+        document.getElementById('smsComposeBody').focus();
+    });
+
+    smsComposeModalEl.addEventListener('hidden.bs.modal', () => {
+        if (_smsComposeReturnModal) {
+            const target = _smsComposeReturnModal;
+            _smsComposeReturnModal = null;
+            bootstrap.Modal.getOrCreateInstance(target).show();
+        }
+    });
+
+    document.getElementById('smsComposeBackBtn').addEventListener('click', () => {
+        bootstrap.Modal.getOrCreateInstance(smsComposeModalEl).hide();
+    });
+
+    document.getElementById('smsComposeSendBtn').addEventListener('click', () => {
+        const volunteerId = parseInt(document.getElementById('smsComposeVolunteerId').value);
+        const message = document.getElementById('smsComposeBody').value.trim();
+        if (!message) { showToast('Skriv en besked.', 'warning'); return; }
+
+        const btn = document.getElementById('smsComposeSendBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        postJson('/Dashboard/SendVolunteerSms', { volunteerId, message })
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send me-1"></i>Send';
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    bootstrap.Modal.getOrCreateInstance(smsComposeModalEl).hide();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send me-1"></i>Send';
+                showToast('Noget gik galt. Prøv igen.', 'error');
+            });
+    });
+
+    // -- Udsæt (snooze) udeblivelse 1 time ---------------------------------------
+    function snoozeNoShow(volunteerId, name, btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        postJson('/Dashboard/SnoozeNoShow', { volunteerId })
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    updateNoShowCount();
+                    loadNoShows(noShowSearchInput.value);
+                } else {
+                    showToast(res.message, 'warning');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-alarm"></i>';
+                }
+            })
+            .catch(() => {
+                showToast('Noget gik galt. Prøv igen.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-alarm"></i>';
+            });
+    }
+
+    // -- Afbud (fjern vagten) fra udeblivelser -----------------------------------
+    const noShowCancelModalEl = document.getElementById('noShowCancelModal');
+    let _noShowCancelReturnToList = false;
+
+    function openNoShowCancelModal(volunteerId, name) {
+        document.getElementById('noShowCancelVolunteerId').value = volunteerId;
+        document.getElementById('noShowCancelVolunteerName').textContent = name;
+        _noShowCancelReturnToList = true;
+        bootstrap.Modal.getOrCreateInstance(noShowModal).hide();
+        bootstrap.Modal.getOrCreateInstance(noShowCancelModalEl).show();
+    }
+
+    noShowCancelModalEl.addEventListener('hidden.bs.modal', () => {
+        if (_noShowCancelReturnToList) {
+            _noShowCancelReturnToList = false;
+            bootstrap.Modal.getOrCreateInstance(noShowModal).show();
+        }
+    });
+
+    document.getElementById('confirmNoShowCancelBtn').addEventListener('click', () => {
+        const volunteerId = parseInt(document.getElementById('noShowCancelVolunteerId').value);
+        const btn = document.getElementById('confirmNoShowCancelBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        postJson('/Dashboard/CancelNoShowShift', { volunteerId })
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Bekræft afbud';
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    updateNoShowCount();
+                    bootstrap.Modal.getOrCreateInstance(noShowCancelModalEl).hide();
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Bekræft afbud';
+                showToast('Noget gik galt. Prøv igen.', 'error');
+            });
+    });
 
     // -- Pitten ----------------------------------------------------------------
     pitSearchInput.addEventListener('keyup', () => {
@@ -1576,6 +1799,9 @@
                 <li><a class="dropdown-item" href="#" id="vol-futuremove-btn">
                     <i class="bi bi-clock-history me-2" style="color:var(--clr-info);"></i>Fremtidig flyt
                 </a></li>
+                <li><a class="dropdown-item" href="#" id="vol-sms-btn">
+                    <i class="bi bi-chat-dots me-2" style="color:var(--clr-brand);"></i>Send sms
+                </a></li>
                 <li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:3px 0;"></li>
                 <li><a class="dropdown-item" href="#" id="vol-checkout-btn">
                     <i class="bi bi-box-arrow-right me-2" style="color:var(--clr-alarm);"></i>Check ud
@@ -1625,6 +1851,11 @@
             e.preventDefault();
             closeVolunteerMenu();
             openFutureMoveModal(parseInt(menu.dataset.vid), menu.dataset.vname);
+        });
+        panel1.querySelector('#vol-sms-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            closeVolunteerMenu();
+            openVolunteerSmsFromMenu(parseInt(menu.dataset.vid), menu.dataset.vname);
         });
         panel1.querySelector('#vol-checkout-btn').addEventListener('click', (e) => {
             e.preventDefault();
