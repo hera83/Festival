@@ -1373,7 +1373,7 @@
             return;
         }
 
-        // Sorter: alarmerede øverst, derefter alfabetisk — låste frivillige er fritaget for alarmer
+        // Sorter: alarmerede øverst, derefter efter hvor længe de har været i pitten (længst ventetid øverst) — låste frivillige er fritaget for alarmer
         const now = Date.now();
         const withAlarm = (v) => !v.isLocked && alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
             && !disabledAlarmVolunteers.has(v.volunteerId)
@@ -1384,11 +1384,16 @@
         _pitAlarmCount = pitVolunteers.filter(v => withAlarm(v)).length;
         updateAlarmCounter();
 
+        const arrivedTime = (v) => v.arrivedAtPit ? parseLocalDate(v.arrivedAtPit).getTime() : Infinity;
+
         const sorted = [...pitVolunteers].sort((a, b) => {
             const aFiring = withAlarm(a);
             const bFiring = withAlarm(b);
             if (aFiring && !bFiring) return -1;
             if (!aFiring && bFiring) return 1;
+            const aTime = arrivedTime(a);
+            const bTime = arrivedTime(b);
+            if (aTime !== bTime) return aTime - bTime; // ældste ankomst (længst ventetid) øverst
             return a.name.localeCompare(b.name);
         });
 
@@ -1557,6 +1562,19 @@
         const movableVolunteers = (p.volunteers || []).filter(v => !v.isLocked);
         const lockedVolunteers = (p.volunteers || []).filter(v => v.isLocked);
 
+        // Sorter: alarmerede øverst, derefter efter hvor længe de har været på posten (længst ventetid øverst)
+        const firingIds = new Set(firingVolunteers.map(v => v.volunteerId));
+        const sortedVolunteers = [...(p.volunteers || [])].sort((a, b) => {
+            const aFiring = firingIds.has(a.volunteerId);
+            const bFiring = firingIds.has(b.volunteerId);
+            if (aFiring && !bFiring) return -1;
+            if (!aFiring && bFiring) return 1;
+            const aTime = a.arrivedAtPost ? parseLocalDate(a.arrivedAtPost).getTime() : Infinity;
+            const bTime = b.arrivedAtPost ? parseLocalDate(b.arrivedAtPost).getTime() : Infinity;
+            if (aTime !== bTime) return aTime - bTime; // ældste ankomst (længst ventetid) øverst
+            return a.name.localeCompare(b.name);
+        });
+
         card.innerHTML = `
             <div class="d-flex align-items-center justify-content-between mb-1">
                 <div class="d-flex align-items-center gap-1" style="font-size:0.82rem;font-weight:600;color:var(--clr-text);flex:1;min-width:0;cursor:pointer;" data-collapse-toggle>
@@ -1588,7 +1606,7 @@
                                         data-post-name="${escHtml(p.name)}"
                                         ${movableVolunteers.length === 0 ? 'disabled' : ''}
                                         title="${movableVolunteers.length === 0 ? 'Ingen flytbare frivillige på posten' : ''}"
-                                        style="color:var(--clr-text);font-size:0.82rem;${movableVolunteers.length === 0 ? 'opacity:0.45;cursor:not-allowed;' : ''}">
+                                        style="color:var(--clr-text);font-size:0.82rem;${movableVolunteers.length === 0 ? 'opacity:0.45;cursor:default;pointer-events:auto;' : ''}">
                                     <i class="bi bi-arrow-return-left" style="color:var(--clr-brand);"></i> Flyt alle til Pitten
                                     ${lockedVolunteers.length > 0 ? `<i class="bi bi-lock-fill ms-auto" style="color:var(--clr-text-muted);font-size:0.7rem;" title="${lockedVolunteers.length} låst(e) flyttes ikke"></i>` : ''}
                                 </button>
@@ -1606,7 +1624,7 @@
                 </div>
             </div>
             <div class="post-volunteer-zone d-flex flex-column gap-1" data-post-name="${escHtml(p.name)}" style="min-height:${isCollapsed ? '0' : '32px'};padding-top:${isCollapsed ? '0' : '4px'};${isCollapsed ? 'display:none!important;' : ''}">
-                ${(p.volunteers || []).map(v => volunteerChipHtml(v, p.name, p.alarmAfterMinutes)).join('')}
+                ${sortedVolunteers.map(v => volunteerChipHtml(v, p.name, p.alarmAfterMinutes)).join('')}
             </div>
             ${isCollapsed ? `<div class="post-collapsed-summary" style="font-size:0.75rem;color:var(--clr-text-muted);padding-top:0.1rem;">
                 <i class="bi bi-people" style="margin-right:0.25rem;"></i>${volunteerCount} frivillig${volunteerCount !== 1 ? 'e' : ''}
@@ -2303,6 +2321,7 @@
         dragPayload = { type: 'post', id: parseInt(this.dataset.postId), element: this };
         this.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
+        _autoRefreshPaused = true; // sættes eksplicit her frem for kun via document-level dragstart-listener
     }
 
     function onVolunteerDragStart(e) {
@@ -2316,6 +2335,11 @@
         };
         this.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
+        // stopPropagation forhindrer at chippens dragstart også trigger post-kortets
+        // dragstart (chippen ligger inde i et draggable kort). Det betyder samtidig at
+        // document-level dragstart-listeneren (der ellers sætter _autoRefreshPaused)
+        // aldrig ses her – sæt derfor flaget eksplicit før vi stopper propagation.
+        _autoRefreshPaused = true;
         e.stopPropagation();
     }
 
