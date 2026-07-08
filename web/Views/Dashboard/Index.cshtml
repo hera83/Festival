@@ -47,6 +47,16 @@
     opacity: 0.4;
     cursor: grabbing;
 }
+/* Låst frivillig: signalér tydeligt at objektet ikke kan trækkes,
+   selv når det ligger inde i et draggable post-kort. */
+.volunteer-chip.is-locked,
+.volunteer-chip.is-locked:active {
+    cursor: not-allowed;
+}
+.volunteer-chip.is-locked:hover {
+    background: var(--clr-bg);
+    border-color: var(--clr-warn);
+}
 
 /* ── Frivillig-række i pitten ─────────────────────────────────── */
 .pit-volunteer-row {
@@ -67,6 +77,14 @@
 .pit-volunteer-row.dragging {
     opacity: 0.4;
     cursor: grabbing;
+}
+.pit-volunteer-row.is-locked,
+.pit-volunteer-row.is-locked:active {
+    cursor: not-allowed;
+}
+.pit-volunteer-row.is-locked:hover {
+    background: var(--clr-bg);
+    border-color: var(--clr-warn);
 }
 
 /* ── Drop-zone highlights ─────────────────────────────────────── */
@@ -850,6 +868,9 @@
     }
     .volunteer-chip:active { cursor: grabbing; }
     .volunteer-chip.dragging { opacity: 0.4; }
+    .volunteer-chip.is-locked,
+    .volunteer-chip.is-locked:active { cursor: not-allowed; }
+    .volunteer-chip.is-locked:hover { background: var(--clr-surface); border-color: var(--clr-warn); }
 
     .pit-volunteer-row {
         display: flex;
@@ -862,6 +883,9 @@
     }
     .pit-volunteer-row:active { cursor: grabbing; }
     .pit-volunteer-row.dragging { opacity: 0.4; }
+    .pit-volunteer-row.is-locked,
+    .pit-volunteer-row.is-locked:active { cursor: not-allowed; }
+    .pit-volunteer-row.is-locked:hover { background: transparent; border-color: var(--clr-warn); }
 
     .vol-menu-btn { opacity: 0.4; transition: opacity 0.15s; }
     .pit-volunteer-row:hover .vol-menu-btn,
@@ -1377,7 +1401,7 @@
             const alarmMuted = !v.isLocked && disabledAlarmVolunteers.has(v.volunteerId);
             const lockIcon = v.isLocked ? '<i class="bi bi-lock-fill" style="color:var(--clr-warn);font-size:0.7rem;" title="Låst – kan ikke flyttes"></i>' : '';
             const row = document.createElement('div');
-            row.className = 'pit-volunteer-row';
+            row.className = 'pit-volunteer-row' + (v.isLocked ? ' is-locked' : '');
             if (firing) row.style.cssText = 'border-left:3px solid var(--clr-alarm);padding-left:0.4rem;';
             row.draggable = !v.isLocked;
             row.dataset.volunteerId = v.volunteerId;
@@ -1411,7 +1435,7 @@
             pitList.appendChild(sep);
             postVolunteers.forEach(v => {
                 const row = document.createElement('div');
-                row.className = 'pit-volunteer-row';
+                row.className = 'pit-volunteer-row' + (v.isLocked ? ' is-locked' : '');
                 row.style.opacity = '0.7';
                 const lockIcon = v.isLocked ? '<i class="bi bi-lock-fill" style="color:var(--clr-warn);font-size:0.7rem;" title="Låst – kan ikke flyttes"></i>' : '';
                 row.innerHTML = `
@@ -1563,7 +1587,8 @@
                                 <button class="dropdown-item move-all-to-pit-btn d-flex align-items-center gap-2"
                                         data-post-name="${escHtml(p.name)}"
                                         ${movableVolunteers.length === 0 ? 'disabled' : ''}
-                                        style="color:var(--clr-text);font-size:0.82rem;">
+                                        title="${movableVolunteers.length === 0 ? 'Ingen flytbare frivillige på posten' : ''}"
+                                        style="color:var(--clr-text);font-size:0.82rem;${movableVolunteers.length === 0 ? 'opacity:0.45;cursor:not-allowed;' : ''}">
                                     <i class="bi bi-arrow-return-left" style="color:var(--clr-brand);"></i> Flyt alle til Pitten
                                     ${lockedVolunteers.length > 0 ? `<i class="bi bi-lock-fill ms-auto" style="color:var(--clr-text-muted);font-size:0.7rem;" title="${lockedVolunteers.length} låst(e) flyttes ikke"></i>` : ''}
                                 </button>
@@ -1672,7 +1697,7 @@
         }
         const alarmMuted = !v.isLocked && disabledAlarmVolunteers.has(v.volunteerId);
         const lockIcon = v.isLocked ? `<i class="bi bi-lock-fill" style="color:var(--clr-warn);font-size:0.7rem;" title="Låst til posten – kan ikke flyttes"></i>` : '';
-        return `<span class="volunteer-chip" draggable="${v.isLocked ? 'false' : 'true'}" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}">
+        return `<span class="volunteer-chip${v.isLocked ? ' is-locked' : ''}" draggable="${v.isLocked ? 'false' : 'true'}" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}">
             <span style="width:20px;height:20px;border-radius:50%;background:var(--clr-brand-dim);display:inline-flex;align-items:center;justify-content:center;color:var(--clr-brand);font-weight:700;font-size:0.65rem;flex-shrink:0;">
                 ${escHtml(v.name).charAt(0).toUpperCase()}
             </span>
@@ -2262,7 +2287,19 @@
     }
 
     // -- Drag & Drop -----------------------------------------------------------
+    // Låste frivillig-chips og deaktiverede knapper (fx "Flyt alle til Pitten"
+    // når posten ingen flytbare frivillige har) er ikke selv draggable, men da
+    // de ligger inde i et draggable post-kort, vil browseren ellers falde
+    // tilbage til at trække posten (bl.a. fordi disabled knapper har
+    // pointer-events:none og lader kliks "falde igennem" til kortet). Vi
+    // tracker derfor mousedown-målet, så post-drag kan afvises i de tilfælde.
+    let _mouseDownBlocksPostDrag = false;
+    document.addEventListener('mousedown', (e) => {
+        _mouseDownBlocksPostDrag = !!e.target.closest('.volunteer-chip.is-locked, .pit-volunteer-row.is-locked, .dropdown-menu, button:disabled');
+    }, true);
+
     function onPostDragStart(e) {
+        if (_mouseDownBlocksPostDrag) { e.preventDefault(); return; }
         dragPayload = { type: 'post', id: parseInt(this.dataset.postId), element: this };
         this.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
