@@ -906,6 +906,18 @@
         color: var(--clr-text);
     }
 
+    .dropdown-menu .dropdown-item:hover,
+    .dropdown-menu .dropdown-item:focus {
+        background: rgba(255,255,255,0.06);
+        color: var(--clr-text);
+    }
+    [data-theme="light"] #vol-ctx-menu .dropdown-item:hover,
+    [data-theme="light"] .dropdown-menu .dropdown-item:hover,
+    [data-theme="light"] .dropdown-menu .dropdown-item:focus {
+        background: rgba(0,0,0,0.06);
+        color: var(--clr-text);
+    }
+
     .drop-zone-active {
         background: rgba(232, 93, 46, 0.06) !important;
         outline: 2px dashed var(--clr-brand);
