@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -85,6 +86,20 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+
+// Appen kører i en Docker-container bag en reverse proxy der terminerer TLS,
+// så Kestrel ser altid requests som http. Uden dette bliver Request.Scheme
+// (og dermed genererede webhook-URLs mv.) forkert sat til http i stedet for https.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+// Reverse proxyens IP er ikke kendt på forhånd (Docker-netværk/host), så vi
+// stoler på alle proxyer i stedet for kun standardværdien (loopback).
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
