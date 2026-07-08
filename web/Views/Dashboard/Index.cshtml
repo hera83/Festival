@@ -660,6 +660,41 @@
     </div>
 </div>
 
+<!-- Flyt Alle Til Pitten Bekræft Modal -->
+<div class="modal fade" id="moveAllToPitModal" tabindex="-1" aria-labelledby="moveAllToPitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="moveAllToPitModalLabel">
+                    <i class="bi bi-arrow-return-left me-2" style="color:var(--clr-brand);"></i>Flyt alle til Pitten
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="moveAllToPitPostName">
+                <p class="mb-1" style="color:var(--clr-text);font-size:0.88rem;">
+                    Flyt <strong id="moveAllToPitVolunteerCount" style="color:var(--clr-text);"></strong> frivillige fra <strong id="moveAllToPitPostNameLabel" style="color:var(--clr-text);"></strong> til Pitten?
+                </p>
+                <div id="moveAllToPitMovedNames" style="font-size:0.8rem;color:var(--clr-text-muted);margin-bottom:0.25rem;"></div>
+                <div id="moveAllToPitLockedSection" class="d-none" style="border-top:1px solid var(--clr-border);padding-top:0.5rem;margin-top:0.5rem;">
+                    <div style="font-size:0.75rem;color:var(--clr-warn);margin-bottom:0.25rem;">
+                        <i class="bi bi-lock-fill me-1"></i>Låst – bliver <strong>ikke</strong> flyttet:
+                    </div>
+                    <div id="moveAllToPitLockedNames" style="font-size:0.82rem;color:var(--clr-text);"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="confirmMoveAllToPitBtn" class="btn btn-sm btn-primary">
+                    <i class="bi bi-arrow-return-left me-1"></i>Flyt alle
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Fremtidig flyt Modal -->
 <div class="modal fade" id="futureMoveModal" tabindex="-1" aria-labelledby="futureMoveModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -1314,9 +1349,9 @@
             return;
         }
 
-        // Sorter: alarmerede øverst, derefter alfabetisk
+        // Sorter: alarmerede øverst, derefter alfabetisk — låste frivillige er fritaget for alarmer
         const now = Date.now();
-        const withAlarm = (v) => alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
+        const withAlarm = (v) => !v.isLocked && alarmsEnabled && pitAlarmMinutes && v.arrivedAtPit
             && !disabledAlarmVolunteers.has(v.volunteerId)
                     ? (now - parseLocalDate(v.arrivedAtPit).getTime()) >= pitAlarmMinutes * 60 * 1000
             : false;
@@ -1339,11 +1374,12 @@
         // Vis pit-frivillige
         sorted.forEach(v => {
             const firing = withAlarm(v);
-            const alarmMuted = disabledAlarmVolunteers.has(v.volunteerId);
+            const alarmMuted = !v.isLocked && disabledAlarmVolunteers.has(v.volunteerId);
+            const lockIcon = v.isLocked ? '<i class="bi bi-lock-fill" style="color:var(--clr-warn);font-size:0.7rem;" title="Låst – kan ikke flyttes"></i>' : '';
             const row = document.createElement('div');
             row.className = 'pit-volunteer-row';
             if (firing) row.style.cssText = 'border-left:3px solid var(--clr-alarm);padding-left:0.4rem;';
-            row.draggable = true;
+            row.draggable = !v.isLocked;
             row.dataset.volunteerId = v.volunteerId;
             row.dataset.name = v.name;
             row.dataset.location = 'Pit';
@@ -1353,9 +1389,10 @@
                 </div>
                 <span style="font-size:0.875rem;color:var(--clr-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
                 ${elapsedBadgeHtml(v.arrivedAtPit)}
+                ${lockIcon}
                 ${firing ? '<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.75rem;" title="Over alarmtid"></i>' : ''}
                 ${alarmMuted ? '<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.7rem;" title="Alarm deaktiveret"></i>' : ''}
-                <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="Pit" draggable="false"
+                <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="Pit" data-vlocked="${!!v.isLocked}" draggable="false"
                     style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
                     <i class="bi bi-three-dots-vertical"></i>
                 </button>`
@@ -1376,6 +1413,7 @@
                 const row = document.createElement('div');
                 row.className = 'pit-volunteer-row';
                 row.style.opacity = '0.7';
+                const lockIcon = v.isLocked ? '<i class="bi bi-lock-fill" style="color:var(--clr-warn);font-size:0.7rem;" title="Låst – kan ikke flyttes"></i>' : '';
                 row.innerHTML = `
                     <div style="width:26px;height:26px;border-radius:50%;background:var(--clr-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--clr-text-muted);font-weight:700;font-size:0.75rem;border:1px solid var(--clr-border);">
                         ${escHtml(v.name).charAt(0).toUpperCase()}
@@ -1383,7 +1421,8 @@
                     <span style="font-size:0.875rem;color:var(--clr-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
                     <span style="font-size:0.7rem;color:var(--clr-text-muted);white-space:nowrap;">${escHtml(v.currentLocation)}</span>
                     ${elapsedBadgeHtml(v.arrivedAtPit)}
-                    <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(v.currentLocation)}" draggable="false"
+                    ${lockIcon}
+                    <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(v.currentLocation)}" data-vlocked="${!!v.isLocked}" draggable="false"
                         style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.85rem;cursor:pointer;flex-shrink:0;line-height:1;margin-left:4px;">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>`;
@@ -1451,6 +1490,7 @@
             _lastPosts.forEach(p => {
                 if (!p.alarmAfterMinutes) return;
                 (p.volunteers || []).forEach(v => {
+                    if (v.isLocked) return;
                     if (disabledAlarmVolunteers.has(v.volunteerId)) return;
                             const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
                     if (ms >= p.alarmAfterMinutes * 60 * 1000) postAlarmCount++;
@@ -1477,10 +1517,11 @@
             ? `<span class="alarm-badge ms-1"><i class="bi bi-bell-fill me-1"></i>${p.alarmAfterMinutes} min</span>`
             : '';
 
-        // Check om nogen frivillige er over alarmtiden
+        // Check om nogen frivillige er over alarmtiden — låste frivillige er fritaget for alarmer
         const now = Date.now();
         const firingVolunteers = alarmsEnabled ? (p.volunteers || []).filter(v => {
             if (!p.alarmAfterMinutes) return false;
+            if (v.isLocked) return false;
             if (disabledAlarmVolunteers.has(v.volunteerId)) return false;
                             const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
             return ms >= p.alarmAfterMinutes * 60 * 1000;
@@ -1489,6 +1530,8 @@
 
         const isCollapsed = collapsedPosts.has(p.id);
         const volunteerCount = (p.volunteers || []).length;
+        const movableVolunteers = (p.volunteers || []).filter(v => !v.isLocked);
+        const lockedVolunteers = (p.volunteers || []).filter(v => v.isLocked);
 
         card.innerHTML = `
             <div class="d-flex align-items-center justify-content-between mb-1">
@@ -1514,6 +1557,15 @@
                                         data-post-id="${p.id}" data-post-name="${escHtml(p.name)}" data-alarm="${p.alarmAfterMinutes ?? ''}"
                                         style="color:var(--clr-text);font-size:0.82rem;">
                                     <i class="bi bi-pencil" style="color:var(--clr-info);"></i> Rediger
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item move-all-to-pit-btn d-flex align-items-center gap-2"
+                                        data-post-name="${escHtml(p.name)}"
+                                        ${movableVolunteers.length === 0 ? 'disabled' : ''}
+                                        style="color:var(--clr-text);font-size:0.82rem;">
+                                    <i class="bi bi-arrow-return-left" style="color:var(--clr-brand);"></i> Flyt alle til Pitten
+                                    ${lockedVolunteers.length > 0 ? `<i class="bi bi-lock-fill ms-auto" style="color:var(--clr-text-muted);font-size:0.7rem;" title="${lockedVolunteers.length} låst(e) flyttes ikke"></i>` : ''}
                                 </button>
                             </li>
                             <li><hr class="dropdown-divider" style="border-color:var(--clr-border);margin:0.25rem 0;"></li>
@@ -1572,6 +1624,16 @@
             openDeletePostModal(parseInt(btn.dataset.postId), btn.dataset.postName, parseInt(btn.dataset.volunteerCount) || 0);
         });
 
+        card.querySelector('.move-all-to-pit-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const btn = e.currentTarget;
+            const post = _lastPosts.find(x => x.name === btn.dataset.postName);
+            const movable = (post?.volunteers || []).filter(v => !v.isLocked);
+            const locked = (post?.volunteers || []).filter(v => v.isLocked);
+            if (movable.length === 0) return;
+            openMoveAllToPitModal(btn.dataset.postName, movable, locked);
+        });
+
         // Setup volunteer drop-zone på posten
         const vZone = card.querySelector('.post-volunteer-zone');
         setupVolunteerDropZoneOnPost(vZone, p.name);
@@ -1601,22 +1663,25 @@
 
     function volunteerChipHtml(v, postName, alarmAfterMinutes) {
         let alarmIcon = '';
-        if (alarmsEnabled && alarmAfterMinutes && !disabledAlarmVolunteers.has(v.volunteerId)) {
+        // Låste frivillige er fritaget for alarmer.
+        if (!v.isLocked && alarmsEnabled && alarmAfterMinutes && !disabledAlarmVolunteers.has(v.volunteerId)) {
                     const ms = Date.now() - parseLocalDate(v.arrivedAtPost).getTime();
             if (ms >= alarmAfterMinutes * 60 * 1000) {
                 alarmIcon = `<i class="bi bi-exclamation-triangle-fill" style="color:var(--clr-alarm);font-size:0.7rem;" title="Over alarmtid"></i>`;
             }
         }
-        const alarmMuted = disabledAlarmVolunteers.has(v.volunteerId);
-        return `<span class="volunteer-chip" draggable="true" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}">
+        const alarmMuted = !v.isLocked && disabledAlarmVolunteers.has(v.volunteerId);
+        const lockIcon = v.isLocked ? `<i class="bi bi-lock-fill" style="color:var(--clr-warn);font-size:0.7rem;" title="Låst til posten – kan ikke flyttes"></i>` : '';
+        return `<span class="volunteer-chip" draggable="${v.isLocked ? 'false' : 'true'}" data-volunteer-id="${v.volunteerId}" data-name="${escHtml(v.name)}" data-location="${escHtml(postName)}">
             <span style="width:20px;height:20px;border-radius:50%;background:var(--clr-brand-dim);display:inline-flex;align-items:center;justify-content:center;color:var(--clr-brand);font-weight:700;font-size:0.65rem;flex-shrink:0;">
                 ${escHtml(v.name).charAt(0).toUpperCase()}
             </span>
             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(v.name)}</span>
             ${elapsedBadgeHtml(v.arrivedAtPost)}
+            ${lockIcon}
             ${alarmIcon}
             ${alarmMuted ? `<i class="bi bi-bell-slash" style="color:var(--clr-text-muted);font-size:0.65rem;" title="Alarm deaktiveret"></i>` : ''}
-            <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(postName)}" draggable="false"
+            <button class="vol-menu-btn" data-vid="${v.volunteerId}" data-vname="${escHtml(v.name)}" data-vloc="${escHtml(postName)}" data-vlocked="${!!v.isLocked}" draggable="false"
                 style="background:none;border:none;padding:0 2px;color:var(--clr-text-muted);font-size:0.8rem;cursor:pointer;flex-shrink:0;line-height:1;">
                 <i class="bi bi-three-dots-vertical"></i>
             </button>
@@ -1774,6 +1839,7 @@
         const volunteerId = parseInt(btn.dataset.vid);
         const name = btn.dataset.vname;
         const currentLocation = btn.dataset.vloc;
+        const isLocked = btn.dataset.vlocked === 'true';
         const isMuted = disabledAlarmVolunteers.has(volunteerId);
         const rect = btn.getBoundingClientRect();
 
@@ -1781,6 +1847,7 @@
         menu.id = 'vol-ctx-menu';
         menu.dataset.vid = volunteerId;
         menu.dataset.vname = name;
+        menu.dataset.vlocked = isLocked;
         menu.style.cssText = `position:fixed;z-index:9999;width:220px;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);font-size:0.85rem;overflow:hidden;`;
 
         // -- Panel 1: Hovedmenu --
@@ -1789,9 +1856,13 @@
         panel1.innerHTML = `
             <div style="padding:6px 12px 5px;font-size:0.75rem;color:var(--clr-text-muted);border-bottom:1px solid var(--clr-border);">${escHtml(name)}</div>
             <ul style="list-style:none;margin:0;padding:4px 0;">
-                <li><a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="vol-goto-post-panel">
+                <li><a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="vol-goto-post-panel"
+                        ${isLocked ? 'style="opacity:.45;cursor:not-allowed;"' : ''} title="${isLocked ? 'Låst – lås op for at flytte' : ''}">
                     <span><i class="bi bi-geo-alt me-2" style="color:var(--clr-brand);"></i>Flyt til post</span>
                     <i class="bi bi-chevron-right" style="font-size:0.7rem;color:var(--clr-text-muted);"></i>
+                </a></li>
+                <li><a class="dropdown-item" href="#" id="vol-lock-toggle">
+                    <i class="bi ${isLocked ? 'bi-unlock' : 'bi-lock-fill'} me-2" style="color:${isLocked ? 'var(--clr-ok)' : 'var(--clr-warn)'};"></i>${isLocked ? 'Lås op' : 'Lås til post'}
                 </a></li>
                 <li><a class="dropdown-item" href="#" id="vol-alarm-toggle">
                     <i class="bi ${isMuted ? 'bi-bell' : 'bi-bell-slash'} me-2" style="color:${isMuted ? 'var(--clr-ok)' : 'var(--clr-warn)'};"></i>${isMuted ? 'Aktiver alarm' : 'Deaktiver alarm'}
@@ -1835,6 +1906,11 @@
         // Events panel 1
         panel1.querySelector('#vol-goto-post-panel').addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
+            if (menu.dataset.vlocked === 'true') {
+                closeVolunteerMenu();
+                showToast('Frivillig er låst. Lås op for at flytte.', 'warning');
+                return;
+            }
             panel1.style.display = 'none';
             panel2.style.display = 'block';
             // Juster menuposition hvis den er ved at gå ud af skærmen
@@ -1842,6 +1918,10 @@
             if (r.bottom > window.innerHeight - 8) {
                 menu.style.top = Math.max(8, window.innerHeight - menu.offsetHeight - 8) + 'px';
             }
+        });
+        panel1.querySelector('#vol-lock-toggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            volMenuToggleLock(parseInt(menu.dataset.vid), menu.dataset.vlocked === 'true');
         });
         panel1.querySelector('#vol-alarm-toggle').addEventListener('click', (e) => {
             e.preventDefault();
@@ -1923,6 +2003,19 @@
         loadPitVolunteers(pitSearchInput.value);
         if (_lastPosts.length) renderAllPosts(_lastPosts);
         updateAlarmCounter();
+    }
+
+    function volMenuToggleLock(volunteerId, currentlyLocked) {
+        closeVolunteerMenu();
+        postJson('/Dashboard/SetVolunteerLock', { volunteerId, locked: !currentlyLocked })
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message, 'info');
+                    refreshBoardAfterChange(pitSearchInput.value);
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            }).catch(() => showToast('Noget gik galt.', 'error'));
     }
 
     function volMenuCheckOut(volunteerId, name) {
@@ -2091,11 +2184,39 @@
         btn.innerHTML = '<i class="bi bi-trash3 me-1"></i>Slet post';
     });
 
+    // -- Flyt Alle Til Pitten Bekræft -------------------------------------------
+    document.getElementById('confirmMoveAllToPitBtn').addEventListener('click', () => {
+        const postName = document.getElementById('moveAllToPitPostName').value;
+        const btn = document.getElementById('confirmMoveAllToPitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        moveAllOnPostToPit(postName);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-return-left me-1"></i>Flyt alle';
+    });
+
     function openEditPostModal(postId, postName, alarmVal) {
         document.getElementById('editPostId').value = postId;
         document.getElementById('editPostName').value = postName;
         document.getElementById('editPostAlarm').value = alarmVal || '';
         bootstrap.Modal.getOrCreateInstance(document.getElementById('editPostModal')).show();
+    }
+
+    function openMoveAllToPitModal(postName, movableVolunteers, lockedVolunteers) {
+        document.getElementById('moveAllToPitPostName').value = postName;
+        document.getElementById('moveAllToPitPostNameLabel').textContent = postName;
+        document.getElementById('moveAllToPitVolunteerCount').textContent = movableVolunteers.length;
+        document.getElementById('moveAllToPitMovedNames').textContent = movableVolunteers.map(v => v.name).join(', ');
+
+        const lockedSection = document.getElementById('moveAllToPitLockedSection');
+        if (lockedVolunteers.length > 0) {
+            document.getElementById('moveAllToPitLockedNames').textContent = lockedVolunteers.map(v => v.name).join(', ');
+            lockedSection.classList.remove('d-none');
+        } else {
+            lockedSection.classList.add('d-none');
+        }
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('moveAllToPitModal')).show();
     }
 
     function openDeletePostModal(postId, postName, volunteerCount) {
@@ -2352,6 +2473,25 @@
                 }
             })
             .catch(() => showToast('Noget gik galt.', 'error'));
+    }
+
+    function moveAllOnPostToPit(postName) {
+        postJson('/Dashboard/MoveAllOnPostToPit', { postName })
+            .then(res => {
+                bootstrap.Modal.getInstance(document.getElementById('moveAllToPitModal'))?.hide();
+                if (res.success) {
+                    clearPitSearch();
+                    updateCheckedInCount();
+                    refreshBoardAfterChange();
+                    if (res.movedCount) showToast(res.message, 'success');
+                } else {
+                    showToast(res.message, 'warning');
+                }
+            })
+            .catch(() => {
+                bootstrap.Modal.getInstance(document.getElementById('moveAllToPitModal'))?.hide();
+                showToast('Noget gik galt.', 'error');
+            });
     }
 
     // -- Hjælpefunktioner ------------------------------------------------------
@@ -2615,6 +2755,7 @@
             const curr   = new Set();
 
             (p.volunteers || []).forEach(v => {
+                if (v.isLocked) return;
                 if (disabledAlarmVolunteers.has(v.volunteerId)) return;
                 const ms = now - parseLocalDate(v.arrivedAtPost).getTime();
                 if (ms >= thresh) curr.add(v.volunteerId);

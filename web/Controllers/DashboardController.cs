@@ -581,7 +581,8 @@ namespace web.Controllers
                     PhoneNumber = c.Volunteer.PhoneNumber,
                     // Tidspunkt for hvornår de senest ankom til Pit (fallback: original check-in)
                     ArrivedAtPit = arrivalByCheckInId.TryGetValue(c.Id, out var t) ? t : c.CheckedInAt,
-                    CurrentLocation = c.CurrentLocation
+                    CurrentLocation = c.CurrentLocation,
+                    IsLocked = c.IsLocked
                 })
                 .OrderBy(v => v.Name)
                 .ToList();
@@ -639,6 +640,9 @@ namespace web.Controllers
             if (checkIn == null)
                 return Json(new { success = false, message = "Frivillig er ikke checket ind." });
 
+            if (checkIn.IsLocked)
+                return Json(new { success = false, message = $"{checkIn.Volunteer.Name} er låst og kan ikke flyttes. Lås op for at flytte." });
+
             var from = checkIn.CurrentLocation;
             var to = request.TargetLocation?.Trim();
 
@@ -671,6 +675,101 @@ namespace web.Controllers
         {
             public int VolunteerId { get; set; }
             public string TargetLocation { get; set; } = string.Empty;
+        }
+
+        // POST: /Dashboard/SetVolunteerLock — lås/lås op en frivillig på sin nuværende
+        // post, så de ikke kan flyttes (hverken ved drag, "flyt til post" eller
+        // "flyt alle til pitten") og er fritaget for alarmer, indtil de låses op igen.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetVolunteerLock([FromBody] SetVolunteerLockRequest request)
+        {
+            var seasonId = AppTime.CopenhagenToday.Year;
+
+            var checkIn = await _db.VolunteerCheckIns
+                .Include(c => c.Volunteer)
+                .FirstOrDefaultAsync(c => c.SeasonId == seasonId && c.VolunteerId == request.VolunteerId && c.CheckedOutAt == null);
+
+            if (checkIn == null)
+                return Json(new { success = false, message = "Frivillig er ikke checket ind." });
+
+            checkIn.IsLocked = request.Locked;
+            await _db.SaveChangesAsync();
+
+            var message = request.Locked
+                ? $"{checkIn.Volunteer.Name} er låst og kan ikke flyttes."
+                : $"{checkIn.Volunteer.Name} er låst op igen.";
+
+            return Json(new { success = true, message, isLocked = checkIn.IsLocked });
+        }
+
+        public class SetVolunteerLockRequest
+        {
+            public int VolunteerId { get; set; }
+            public bool Locked { get; set; }
+        }
+
+        // POST: /Dashboard/MoveAllOnPostToPit — flyt alle frivillige på en post til Pit i
+        // ét klik. Hver frivillig flyttes enkeltvis med samme logning og sms som en
+        // almindelig MoveVolunteer, så det ikke er en genvej der springer flows over,
+        // bare en hjælp til koordinatoren i travle perioder.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MoveAllOnPostToPit([FromBody] MoveAllOnPostToPitRequest request)
+        {
+            var postName = request.PostName?.Trim();
+            if (string.IsNullOrWhiteSpace(postName) || postName == "Pit")
+                return Json(new { success = false, message = "Ugyldig post." });
+
+            var seasonId = AppTime.CopenhagenToday.Year;
+
+            var allCheckIns = await _db.VolunteerCheckIns
+                .Include(c => c.Volunteer)
+                .Where(c => c.SeasonId == seasonId && c.CheckedOutAt == null && c.CurrentLocation == postName)
+                .ToListAsync();
+
+            // Låste frivillige skal blive på posten — kun de ulåste flyttes.
+            var checkIns = allCheckIns.Where(c => !c.IsLocked).ToList();
+            var lockedCount = allCheckIns.Count - checkIns.Count;
+
+            if (checkIns.Count == 0)
+            {
+                var noneMessage = lockedCount > 0
+                    ? $"Ingen at flytte — alle {lockedCount} frivillige på posten er låst."
+                    : "Ingen frivillige at flytte.";
+                return Json(new { success = true, message = noneMessage, movedCount = 0, lockedCount });
+            }
+
+            var moveTime = AppTime.Now;
+            foreach (var checkIn in checkIns)
+            {
+                checkIn.CurrentLocation = "Pit";
+                _db.VolunteerLocationLogs.Add(new VolunteerLocationLog
+                {
+                    CheckInId = checkIn.Id,
+                    VolunteerId = checkIn.VolunteerId,
+                    SeasonId = seasonId,
+                    EventType = "Move",
+                    Location = "Pit",
+                    OccurredAt = moveTime
+                });
+            }
+
+            await _db.SaveChangesAsync();
+
+            foreach (var checkIn in checkIns)
+                await SendTemplatedSmsAsync(SmsTemplateType.Moved, checkIn.VolunteerId, checkIn.Volunteer.Name, moveTime, fraPost: postName, tilPost: "Pit");
+
+            var message = lockedCount > 0
+                ? $"{checkIns.Count} frivillige flyttet til Pitten. {lockedCount} låste blev ikke flyttet."
+                : $"{checkIns.Count} frivillige flyttet til Pitten.";
+
+            return Json(new { success = true, message, movedCount = checkIns.Count, lockedCount });
+        }
+
+        public class MoveAllOnPostToPitRequest
+        {
+            public string PostName { get; set; } = string.Empty;
         }
 
         // POST: /Dashboard/QrScanPit – check ind eller flyt frivillig til Pit via QR-scanning

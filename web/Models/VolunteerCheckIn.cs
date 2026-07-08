@@ -23,6 +23,13 @@ public class VolunteerCheckIn
     /// <summary>Nuværende lokation, fx "Pit" eller "Bar8".</summary>
     public string CurrentLocation { get; set; } = "Pit";
 
+    /// <summary>
+    /// Når true kan den frivillige ikke flyttes (hverken ved drag, "flyt til post" eller
+    /// "flyt alle til pitten"), og er fritaget for alarmer. Bruges til frivillige der
+    /// ønsker at blive på samme post hele vagten. Nulstilles automatisk ved næste check-in.
+    /// </summary>
+    public bool IsLocked { get; set; }
+
     public Volunteer Volunteer { get; set; } = null!;
     public ICollection<VolunteerLocationLog> LocationLogs { get; set; } = [];
 }

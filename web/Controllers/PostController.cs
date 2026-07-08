@@ -66,7 +66,8 @@ public class PostController : Controller
                     VolunteerId = c.VolunteerId,
                     Name = c.Volunteer.Name,
                     // ArrivedAtPost: hvornår de senest ankom til denne post
-                    ArrivedAtPost = arrivalByCheckInId.TryGetValue(c.Id, out var t) ? t : c.CheckedInAt
+                    ArrivedAtPost = arrivalByCheckInId.TryGetValue(c.Id, out var t) ? t : c.CheckedInAt,
+                    IsLocked = c.IsLocked
                 })
                 .OrderBy(v => v.Name)
                 .ToList()
