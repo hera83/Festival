@@ -15,9 +15,9 @@
 
 @* Detalje-modal *@
 <div class="modal fade" id="detailMsgModalRead" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div id="detailMsgModalBodyRead">
+            <div id="detailMsgModalBodyRead" style="display:flex; flex-direction:column; min-height:0; flex:1 1 auto;">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
                 </div>
@@ -39,24 +39,25 @@
     </div>
 </div>
 
-@* Slet-modal *@
+@* Slet samtale-modal *@
 <div class="modal fade" id="deleteMsgModalRead" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h6 class="modal-title mb-0"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet besked</h6>
+                <h6 class="modal-title mb-0"><i class="bi bi-trash me-2" style="color: var(--clr-alarm);"></i>Slet samtale</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
             <div class="modal-body text-center py-4">
                 <i class="bi bi-exclamation-triangle fs-2 d-block mb-2" style="color: var(--clr-alarm);"></i>
-                <p class="mb-0">Er du sikker på du vil slette denne besked?</p>
+                <p class="mb-0">Er du sikker på du vil slette hele samtalen?</p>
+                <p class="mb-0" style="font-size:0.8rem; color: var(--clr-text-muted);">Dette kan ikke fortrydes.</p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-sm btn-secondary me-2" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>Annuller
                 </button>
                 <button type="button" id="deleteMsgConfirmRead" class="btn btn-sm btn-danger">
-                    <i class="bi bi-trash3 me-1"></i>Slet
+                    <i class="bi bi-trash3 me-1"></i>Slet samtale
                 </button>
             </div>
         </div>
@@ -170,16 +171,20 @@
                                                 data-phone="@m.PhoneNumber">
                                             <i class="bi bi-eye me-1"></i>Åbn besked
                                         </button>
+                                        <button type="button" class="btn btn-sm read-deleteConversation-btn"
+                                                style="background: var(--clr-alarm); color: #fff; border: none;"
+                                                title="Slet samtale"
+                                                data-channel="@(isSms ? "sms" : "app")"
+                                                data-id="@m.MessageId"
+                                                data-volunteer-id="@m.VolunteerId"
+                                                data-phone="@m.PhoneNumber">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                         @if (!isSms)
                                         {
                                             <button type="button" class="btn btn-sm btn-secondary read-markUnread-btn"
                                                     title="Marker som ulæst" data-id="@m.MessageId">
                                                 <i class="bi bi-envelope"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm read-delete-btn"
-                                                    style="background: var(--clr-alarm); color: #fff; border: none;"
-                                                    title="Slet besked" data-id="@m.MessageId">
-                                                <i class="bi bi-trash"></i>
                                             </button>
                                         }
                                     </div>
@@ -256,6 +261,7 @@
     var detailUrl      = '@Url.Action("Detail",             "Beskeder")';
     var smsDetailUrl   = '@Url.Action("SmsThreadDetail",    "Beskeder")';
     var deletePostUrl  = '@Url.Action("DeleteMessage",      "Beskeder")';
+    var deleteSmsThreadUrl = '@Url.Action("DeleteSmsThread", "Beskeder")';
     var markUnreadUrl  = '@Url.Action("MarkUnread",         "Beskeder")';
     var taskFormUrl    = '@Url.Action("GetCreateTaskForm",  "Beskeder")';
     var taskPostUrl    = '@Url.Action("CreateTask",         "Beskeder")';
@@ -294,19 +300,27 @@
         bindRowActions();
     }
 
-    // ── Slet modal ────────────────────────────────────────────────
+    // ── Slet samtale-modal ───────────────────────────────────────────
     var deleteModalEl   = document.getElementById('deleteMsgModalRead');
     var bsDeleteModal   = new bootstrap.Modal(deleteModalEl);
-    var pendingDeleteId = null;
+    var pendingDelete   = null; // { channel, id, volunteerId, phone }
 
     document.getElementById('deleteMsgConfirmRead').addEventListener('click', async function () {
-        if (!pendingDeleteId) return;
+        if (!pendingDelete) return;
         var btn = this; btn.disabled = true;
         try {
             var fd = new FormData();
-            fd.append('id', pendingDeleteId);
             fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-            var res  = await fetch(deletePostUrl, { method: 'POST', body: fd });
+            var url;
+            if (pendingDelete.channel === 'sms') {
+                url = deleteSmsThreadUrl;
+                if (pendingDelete.volunteerId) fd.append('volunteerId', pendingDelete.volunteerId);
+                else fd.append('phone', pendingDelete.phone || '');
+            } else {
+                url = deletePostUrl;
+                fd.append('id', pendingDelete.id);
+            }
+            var res  = await fetch(url, { method: 'POST', body: fd });
             var json = await res.json();
             bsDeleteModal.hide();
             if (json.success) {
@@ -315,7 +329,7 @@
                 await loadPage(currentPage, currentSize);
             } else { showToast(json.message, 'error'); }
         } catch (e) { bsDeleteModal.hide(); showToast('Netværksfejl.', 'error'); }
-        finally { btn.disabled = false; pendingDeleteId = null; }
+        finally { btn.disabled = false; pendingDelete = null; }
     });
 
     // ── Detalje modal ─────────────────────────────────────────────
@@ -478,8 +492,17 @@
                 }
             });
         });
-        document.querySelectorAll('.read-delete-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () { pendingDeleteId = parseInt(this.dataset.id); bsDeleteModal.show(); });
+        document.querySelectorAll('.read-deleteConversation-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var vid = this.dataset.volunteerId;
+                pendingDelete = {
+                    channel: this.dataset.channel,
+                    id: this.dataset.id ? parseInt(this.dataset.id) : null,
+                    volunteerId: vid ? parseInt(vid) : null,
+                    phone: this.dataset.phone || null
+                };
+                bsDeleteModal.show();
+            });
         });
         document.querySelectorAll('.read-markUnread-btn').forEach(function (btn) {
             btn.addEventListener('click', async function () {
@@ -496,6 +519,17 @@
                         await loadPage(currentPage, currentSize);
                     } else { showToast(json.message, 'error'); }
                 } catch (e) { showToast('Netværksfejl.', 'error'); }
+            });
+        });
+
+        // Klik hvor som helst på rækken åbner beskeden (uden at genudløse ved klik på knapper)
+        document.querySelectorAll('#read-result-zone tbody tr').forEach(function (tr) {
+            var detailBtn = tr.querySelector('.read-detail-btn');
+            if (!detailBtn) return;
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', function (e) {
+                if (e.target.closest('button, a, input, select, textarea')) return;
+                detailBtn.click();
             });
         });
     }

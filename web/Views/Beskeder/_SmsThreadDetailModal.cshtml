@@ -22,7 +22,7 @@
     </div>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Luk"></button>
 </div>
-<div class="modal-body">
+<div class="modal-body" id="smsDetailScrollBody" style="min-height:0; overflow-y:auto;">
 
     @* ── Sms-tråd ── *@
     <div id="sms-thread-messages" class="d-flex flex-column gap-2 mb-3">
@@ -49,35 +49,35 @@
             </div>
         }
     </div>
-
-    @* ── Besvar-formular ── *@
-    @if (Model.VolunteerId.HasValue)
-    {
-        <div class="mt-3 pt-3" style="border-top: 1px solid var(--clr-border);">
-            <p class="mb-2 fw-semibold" style="font-size:0.85rem; color: var(--clr-text-muted);">
-                <i class="bi bi-reply me-1"></i>Svar (sms)
-            </p>
-            <form id="smsReplyForm">
-                @token
-                <input type="hidden" name="volunteerId" value="@Model.VolunteerId" />
-                <textarea name="body" class="form-control mb-2" rows="3" placeholder="Skriv sms-svar her…"
-                          style="background: var(--clr-bg); border: 1px solid var(--clr-border);
-                                 color: var(--clr-text); resize: vertical; font-size:0.9rem;"></textarea>
-                <div class="d-flex justify-content-end">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="bi bi-send me-1"></i>Send sms
-                    </button>
-                </div>
-            </form>
-        </div>
-    }
-    else
-    {
-        <div class="mt-3 pt-3 text-center" style="border-top: 1px solid var(--clr-border); color: var(--clr-text-muted); font-size:0.85rem;">
-            <i class="bi bi-info-circle me-1"></i>Nummeret er ikke tilknyttet en frivillig og kan ikke besvares herfra.
-        </div>
-    }
 </div>
+
+@* ── Besvar-formular (altid synlig, uden for scroll-området) ── *@
+@if (Model.VolunteerId.HasValue)
+{
+    <div class="px-3 py-3" style="border-top: 1px solid var(--clr-border); flex-shrink:0;">
+        <p class="mb-2 fw-semibold" style="font-size:0.85rem; color: var(--clr-text-muted);">
+            <i class="bi bi-reply me-1"></i>Svar (sms)
+        </p>
+        <form id="smsReplyForm">
+            @token
+            <input type="hidden" name="volunteerId" value="@Model.VolunteerId" />
+            <textarea name="body" class="form-control mb-2" rows="2" placeholder="Skriv sms-svar her…"
+                      style="background: var(--clr-bg); border: 1px solid var(--clr-border);
+                             color: var(--clr-text); resize: vertical; font-size:0.9rem;"></textarea>
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-send me-1"></i>Send sms
+                </button>
+            </div>
+        </form>
+    </div>
+}
+else
+{
+    <div class="px-3 py-3 text-center" style="border-top: 1px solid var(--clr-border); color: var(--clr-text-muted); font-size:0.85rem; flex-shrink:0;">
+        <i class="bi bi-info-circle me-1"></i>Nummeret er ikke tilknyttet en frivillig og kan ikke besvares herfra.
+    </div>
+}
 <div class="modal-footer">
     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
         <i class="bi bi-x-lg me-1"></i>Luk
@@ -86,6 +86,55 @@
 
 <script>
 (function () {
+    // ── Vis kun de seneste sms'er, med "vis flere" for ældre beskeder ──
+    (function () {
+        const threadContainer = document.getElementById('sms-thread-messages');
+        const scrollBody = document.getElementById('smsDetailScrollBody');
+        const INITIAL_VISIBLE = 3;
+        const BATCH_SIZE = 5;
+        if (threadContainer) {
+            const items = Array.prototype.slice.call(threadContainer.children);
+            if (items.length > INITIAL_VISIBLE) {
+                const hiddenCount = items.length - INITIAL_VISIBLE;
+                // .d-flex sætter "display:flex !important" i Bootstrap, så vi skal
+                // også bruge !important her for at kunne skjule elementerne.
+                items.forEach(function (el, idx) { if (idx < hiddenCount) el.style.setProperty('display', 'none', 'important'); });
+
+                const btnWrap = document.createElement('div');
+                btnWrap.className = 'text-center mb-2';
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-secondary thread-show-more-btn';
+
+                function remainingHidden() {
+                    return items.filter(function (el) { return el.style.display === 'none'; });
+                }
+                function updateLabel() {
+                    const remaining = remainingHidden().length;
+                    const nextBatch = Math.min(BATCH_SIZE, remaining);
+                    btn.innerHTML = '<i class="bi bi-chevron-up me-1"></i>Vis ' + nextBatch + ' ældre besked' + (nextBatch === 1 ? '' : 'er') +
+                        ' <span style="opacity:.7;">(' + remaining + ' skjult' + (remaining === 1 ? '' : 'e') + ')</span>';
+                }
+                btn.addEventListener('click', function () {
+                    const prevHeight = threadContainer.scrollHeight;
+                    const hidden = remainingHidden();
+                    hidden.slice(Math.max(hidden.length - BATCH_SIZE, 0)).forEach(function (el) { el.style.removeProperty('display'); });
+                    if (remainingHidden().length === 0) {
+                        btnWrap.remove();
+                    } else {
+                        updateLabel();
+                    }
+                    if (scrollBody) scrollBody.scrollTop += (threadContainer.scrollHeight - prevHeight);
+                });
+
+                updateLabel();
+                btnWrap.appendChild(btn);
+                threadContainer.insertBefore(btnWrap, threadContainer.firstChild);
+            }
+        }
+        if (scrollBody) scrollBody.scrollTop = scrollBody.scrollHeight;
+    })();
+
     const form = document.getElementById('smsReplyForm');
     if (!form) return;
     form.addEventListener('submit', async function (e) {

@@ -15,9 +15,9 @@
 
 @* Detalje-modal *@
 <div class="modal fade" id="detailMsgModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div id="detailMsgModalBody">
+            <div id="detailMsgModalBody" style="display:flex; flex-direction:column; min-height:0; flex:1 1 auto;">
                 <div class="modal-body text-center py-5" style="color: var(--clr-text-muted);">
                     <div class="spinner-border spinner-border-sm" role="status"></div>
                 </div>
@@ -459,6 +459,17 @@
         });
         document.querySelectorAll('.msg-task-btn').forEach(function (btn) {
             btn.addEventListener('click', function () { openTaskModal(parseInt(this.dataset.id)); });
+        });
+
+        // Klik hvor som helst på rækken åbner beskeden (uden at genudløse ved klik på knapper)
+        document.querySelectorAll('#unread-result-zone tbody tr').forEach(function (tr) {
+            var detailBtn = tr.querySelector('.msg-detail-btn');
+            if (!detailBtn) return;
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', function (e) {
+                if (e.target.closest('button, a, input, select, textarea')) return;
+                detailBtn.click();
+            });
         });
     }
 

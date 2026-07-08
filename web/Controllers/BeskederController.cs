@@ -57,7 +57,7 @@ public class BeskederController(
     private async Task<(int Unread, int Read)> GetSmsThreadCountsAsync(int season)
     {
         var messages = await db.SmsMessages
-            .Where(s => s.SeasonId == season)
+            .Where(s => s.SeasonId == season && !s.HiddenFromBeskedCenter)
             .Select(s => new { s.VolunteerId, s.PhoneNumberSnapshot, s.Direction, s.IsReadByCoordinator })
             .ToListAsync();
 
@@ -126,7 +126,7 @@ public class BeskederController(
 
         // ── Sms-tråde ────────────────────────────────────────────
         var smsMessages = await db.SmsMessages
-            .Where(s => s.SeasonId == season)
+            .Where(s => s.SeasonId == season && !s.HiddenFromBeskedCenter)
             .Include(s => s.Volunteer)
             .ToListAsync();
 
@@ -325,7 +325,7 @@ public class BeskederController(
     public async Task<IActionResult> SmsThreadDetail(int? volunteerId, string? phone)
     {
         var season = CurrentSeason;
-        IQueryable<SmsMessage> query = db.SmsMessages.Where(s => s.SeasonId == season);
+        IQueryable<SmsMessage> query = db.SmsMessages.Where(s => s.SeasonId == season && !s.HiddenFromBeskedCenter);
         query = volunteerId.HasValue
             ? query.Where(s => s.VolunteerId == volunteerId.Value)
             : query.Where(s => s.VolunteerId == null && s.PhoneNumberSnapshot == phone);
@@ -553,6 +553,27 @@ public class BeskederController(
             if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
         }
         db.Messages.Remove(msg);
+    }
+
+    // ── Slet sms-samtale (skjules i Besked Center, bevares i Admins sms-log/statistik) ─
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteSmsThread([FromForm] int? volunteerId, [FromForm] string? phone)
+    {
+        var season = CurrentSeason;
+        IQueryable<SmsMessage> query = db.SmsMessages.Where(s => s.SeasonId == season);
+        query = volunteerId.HasValue
+            ? query.Where(s => s.VolunteerId == volunteerId.Value)
+            : query.Where(s => s.VolunteerId == null && s.PhoneNumberSnapshot == phone);
+
+        var messages = await query.ToListAsync();
+        if (messages.Count == 0) return Json(new { success = false, message = "Samtale ikke fundet." });
+
+        foreach (var m in messages)
+        {
+            m.HiddenFromBeskedCenter = true;
+        }
+        await db.SaveChangesAsync();
+        return Json(new { success = true, message = "Samtale slettet." });
     }
 
     // ── Hent opret-opgave formular ────────────────────────────────

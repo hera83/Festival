@@ -547,6 +547,10 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" id="logAllPitOutBtn" class="btn btn-sm me-auto"
+                        style="background:var(--clr-alarm-bg);border:1px solid var(--clr-alarm);color:var(--clr-alarm);">
+                    <i class="bi bi-box-arrow-right me-1"></i>Log alle ud
+                </button>
                 <button type="button" id="clearPitAlarmBtn" class="btn btn-sm"
                         style="background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text-muted);">
                     <i class="bi bi-x-lg me-1"></i>Ryd alarm
@@ -554,6 +558,36 @@
                 <button type="button" id="savePitAlarmBtn" class="btn btn-sm"
                         style="background:var(--clr-brand);border:none;color:#fff;">
                     <i class="bi bi-floppy me-1"></i>Gem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log alle ud af Pitten Modal -->
+<div class="modal fade" id="logAllPitOutModal" tabindex="-1" aria-labelledby="logAllPitOutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logAllPitOutModalLabel">
+                    <i class="bi bi-box-arrow-right me-2" style="color:var(--clr-alarm);"></i>Log alle ud af Pitten
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1" style="color:var(--clr-text);font-size:0.88rem;">
+                    Log <strong id="logAllPitOutCount" style="color:var(--clr-text);"></strong> frivillige ud af Pitten?
+                </p>
+                <div id="logAllPitOutNames" style="font-size:0.8rem;color:var(--clr-text-muted);margin-bottom:0.25rem;"></div>
+                <div id="logAllPitOutProgress" class="d-none" style="font-size:0.8rem;color:var(--clr-text-muted);margin-top:0.5rem;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="logAllPitOutCancelBtn" class="btn btn-sm" style="background:var(--clr-bg);color:var(--clr-text-muted);border-color:var(--clr-border);" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Annuller
+                </button>
+                <button type="button" id="confirmLogAllPitOutBtn" class="btn btn-sm"
+                        style="background:var(--clr-alarm);border:none;color:#fff;">
+                    <i class="bi bi-box-arrow-right me-1"></i>Log alle ud
                 </button>
             </div>
         </div>
@@ -2804,6 +2838,64 @@
         bootstrap.Modal.getInstance(pitAlarmModal).hide();
         updateGearIcon();
         loadPitVolunteers(pitSearchInput.value);
+    });
+
+    // -- Log alle ud af Pitten --------------------------------------------------
+    let _pitVolunteersToLogOut = [];
+    const logAllPitOutModalEl = document.getElementById('logAllPitOutModal');
+    const logAllPitOutModal = new bootstrap.Modal(logAllPitOutModalEl);
+
+    document.getElementById('logAllPitOutBtn').addEventListener('click', () => {
+        fetch('/Dashboard/GetPitVolunteers?q=')
+            .then(r => r.json())
+            .then(data => {
+                _pitVolunteersToLogOut = (data || []).filter(v => v.currentLocation === 'Pit' || !v.currentLocation);
+                if (_pitVolunteersToLogOut.length === 0) {
+                    showToast('Der er ingen i pitten.', 'warning');
+                    return;
+                }
+                document.getElementById('logAllPitOutCount').textContent = _pitVolunteersToLogOut.length;
+                document.getElementById('logAllPitOutNames').textContent = _pitVolunteersToLogOut.map(v => v.name).join(', ');
+                document.getElementById('logAllPitOutProgress').classList.add('d-none');
+                const confirmBtn = document.getElementById('confirmLogAllPitOutBtn');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-box-arrow-right me-1"></i>Log alle ud';
+                bootstrap.Modal.getInstance(pitAlarmModal)?.hide();
+                logAllPitOutModal.show();
+            })
+            .catch(() => showToast('Noget gik galt. Prøv igen.', 'error'));
+    });
+
+    document.getElementById('confirmLogAllPitOutBtn').addEventListener('click', async () => {
+        const confirmBtn = document.getElementById('confirmLogAllPitOutBtn');
+        const cancelBtn = document.getElementById('logAllPitOutCancelBtn');
+        const progress = document.getElementById('logAllPitOutProgress');
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        progress.classList.remove('d-none');
+
+        const total = _pitVolunteersToLogOut.length;
+        let done = 0;
+        let failed = 0;
+        for (const v of _pitVolunteersToLogOut) {
+            confirmBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Logger ud… ${done + 1}/${total}`;
+            progress.textContent = `Checker ${escHtml(v.name)} ud…`;
+            try {
+                const res = await postJson('/Dashboard/CheckOut', { volunteerId: v.volunteerId });
+                if (res.success) done++; else failed++;
+            } catch {
+                failed++;
+            }
+        }
+
+        cancelBtn.disabled = false;
+        logAllPitOutModal.hide();
+        clearPitSearch();
+        updateCheckedInCount();
+        updateNoShowCount();
+        refreshBoardAfterChange();
+        if (failed === 0) showToast(`${done} frivillige logget ud af pitten.`, 'success');
+        else showToast(`${done} logget ud, ${failed} fejlede.`, 'warning');
     });
 
     // -- Init ------------------------------------------------------------------

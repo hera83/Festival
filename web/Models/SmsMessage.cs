@@ -44,6 +44,11 @@ public class SmsMessage
     public bool IsReadByCoordinator { get; set; } = true;
     public DateTime? ReadByCoordinatorAt { get; set; }
 
+    // Skjuler sms'en fra Besked Center (Læste/Ulæste), når en koordinator har
+    // slettet hele sms-tråden. Rækken bevares i sin helhed for Admins sms-log
+    // og pris-statistik — dette er bevidst IKKE en rigtig sletning.
+    public bool HiddenFromBeskedCenter { get; set; } = false;
+
     public int SegmentCount { get; set; }
     public decimal UnitPriceDkk { get; set; }
     public decimal TotalPriceDkk { get; set; }

@@ -44,12 +44,12 @@ else
                         <td class="ps-3 align-middle">
                             @if (sub.MatchedVolunteers.Any())
                             {
-                                <span>@string.Join(", ", sub.MatchedVolunteers.Select(v => v.Name))</span>
+                                <span title="@string.Join(", ", sub.MatchedVolunteers.Select(v => v.Name))">@sub.MatchedVolunteers.Count frivillig@(sub.MatchedVolunteers.Count == 1 ? "" : "e")</span>
                             }
                             @if (sub.UnmatchedPhoneNumbers.Any())
                             {
                                 <br />
-                                <small style="color: var(--clr-text-muted);">+ @sub.UnmatchedPhoneNumbers.Count nummer/numre uden match: @string.Join(", ", sub.UnmatchedPhoneNumbers)</small>
+                                <small style="color: var(--clr-text-muted);" title="@string.Join(", ", sub.UnmatchedPhoneNumbers)">+ @sub.UnmatchedPhoneNumbers.Count nummer/numre uden match</small>
                             }
                         </td>
                         <td class="align-middle" style="font-size: 0.85rem; color: var(--clr-text-muted);">
